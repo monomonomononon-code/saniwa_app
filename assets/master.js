@@ -38,7 +38,7 @@
         type: "character_update",
         character: {
           id: c.id, name: c.name, swordType: c.swordType,
-          activationDate: c.activationDate, unit: c.unit, isCaptain: c.isCaptain
+          activationDate: c.activationDate, unit: c.unit, isCaptain: c.isCaptain, isKiwame: !!c.isKiwame
         }
       }, "*");
     } catch (e) {}
@@ -64,9 +64,11 @@
       c.activationDate = sc.activationDate || c.activationDate || "";
       c.unit = sc.unit || c.unit || "";
       c.isCaptain = !!sc.isCaptain;
+      if (typeof sc.isKiwame === "boolean") c.isKiwame = sc.isKiwame;
     });
     if (changed) render();
   });
+  characters.forEach(syncCharacter);
   try { window.parent && window.parent.postMessage({ source: "master", type: "ready" }, "*"); } catch (e) {}
 
   function root() { return document.getElementById("app"); }
