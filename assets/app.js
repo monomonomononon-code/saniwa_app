@@ -44,7 +44,7 @@
         <div class="app-icon-label">部屋割り</div>
       </button>
       <button class="app-icon-btn" id="open-expcalc">
-        <div class="app-icon-glyph expcalc">験</div>
+        <div class="app-icon-glyph expcalc">戦</div>
         <div class="app-icon-label">経験値計算</div>
       </button>
       <button class="app-icon-btn soon" id="open-honmaru">
@@ -109,7 +109,7 @@
     { label: "部屋割り", glyph: "丸", color: "var(--wood)", action: () => showView("rooms-view") },
     { label: "相関図",   glyph: "縁", color: "var(--hanko)", action: () => showView("network-view") },
     { label: "刀剣男士", glyph: "刀", color: "var(--moss)", action: () => showView("master-view") },
-    { label: "経験値計算", glyph: "験", color: "var(--gold)", action: () => showView("expcalc-view") },
+    { label: "経験値計算", glyph: "戦", color: "var(--gold)", action: () => showView("expcalc-view") },
     { label: "本丸設定",       glyph: "本", color: "var(--tag-border)", disabled: true },
     { label: "設定",           glyph: "設", color: "var(--tag-border)", disabled: true }
   ];
@@ -266,7 +266,7 @@
       }
       const icon = document.createElement("div");
       icon.className = "feed-icon " + item.source;
-      icon.textContent = item.source === "rooms" ? "丸" : item.source === "network" ? "縁" : item.source === "master" ? "刀" : item.source === "expcalc" ? "験" : "X";
+      icon.textContent = item.source === "rooms" ? "丸" : item.source === "network" ? "縁" : item.source === "master" ? "刀" : item.source === "expcalc" ? "戦" : "X";
       const text = document.createElement("div");
       text.className = "feed-text";
       text.textContent = item.text;
