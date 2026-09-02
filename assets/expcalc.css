@@ -289,6 +289,23 @@
     color: var(--ink-soft);
     font-size: 10px;
   }
+  .provisional-note {
+    margin-top: 7px;
+    color: var(--ink-soft);
+    font-size: 10px;
+    line-height: 1.55;
+  }
+  .route-details {
+    margin-top: 12px;
+    border-top: 1px solid var(--tag-border);
+    text-align: left;
+  }
+  .route-details summary {
+    padding: 8px 0 2px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-size: 11px;
+  }
   .custom-loop-row {
     display: flex;
     align-items: center;
