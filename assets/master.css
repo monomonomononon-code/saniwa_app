@@ -198,7 +198,8 @@
     padding: 12px;
   }
   .add-char-form.open { display: block; }
-  .add-char-form input {
+  .add-char-form input,
+  .add-char-form select {
     width: 100%;
     background: #fff;
     border: 1px solid var(--tag-border);
