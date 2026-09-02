@@ -15,6 +15,7 @@
   let mapCategory = "";
   let selectedBattlefield = "";
   let selectedStage = "";
+  let selectedEncounter = "normal";
   let selectedBattleResult = "";
   let selectedMvp = "部隊内で均等";
   let isDoubleExperience = false;
@@ -23,7 +24,7 @@
     past: ["①維新の記憶", "②江戸の記憶"],
     event: ["大阪城", "夜花奪還作成"]
   };
-  const ISSHIN_STAGES = ["1-1 箱館", "1-2 会津", "1-3 宇都宮", "1-4 鳥羽"];
+  const ISSHIN_STAGES = ["1-1 函館", "1-2 会津", "1-3 宇都宮", "1-4 鳥羽"];
 
   function notify(text) {
     try { window.parent && window.parent.postMessage({ source: "expcalc", text: text }, "*"); }
@@ -208,6 +209,7 @@
           mapCategory = category;
           selectedBattlefield = "";
           selectedStage = "";
+          selectedEncounter = "normal";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
           isDoubleExperience = false;
@@ -229,6 +231,7 @@
         battlefieldSelect.onchange = e => {
           selectedBattlefield = e.target.value;
           selectedStage = "";
+          selectedEncounter = "normal";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
           isDoubleExperience = false;
@@ -247,6 +250,7 @@
           stageSelect.value = selectedStage;
           stageSelect.onchange = e => {
             selectedStage = e.target.value;
+            selectedEncounter = "normal";
             selectedBattleResult = "";
             selectedMvp = "部隊内で均等";
             isDoubleExperience = false;
@@ -255,13 +259,27 @@
           mapSelector.appendChild(stageSelect);
 
           if (selectedStage) {
+            const encounterLabel = document.createElement("div");
+            encounterLabel.className = "select-label battlefield-label";
+            encounterLabel.textContent = "戦闘種別";
+            mapSelector.appendChild(encounterLabel);
+            const encounterSelect = document.createElement("select");
+            encounterSelect.className = "char-select battlefield-select";
+            encounterSelect.innerHTML = `<option value="normal">道中戦</option><option value="boss">ボス戦</option>`;
+            encounterSelect.value = selectedEncounter;
+            encounterSelect.onchange = e => {
+              selectedEncounter = e.target.value;
+              render();
+            };
+            mapSelector.appendChild(encounterSelect);
+
             const resultLabel = document.createElement("div");
             resultLabel.className = "select-label battlefield-label";
             resultLabel.textContent = "想定する戦闘結果";
             mapSelector.appendChild(resultLabel);
             const resultSelect = document.createElement("select");
             resultSelect.className = "char-select battlefield-select";
-            resultSelect.innerHTML = `<option value="">選択してください</option>${["完全勝利S", "勝利A", "勝利B", "勝利C"].map(name => `<option value="${name}">${name}</option>`).join("")}`;
+            resultSelect.innerHTML = `<option value="">選択してください</option>${["完全勝利S", "勝利A", "勝利B", "勝利C", "敗北"].map(name => `<option value="${name}">${name}</option>`).join("")}`;
             resultSelect.value = selectedBattleResult;
             resultSelect.onchange = e => {
               selectedBattleResult = e.target.value;
@@ -296,10 +314,15 @@
               const doubleExperienceCheck = document.createElement("input");
               doubleExperienceCheck.type = "checkbox";
               doubleExperienceCheck.checked = isDoubleExperience;
-              doubleExperienceCheck.onchange = e => { isDoubleExperience = e.target.checked; };
+              doubleExperienceCheck.onchange = e => {
+                isDoubleExperience = e.target.checked;
+                render();
+              };
               doubleExperienceRow.appendChild(doubleExperienceCheck);
               doubleExperienceRow.append("経験値2倍CP");
               mapSelector.appendChild(doubleExperienceRow);
+
+              renderCalculatedExperience(mapSelector, c);
             }
           }
         }
@@ -321,6 +344,40 @@
     expCard.appendChild(result);
 
     el.appendChild(expCard);
+  }
+
+  function renderCalculatedExperience(container, character) {
+    const calculator = window.ExperienceCalculator;
+    if (!calculator) return;
+    const baseExperience = calculator.getMapExperience(selectedStage, selectedEncounter);
+    const resultCard = document.createElement("div");
+    resultCard.className = "calculated-experience";
+
+    if (baseExperience === null) {
+      resultCard.classList.add("pending");
+      resultCard.textContent = "このマップの基礎経験値は準備中です";
+      container.appendChild(resultCard);
+      return;
+    }
+
+    const unitSize = characters.filter(member => member.unit === character.unit).length;
+    const calculation = calculator.calculateExperience({
+      baseExperience,
+      isCaptain: character.isCaptain,
+      mvpMode: selectedMvp,
+      unitSize,
+      rank: selectedBattleResult,
+      isDoubleExperience
+    });
+    if (!calculation.valid) return;
+
+    const encounterLabel = selectedEncounter === "boss" ? "ボス戦" : "道中戦";
+    resultCard.innerHTML = `
+      <div class="calculated-experience-label">1戦あたりの獲得経験値（${encounterLabel}）</div>
+      <div class="calculated-experience-value">${calculator.formatExperience(calculation.rawExperience)}</div>
+      <div class="calculated-experience-detail">基礎 ${baseExperience} × 補正 ${calculation.totalMultiplier.toFixed(4)}</div>
+    `;
+    container.appendChild(resultCard);
   }
 
   function makeRow(labelText, c, key) {
