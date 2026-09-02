@@ -49,7 +49,7 @@
     const header = document.createElement("div");
     header.className = "header";
     header.innerHTML = `
-      <h1><span class="seal">験</span>経験値計算機</h1>
+      <h1><span class="seal">戦</span>経験値計算機</h1>
       <p>刀剣男士を選んでから、経験値を入力してください。</p>
     `;
     el.appendChild(header);
