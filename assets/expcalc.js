@@ -56,7 +56,7 @@
     const header = document.createElement("div");
     header.className = "header";
     header.innerHTML = `
-      <h1><span class="seal">戦</span>計算メニュー</h1>
+      <h1><span class="seal">戦</span>戦績</h1>
       <p>利用する計算機を選択してください。</p>
     `;
     el.appendChild(header);
@@ -85,7 +85,7 @@
   function addBackToMenu(el) {
     const button = document.createElement("button");
     button.className = "tool-menu-back";
-    button.textContent = "← 計算メニュー";
+    button.textContent = "← 戦績";
     button.onclick = () => { activeTool = null; render(); };
     el.appendChild(button);
   }
