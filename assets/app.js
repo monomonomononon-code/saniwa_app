@@ -31,24 +31,24 @@
     </div>
     <div class="banner-dots" id="banner-dots"></div>
     <div class="icon-grid">
-      <button class="app-icon-btn" id="open-rooms">
-        <div class="app-icon-glyph rooms">丸</div>
-        <div class="app-icon-label">部屋割り</div>
+      <button class="app-icon-btn" id="open-master">
+        <div class="app-icon-glyph master">刀</div>
+        <div class="app-icon-label">刀剣男士</div>
       </button>
       <button class="app-icon-btn" id="open-network">
         <div class="app-icon-glyph network">縁</div>
         <div class="app-icon-label">相関図</div>
       </button>
-      <button class="app-icon-btn" id="open-master">
-        <div class="app-icon-glyph master">刀</div>
-        <div class="app-icon-label">刀剣男士</div>
+      <button class="app-icon-btn" id="open-rooms">
+        <div class="app-icon-glyph rooms">丸</div>
+        <div class="app-icon-label">部屋割り</div>
       </button>
       <button class="app-icon-btn soon" id="open-honmaru">
         <div class="app-icon-glyph soon">本</div>
         <div class="app-icon-label">本丸設定</div>
       </button>
     </div>
-
+    <div class="home-note">アイコンをタップすると各ツールが開きます。戻るときは上の「← ホーム」から。</div>
     <div class="feed-section">
       <div class="feed-title"><span class="dot"></span>最近の更新</div>
       <div class="feed-list" id="feed-list"></div>
