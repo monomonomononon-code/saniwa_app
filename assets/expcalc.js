@@ -347,9 +347,8 @@
     resultCard.className = "calculated-experience";
 
     const unitSize = characters.filter(member => member.unit === character.unit).length;
-    const calculation = calculator.calculateRouteExperience({
+    const calculation = calculator.calculateMapExpectedExperience({
       stageName: selectedStage,
-      routeId: "boss",
       isCaptain: character.isCaptain,
       mvpMode: selectedMvp,
       unitSize,
@@ -358,7 +357,9 @@
     });
     if (!calculation.valid) {
       resultCard.classList.add("pending");
-      resultCard.textContent = "経験値データ未登録";
+      resultCard.textContent = calculation.reason === "route_probability_data_missing"
+        ? "ルート確率データ未登録"
+        : "経験値データ未登録";
       container.appendChild(resultCard);
       return;
     }
@@ -366,7 +367,7 @@
     resultCard.innerHTML = `
       <div class="calculated-experience-label">1周あたりの獲得経験値</div>
       <div class="calculated-experience-value">${calculator.formatExperience(calculation.rawExperience)}</div>
-      <div class="calculated-experience-detail">${calculation.route.label}：${calculation.battles.map(result => `${result.battle.label} ${result.battle.baseExperience}`).join(" ＋ ")}</div>
+      <div class="calculated-experience-detail">${calculation.battles.map(result => `${result.node.label} ${result.node.baseExperience}（到達率 ${(result.arrivalProbability * 100).toFixed(1)}%）`).join(" ＋ ")}</div>
     `;
 
     const totals = document.createElement("div");
