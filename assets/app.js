@@ -45,7 +45,7 @@
       </button>
       <button class="app-icon-btn" id="open-expcalc">
         <div class="app-icon-glyph expcalc">戦</div>
-        <div class="app-icon-label">経験値計算</div>
+        <div class="app-icon-label">戦績</div>
       </button>
       <button class="app-icon-btn soon" id="open-honmaru">
         <div class="app-icon-glyph soon">本</div>
