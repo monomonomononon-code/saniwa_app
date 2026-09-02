@@ -115,6 +115,100 @@
     ]
   };
 
+  // 江戸の記憶：明示されたマス種別・接続・終点のみを登録。
+  MAP_EXPERIENCE["2-1 鳥羽"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 120 },
+      B: { id: "B", type: "resource", label: "B（玉鋼）", terminal: "other" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 120, terminal: "other" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 120 },
+      E: { id: "E", type: "resource", label: "E（砥石）" },
+      F: { id: "F", type: "boss", label: "F", baseExperience: 360, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: null },
+      { from: "sortie", to: "D", probability: null },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "C", probability: null },
+      { from: "D", to: "E", probability: 1 },
+      { from: "E", to: "F", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["2-2 江戸"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 140 },
+      B: { id: "B", type: "resource", label: "B（木炭）" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 140, terminal: "other" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 140 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 140 },
+      F: { id: "F", type: "boss", label: "F", baseExperience: 420, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "E", probability: null },
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "D", probability: null },
+      { from: "D", to: "F", probability: 1 },
+      { from: "E", to: "F", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["2-3 江戸（元禄）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 170 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 170 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 170, terminal: "other" },
+      D: { id: "D", type: "resource", label: "D（冷却材）" },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 170 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 170 },
+      G: { id: "G", type: "boss", label: "G", baseExperience: 510, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: null },
+      { from: "sortie", to: "E", probability: null },
+      { from: "A", to: "B", probability: 1 },
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "G", probability: null },
+      { from: "E", to: "D", probability: null },
+      { from: "E", to: "F", probability: null },
+      // 東南側ルートはボス到達固定という指定に基づく確定遷移です。
+      { from: "D", to: "G", probability: 1 },
+      { from: "F", to: "G", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["2-4 大阪（大阪冬の陣）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 200 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 200, terminal: "other" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 200 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 200 },
+      E: { id: "E", type: "boss", label: "E", baseExperience: 600, terminal: "boss" },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 200 },
+      G: { id: "G", type: "resource", label: "G（依頼札）", terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "C", probability: null },
+      { from: "C", to: "D", probability: null },
+      { from: "C", to: "F", probability: null },
+      // ボス到達時の戦闘回数が4回という指定に基づく確定遷移です。
+      { from: "D", to: "E", probability: 1 },
+      { from: "F", to: "G", probability: 1 }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
