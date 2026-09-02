@@ -347,38 +347,82 @@
     resultCard.className = "calculated-experience";
 
     const unitSize = characters.filter(member => member.unit === character.unit).length;
-    const calculation = calculator.calculateMapExpectedExperience({
+    const calculationOptions = {
       stageName: selectedStage,
       isCaptain: character.isCaptain,
       mvpMode: selectedMvp,
       unitSize,
       rank: selectedBattleResult,
       isDoubleExperience
-    });
-    if (!calculation.valid) {
+    };
+    const routeOutcomes = calculator.calculateMapRouteOutcomes(calculationOptions);
+    if (!routeOutcomes.valid) {
       resultCard.classList.add("pending");
-      resultCard.textContent = calculation.reason === "route_probability_data_missing"
-        ? "ルート確率データ未登録"
+      resultCard.textContent = routeOutcomes.reason === "route_structure_data_missing"
+        ? "ルート構造データ未登録"
         : "経験値データ未登録";
       container.appendChild(resultCard);
       return;
     }
 
-    resultCard.innerHTML = `
-      <div class="calculated-experience-label">1周あたりの獲得経験値</div>
-      <div class="calculated-experience-value">${calculator.formatExperience(calculation.rawExperience)}</div>
-      <div class="calculated-experience-detail">${calculation.battles.map(result => `${result.node.label} ${result.node.baseExperience}（到達率 ${(result.arrivalProbability * 100).toFixed(1)}%）`).join(" ＋ ")}</div>
-    `;
+    if (routeOutcomes.probabilitiesConfigured) {
+      const expected = calculator.calculateMapExpectedExperience(calculationOptions);
+      if (expected.valid) {
+        resultCard.innerHTML = `
+          <div class="calculated-experience-label">1周あたりの獲得経験値</div>
+          <div class="calculated-experience-value">${calculator.formatExperience(expected.rawExperience)}</div>
+          <div class="calculated-experience-detail">平均期待値（ボス到達率 ${(expected.bossArrivalProbability * 100).toFixed(1)}%）</div>
+        `;
+        appendLoopTotals(resultCard, calculator, expected.rawExperience);
+        appendCustomLoopInput(resultCard, calculator, expected.rawExperience);
+        container.appendChild(resultCard);
+        return;
+      }
+    }
 
+    if (routeOutcomes.allOutcomesEqual) {
+      resultCard.innerHTML = `
+        <div class="calculated-experience-label">1周あたりの獲得経験値</div>
+        <div class="calculated-experience-value">${calculator.formatExperience(routeOutcomes.minExperience)}</div>
+        <div class="calculated-experience-detail">すべての到達可能ルートで獲得経験値が同一です</div>
+      `;
+      appendLoopTotals(resultCard, calculator, routeOutcomes.minExperience);
+      appendCustomLoopInput(resultCard, calculator, routeOutcomes.minExperience);
+      container.appendChild(resultCard);
+      return;
+    }
+
+    resultCard.innerHTML = `<div class="calculated-experience-label">1周の獲得経験値（ルート別）</div>`;
+    routeOutcomes.outcomes.forEach(outcome => {
+      const row = document.createElement("div");
+      row.className = "route-outcome";
+      const routeLabel = outcome.terminal.terminal === "boss" ? "ボス到達時" : "逸れ時";
+      row.innerHTML = `<span>${routeLabel}（${outcome.terminal.label}）</span><strong>${calculator.formatExperience(outcome.rawExperience)} EXP</strong>`;
+      resultCard.appendChild(row);
+    });
+    const unavailable = document.createElement("div");
+    unavailable.className = "expected-unavailable";
+    unavailable.textContent = "平均期待値：分岐確率不明のため算出不可";
+    resultCard.appendChild(unavailable);
+    appendLoopTotals(resultCard, calculator, routeOutcomes.minExperience, routeOutcomes.maxExperience);
+    appendCustomLoopInput(resultCard, calculator, routeOutcomes.minExperience, routeOutcomes.maxExperience);
+    container.appendChild(resultCard);
+  }
+
+  function appendLoopTotals(card, calculator, minExperience, maxExperience) {
     const totals = document.createElement("div");
     totals.className = "loop-totals";
     [10, 50, 100, 200, 500].forEach(count => {
       const row = document.createElement("div");
-      row.innerHTML = `<span>${count}周</span><strong>${calculator.formatExperience(calculation.rawExperience * count)}</strong>`;
+      const minimum = calculator.formatExperience(minExperience * count);
+      const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
+      row.innerHTML = `<span>${count}周</span><strong>${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`}</strong>`;
       totals.appendChild(row);
     });
-    resultCard.appendChild(totals);
+    card.appendChild(totals);
+  }
 
+  function appendCustomLoopInput(card, calculator, minExperience, maxExperience) {
     const customRow = document.createElement("div");
     customRow.className = "custom-loop-row";
     const customLabel = document.createElement("label");
@@ -393,13 +437,16 @@
     customResult.className = "custom-loop-result";
     customInput.oninput = e => {
       const count = Number(e.target.value);
-      customResult.textContent = Number.isInteger(count) && count > 0
-        ? `${count}周：${calculator.formatExperience(calculation.rawExperience * count)}`
-        : "";
+      if (!Number.isInteger(count) || count <= 0) {
+        customResult.textContent = "";
+        return;
+      }
+      const minimum = calculator.formatExperience(minExperience * count);
+      const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
+      customResult.textContent = `${count}周：${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP`;
     };
     customRow.append(customLabel, customInput);
-    resultCard.append(customRow, customResult);
-    container.appendChild(resultCard);
+    card.append(customRow, customResult);
   }
 
   function makeRow(labelText, c, key) {
