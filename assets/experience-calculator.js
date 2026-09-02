@@ -38,6 +38,73 @@
     "2-4 大阪（大阪冬の陣）": createStandardBossRouteMap("2-4-osaka-winter", 200, 600)
   };
 
+  // 維新の記憶：ユーザーから明示されたマス・接続情報のみを登録。
+  // probability: null は「確率未設定」を表し、期待値計算を停止させます。
+  MAP_EXPERIENCE["1-1 函館"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 30 },
+      B: { id: "B", type: "boss", label: "B", baseExperience: 90, terminal: "boss" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 30, terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "C", probability: null }
+    ]
+  };
+
+  MAP_EXPERIENCE["1-2 会津"].graph = {
+    startNodeId: "sortie",
+    guaranteedBossArrival: true,
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "unknown", label: "A", knownTerminalId: "D" },
+      B: { id: "B", type: "unknown", label: "B", knownTerminalId: "D" },
+      C: { id: "C", type: "resource", label: "C" },
+      D: { id: "D", type: "boss", label: "D", baseExperience: 150, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: null },
+      { from: "sortie", to: "B", probability: null }
+    ]
+  };
+
+  MAP_EXPERIENCE["1-3 宇都宮"].graph = {
+    startNodeId: null,
+    nodes: {
+      A: { id: "A", type: "normal", label: "A", baseExperience: 80 },
+      B: { id: "B", type: "resource", label: "B" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 80, terminal: "other" },
+      D: { id: "D", type: "boss", label: "D", baseExperience: 240, terminal: "boss" }
+    },
+    connections: [
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "D", probability: null }
+    ]
+  };
+
+  MAP_EXPERIENCE["1-4 鳥羽"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 100 },
+      B: { id: "B", type: "resource", label: "B" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 100 },
+      D: { id: "D", type: "resource", label: "D" },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 100 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 100 },
+      G: { id: "G", type: "boss", label: "G", baseExperience: 300, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: null },
+      { from: "sortie", to: "C", probability: null },
+      { from: "E", to: "F", probability: null },
+      { from: "E", to: "G", probability: null }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
