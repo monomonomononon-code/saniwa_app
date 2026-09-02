@@ -3,11 +3,12 @@
     "山姥切国広","歌仙兼定","加州清光","陸奥守吉行","蜂須賀虎徹",
     "堀川国広","薬研藤四郎","髭切","膝丸","一期一振"
   ];
+  const SWORD_TYPES = ["短刀", "脇差", "打刀", "太刀", "大太刀", "槍", "薙刀", "剣"];
 
   let characters = CHAR_NAMES.map((n, i) => ({
     id: "c" + i, name: n,
     swordType: "", height: "", hobby: "", formerOwner: "",
-    personality: "", memo: "", activationDate: "", unit: "", isCaptain: false
+    personality: "", memo: "", activationDate: "", unit: "", isCaptain: false, isKiwame: false
   }));
 
 
@@ -51,7 +52,7 @@
         c = {
           id: sc.id, name: sc.name, swordType: "",
           height: "", hobby: "", formerOwner: "", personality: "", memo: "",
-          activationDate: "", unit: "", isCaptain: false
+          activationDate: "", unit: "", isCaptain: false, isKiwame: false
         };
         characters.push(c);
         changed = true;
@@ -107,7 +108,10 @@
     addForm.className = "add-char-form";
     addForm.innerHTML = `
       <input id="new-char-name" placeholder="名前(例：獅子王)" />
-      <input id="new-char-type" placeholder="刀種(例：太刀)" />
+      <select id="new-char-type">
+        <option value="">刀種を選択</option>
+        ${SWORD_TYPES.map(type => `<option value="${type}">${type}</option>`).join("")}
+      </select>
       <button class="add-char-submit" id="new-char-submit">この内容で追加</button>
     `;
     addToggle.onclick = () => addForm.classList.toggle("open");
@@ -129,7 +133,7 @@
           name,
           swordType: typeEl.value.trim(),
           height: "", hobby: "", formerOwner: "", personality: "", memo: "",
-          activationDate: "", unit: "", isCaptain: false
+          activationDate: "", unit: "", isCaptain: false, isKiwame: false
         };
         characters.push(newChar);
         notify(`新入り「${newChar.name}」を追加`);
@@ -176,7 +180,32 @@
       card.appendChild(input);
     }
 
-    field("刀種", "swordType", "例：打刀");
+    const swordTypeLabel = document.createElement("div");
+    swordTypeLabel.className = "m-field-label";
+    swordTypeLabel.textContent = "刀種";
+    card.appendChild(swordTypeLabel);
+    const swordTypeSelect = document.createElement("select");
+    swordTypeSelect.className = "m-input";
+    swordTypeSelect.innerHTML = `<option value="">未選択</option>${SWORD_TYPES.map(type => `<option value="${type}">${type}</option>`).join("")}`;
+    swordTypeSelect.value = c.swordType;
+    swordTypeSelect.onchange = e => {
+      c.swordType = e.target.value;
+      if (!c.swordType) c.isKiwame = false;
+      render();
+    };
+    card.appendChild(swordTypeSelect);
+
+    if (c.swordType) {
+      const kiwameRow = document.createElement("div");
+      kiwameRow.className = "toggle-row";
+      kiwameRow.innerHTML = `<div class="tlabel">極にする</div>`;
+      const kiwameBtn = document.createElement("button");
+      kiwameBtn.className = "toggle-switch" + (c.isKiwame ? " on" : "");
+      kiwameBtn.innerHTML = `<span class="knob"></span>`;
+      kiwameBtn.onclick = () => { c.isKiwame = !c.isKiwame; render(); };
+      kiwameRow.appendChild(kiwameBtn);
+      card.appendChild(kiwameRow);
+    }
 
     const dateLabel = document.createElement("div");
     dateLabel.className = "m-field-label";
