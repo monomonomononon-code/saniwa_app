@@ -173,7 +173,7 @@
         teammates.forEach(member => {
           const row = document.createElement("div");
           row.className = "unit-member";
-          row.innerHTML = `<span>${member.name}</span><span>${member.swordType || "刀種未設定"}${member.isKiwame ? "　極" : "　未極"}</span>`;
+          row.innerHTML = `<span>${member.name}</span><span>${member.swordType || "刀種未設定"}${member.isKiwame ? "　極" : "　初"}</span>`;
           unitCard.appendChild(row);
         });
       }
