@@ -11,6 +11,7 @@
   }));
 
   let selectedId = characters[0] ? characters[0].id : null;
+  let activeTool = null;
 
   function notify(text) {
     try { window.parent && window.parent.postMessage({ source: "expcalc", text: text }, "*"); }
@@ -43,8 +44,70 @@
   function root() { return document.getElementById("app"); }
 
   function render() {
+    if (activeTool === "experience") return renderExperience();
+    if (activeTool === "event") return renderEventNorm();
+    renderToolMenu();
+  }
+
+  function renderToolMenu() {
     const el = root();
     el.innerHTML = "";
+
+    const header = document.createElement("div");
+    header.className = "header";
+    header.innerHTML = `
+      <h1><span class="seal">戦</span>計算メニュー</h1>
+      <p>利用する計算機を選択してください。</p>
+    `;
+    el.appendChild(header);
+
+    const menu = document.createElement("div");
+    menu.className = "tool-menu";
+    menu.appendChild(makeToolButton("戦", "経験値計算", "目標までに必要な周回数を計算", () => {
+      activeTool = "experience";
+      render();
+    }));
+    menu.appendChild(makeToolButton("祭", "イベントノルマ", "イベント向けの計算機（準備中）", () => {
+      activeTool = "event";
+      render();
+    }));
+    el.appendChild(menu);
+  }
+
+  function makeToolButton(glyph, title, description, action) {
+    const button = document.createElement("button");
+    button.className = "tool-menu-button";
+    button.innerHTML = `<span class="tool-menu-icon">${glyph}</span><span><strong>${title}</strong><small>${description}</small></span>`;
+    button.onclick = action;
+    return button;
+  }
+
+  function addBackToMenu(el) {
+    const button = document.createElement("button");
+    button.className = "tool-menu-back";
+    button.textContent = "← 計算メニュー";
+    button.onclick = () => { activeTool = null; render(); };
+    el.appendChild(button);
+  }
+
+  function renderEventNorm() {
+    const el = root();
+    el.innerHTML = "";
+    addBackToMenu(el);
+
+    const header = document.createElement("div");
+    header.className = "header";
+    header.innerHTML = `
+      <h1><span class="seal">祭</span>イベントノルマ</h1>
+      <p>準備中です。</p>
+    `;
+    el.appendChild(header);
+  }
+
+  function renderExperience() {
+    const el = root();
+    el.innerHTML = "";
+    addBackToMenu(el);
 
     const header = document.createElement("div");
     header.className = "header";
