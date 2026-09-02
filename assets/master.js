@@ -4,6 +4,8 @@
     "堀川国広","薬研藤四郎","髭切","膝丸","一期一振"
   ];
   const SWORD_TYPES = ["短刀", "脇差", "打刀", "太刀", "大太刀", "槍", "薙刀", "剣"];
+  const UNITS = ["第一部隊", "第二部隊", "第三部隊", "第四部隊", "第五部隊"];
+  const UNIT_CAPACITY = 6;
 
   let characters = CHAR_NAMES.map((n, i) => ({
     id: "c" + i, name: n,
@@ -147,6 +149,10 @@
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
+  function unitMembers(unit) {
+    return characters.filter(character => character.unit === unit);
+  }
+
   function renderEditModal(charId) {
     const c = characters.find(x => x.id === charId);
     if (!c) return document.createElement("div");
@@ -224,32 +230,45 @@
     card.appendChild(unitLabel);
     const unitSelect = document.createElement("select");
     unitSelect.className = "m-input";
-    unitSelect.innerHTML = `
-      <option value="">未選択</option>
-      <option value="第一部隊">第一部隊</option>
-      <option value="第二部隊">第二部隊</option>
-      <option value="第三部隊">第三部隊</option>
-      <option value="第四部隊">第四部隊</option>
-      <option value="第五部隊">第五部隊</option>
-    `;
+    unitSelect.innerHTML = `<option value="">未選択</option>${UNITS.map(unit => {
+      const isFull = unit !== c.unit && unitMembers(unit).length >= UNIT_CAPACITY;
+      return `<option value="${unit}"${isFull ? " disabled" : ""}>${unit}${isFull ? "（定員）" : ""}</option>`;
+    }).join("")}`;
     unitSelect.value = c.unit;
     unitSelect.onchange = e => {
-      c.unit = e.target.value;
-      if (!c.unit) c.isCaptain = false;
+      const nextUnit = e.target.value;
+      if (nextUnit && nextUnit !== c.unit && unitMembers(nextUnit).length >= UNIT_CAPACITY) return;
+      if (nextUnit !== c.unit) c.isCaptain = false;
+      c.unit = nextUnit;
       render();
     };
     card.appendChild(unitSelect);
 
     if (c.unit) {
-      const captainRow = document.createElement("div");
-      captainRow.className = "toggle-row";
-      captainRow.innerHTML = `<div class="tlabel">部隊長にする</div>`;
-      const captainBtn = document.createElement("button");
-      captainBtn.className = "toggle-switch" + (c.isCaptain ? " on" : "");
-      captainBtn.innerHTML = `<span class="knob"></span>`;
-      captainBtn.onclick = () => { c.isCaptain = !c.isCaptain; render(); };
-      captainRow.appendChild(captainBtn);
-      card.appendChild(captainRow);
+      const existingCaptain = unitMembers(c.unit).find(member => member.id !== c.id && member.isCaptain);
+      if (existingCaptain) {
+        const captainStatus = document.createElement("div");
+        captainStatus.className = "unit-status";
+        captainStatus.textContent = `${existingCaptain.name}が隊長です`;
+        card.appendChild(captainStatus);
+      } else {
+        const captainRow = document.createElement("div");
+        captainRow.className = "toggle-row";
+        captainRow.innerHTML = `<div class="tlabel">部隊長にする</div>`;
+        const captainBtn = document.createElement("button");
+        captainBtn.className = "toggle-switch" + (c.isCaptain ? " on" : "");
+        captainBtn.innerHTML = `<span class="knob"></span>`;
+        captainBtn.onclick = () => {
+          const willBeCaptain = !c.isCaptain;
+          if (willBeCaptain) {
+            unitMembers(c.unit).forEach(member => { if (member.id !== c.id) member.isCaptain = false; });
+          }
+          c.isCaptain = willBeCaptain;
+          render();
+        };
+        captainRow.appendChild(captainBtn);
+        card.appendChild(captainRow);
+      }
     }
 
     field("身長", "height", "例：170cm");
