@@ -15,6 +15,7 @@
   let mapCategory = "";
   let selectedBattlefield = "";
   let selectedStage = "";
+  let selectedBattleResult = "";
 
   const BATTLEFIELDS = {
     past: ["①維新の記憶", "②江戸の記憶"],
@@ -205,6 +206,7 @@
           mapCategory = category;
           selectedBattlefield = "";
           selectedStage = "";
+          selectedBattleResult = "";
           render();
         };
         mapButtons.appendChild(button);
@@ -223,6 +225,7 @@
         battlefieldSelect.onchange = e => {
           selectedBattlefield = e.target.value;
           selectedStage = "";
+          selectedBattleResult = "";
           render();
         };
         mapSelector.appendChild(battlefieldSelect);
@@ -236,8 +239,25 @@
           stageSelect.className = "char-select battlefield-select";
           stageSelect.innerHTML = `<option value="">選択してください</option>${ISSHIN_STAGES.map(name => `<option value="${name}">${name}</option>`).join("")}`;
           stageSelect.value = selectedStage;
-          stageSelect.onchange = e => { selectedStage = e.target.value; };
+          stageSelect.onchange = e => {
+            selectedStage = e.target.value;
+            selectedBattleResult = "";
+            render();
+          };
           mapSelector.appendChild(stageSelect);
+
+          if (selectedStage) {
+            const resultLabel = document.createElement("div");
+            resultLabel.className = "select-label battlefield-label";
+            resultLabel.textContent = "想定する戦闘結果";
+            mapSelector.appendChild(resultLabel);
+            const resultSelect = document.createElement("select");
+            resultSelect.className = "char-select battlefield-select";
+            resultSelect.innerHTML = `<option value="">選択してください</option>${["完全勝利S", "勝利A", "勝利B", "勝利C"].map(name => `<option value="${name}">${name}</option>`).join("")}`;
+            resultSelect.value = selectedBattleResult;
+            resultSelect.onchange = e => { selectedBattleResult = e.target.value; };
+            mapSelector.appendChild(resultSelect);
+          }
         }
       }
       el.appendChild(mapSelector);
