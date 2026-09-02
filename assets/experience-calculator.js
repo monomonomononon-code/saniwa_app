@@ -1,13 +1,18 @@
 (function (global) {
   "use strict";
 
-  // マップごとに道中・ボスを分け、さらに cells にマス別の経験値を追加できる構造です。
+  // routes は分岐に備えて複数持てます。各 battles 要素がルート上の戦闘マスです。
   const MAP_EXPERIENCE = {
     "1-1 函館": {
       id: "1-1-hakodate",
-      encounters: {
-        normal: { label: "道中戦", baseExperience: 30, cells: {} },
-        boss: { label: "ボス戦", baseExperience: 90, cells: {} }
+      routes: {
+        boss: {
+          label: "ボス到達ルート",
+          battles: [
+            { id: "normal-1", cellId: "A", type: "normal", label: "道中戦", baseExperience: 30 },
+            { id: "boss", cellId: "BOSS", type: "boss", label: "ボス戦", baseExperience: 90 }
+          ]
+        }
       }
     }
   };
@@ -32,15 +37,18 @@
     return ((size - 1) / size * 1.0) + (1 / size * 2.0);
   }
 
+  function getMapRoute(stageName, routeId) {
+    const map = MAP_EXPERIENCE[stageName];
+    if (!map || !map.routes) return null;
+    return map.routes[routeId] || null;
+  }
+
   function getMapExperience(stageName, encounterType, cellId) {
     const map = MAP_EXPERIENCE[stageName];
-    const encounter = map && map.encounters[encounterType];
-    if (!encounter) return null;
-    // 将来 cells: { "A": { baseExperience: 40 } } のようにマス別設定ができます。
-    const cell = cellId && encounter.cells[cellId];
-    return cell && Number.isFinite(cell.baseExperience)
-      ? cell.baseExperience
-      : encounter.baseExperience;
+    if (!map || !map.routes) return null;
+    const battles = Object.values(map.routes).flatMap(route => route.battles || []);
+    const battle = battles.find(item => item.type === encounterType && (!cellId || item.cellId === cellId));
+    return battle ? battle.baseExperience : null;
   }
 
   function calculateExperience(options) {
@@ -75,6 +83,34 @@
     };
   }
 
+  // 各戦闘マスへ同じ補正ロジックを適用し、ルート全体を合算します。
+  function calculateRouteExperience(options) {
+    const input = options || {};
+    const route = getMapRoute(input.stageName, input.routeId || "boss");
+    if (!route) return { valid: false, reason: "route_missing" };
+    const battleResults = route.battles.map(battle => ({
+      battle,
+      calculation: calculateExperience({
+        baseExperience: battle.baseExperience,
+        isCaptain: input.isCaptain,
+        mvpMode: input.mvpMode,
+        unitSize: input.unitSize,
+        rank: input.rank,
+        isDoubleExperience: input.isDoubleExperience,
+        extraMultipliers: input.extraMultipliers
+      })
+    }));
+    if (battleResults.some(result => !result.calculation.valid)) {
+      return { valid: false, reason: "battle_calculation_failed" };
+    }
+    return {
+      valid: true,
+      route,
+      battles: battleResults,
+      rawExperience: battleResults.reduce((sum, result) => sum + result.calculation.rawExperience, 0)
+    };
+  }
+
   // 丸め規則を計算本体から分離。現在の表示は切り捨てです。
   function roundExperience(value, method) {
     const numericValue = Number(value);
@@ -94,9 +130,11 @@
   const api = {
     MAP_EXPERIENCE,
     RANK_MULTIPLIERS,
+    getMapRoute,
     getMapExperience,
     getMvpMultiplier,
     calculateExperience,
+    calculateRouteExperience,
     roundExperience,
     formatExperience
   };
