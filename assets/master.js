@@ -10,7 +10,7 @@
   let characters = CHAR_NAMES.map((n, i) => ({
     id: "c" + i, name: n,
     swordType: "", height: "", hobby: "", formerOwner: "",
-    personality: "", memo: "", activationDate: "", unit: "", isCaptain: false, isKiwame: false
+    personality: "", memo: "", level: "", activationDate: "", unit: "", isCaptain: false, isKiwame: false
   }));
 
 
@@ -53,7 +53,7 @@
       if (!c) {
         c = {
           id: sc.id, name: sc.name, swordType: "",
-          height: "", hobby: "", formerOwner: "", personality: "", memo: "",
+          height: "", hobby: "", formerOwner: "", personality: "", memo: "", level: "",
           activationDate: "", unit: "", isCaptain: false, isKiwame: false
         };
         characters.push(c);
@@ -92,7 +92,7 @@
       card.className = "char-card";
       card.innerHTML = `
         <div class="ctop">
-          <div class="cname">${c.name}${c.isKiwame ? " 🌸" : ""}</div>
+          <div class="cname">${c.name}${c.level ? ` Lv.${c.level}` : ""}${c.isKiwame ? " 🌸" : ""}</div>
           ${c.isCaptain ? '<div class="ccaptain">隊長</div>' : ""}
         </div>
         <div class="ctype">${c.swordType || "刀種未設定"}${c.unit ? "　" + c.unit + "配属中" : ""}</div>
@@ -136,7 +136,7 @@
           id: "c" + Date.now(),
           name,
           swordType: typeEl.value.trim(),
-          height: "", hobby: "", formerOwner: "", personality: "", memo: "",
+          height: "", hobby: "", formerOwner: "", personality: "", memo: "", level: "",
           activationDate: "", unit: "", isCaptain: false, isKiwame: false
         };
         characters.push(newChar);
@@ -214,6 +214,20 @@
       kiwameRow.appendChild(kiwameBtn);
       card.appendChild(kiwameRow);
     }
+
+    const levelLabel = document.createElement("div");
+    levelLabel.className = "m-field-label";
+    levelLabel.textContent = "レベル";
+    card.appendChild(levelLabel);
+    const levelSelect = document.createElement("select");
+    levelSelect.className = "m-input";
+    levelSelect.innerHTML = `<option value="">未選択</option>${Array.from({ length: 199 }, (_, index) => `<option value="${index + 1}">${index + 1}</option>`).join("")}`;
+    levelSelect.value = c.level || "";
+    levelSelect.onchange = e => {
+      c.level = e.target.value === "" ? "" : Number(e.target.value);
+      render();
+    };
+    card.appendChild(levelSelect);
 
     const dateLabel = document.createElement("div");
     dateLabel.className = "m-field-label";
