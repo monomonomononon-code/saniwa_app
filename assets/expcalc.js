@@ -365,22 +365,7 @@
       return;
     }
 
-    if (routeOutcomes.probabilitiesConfigured) {
-      const expected = calculator.calculateMapExpectedExperience(calculationOptions);
-      if (expected.valid) {
-        resultCard.innerHTML = `
-          <div class="calculated-experience-label">1周あたりの獲得経験値</div>
-          <div class="calculated-experience-value">${calculator.formatExperience(expected.rawExperience)}</div>
-          <div class="calculated-experience-detail">平均期待値（ボス到達率 ${(expected.bossArrivalProbability * 100).toFixed(1)}%）</div>
-        `;
-        appendLoopTotals(resultCard, calculator, expected.rawExperience);
-        appendCustomLoopInput(resultCard, calculator, expected.rawExperience);
-        container.appendChild(resultCard);
-        return;
-      }
-    }
-
-    if (routeOutcomes.allOutcomesEqual) {
+    if (!routeOutcomes.probabilitiesConfigured && routeOutcomes.allOutcomesEqual) {
       resultCard.innerHTML = `
         <div class="calculated-experience-label">1周あたりの獲得経験値</div>
         <div class="calculated-experience-value">${calculator.formatExperience(routeOutcomes.minExperience)}</div>
@@ -392,21 +377,48 @@
       return;
     }
 
-    resultCard.innerHTML = `<div class="calculated-experience-label">1周の獲得経験値（ルート別）</div>`;
-    routeOutcomes.outcomes.forEach(outcome => {
+    const expected = routeOutcomes.probabilitiesConfigured
+      ? calculator.calculateMapExpectedExperience(calculationOptions)
+      : calculator.calculateMapProvisionalExpectedExperience(calculationOptions);
+    if (!expected.valid) {
+      resultCard.classList.add("pending");
+      resultCard.textContent = "ルート構造データ未登録";
+      container.appendChild(resultCard);
+      return;
+    }
+
+    const isProvisional = !routeOutcomes.probabilitiesConfigured && expected.usedProvisionalProbabilities;
+    resultCard.innerHTML = `
+      <div class="calculated-experience-label">${isProvisional ? "1周あたりの暫定期待経験値" : "1周あたりの獲得経験値"}</div>
+      <div class="calculated-experience-value">${calculator.formatExperience(expected.rawExperience)}</div>
+      <div class="calculated-experience-detail">${isProvisional ? "均等確率による暫定計算" : `平均期待値（ボス到達率 ${(expected.bossArrivalProbability * 100).toFixed(1)}%）`}</div>
+    `;
+    if (isProvisional) {
+      const note = document.createElement("div");
+      note.className = "provisional-note";
+      note.textContent = "※分岐確率が未登録のため、各分岐を均等確率として算出した暫定値です";
+      resultCard.appendChild(note);
+    }
+    appendLoopTotals(resultCard, calculator, expected.rawExperience);
+    appendCustomLoopInput(resultCard, calculator, expected.rawExperience);
+    if (isProvisional) appendRouteDetails(resultCard, calculator, routeOutcomes.outcomes);
+    container.appendChild(resultCard);
+  }
+
+  function appendRouteDetails(card, calculator, outcomes) {
+    const details = document.createElement("details");
+    details.className = "route-details";
+    const summary = document.createElement("summary");
+    summary.textContent = "ルート別詳細";
+    details.appendChild(summary);
+    outcomes.forEach(outcome => {
       const row = document.createElement("div");
       row.className = "route-outcome";
       const routeLabel = outcome.terminal.terminal === "boss" ? "ボス到達時" : "逸れ時";
       row.innerHTML = `<span>${routeLabel}（${outcome.terminal.label}）</span><strong>${calculator.formatExperience(outcome.rawExperience)} EXP</strong>`;
-      resultCard.appendChild(row);
+      details.appendChild(row);
     });
-    const unavailable = document.createElement("div");
-    unavailable.className = "expected-unavailable";
-    unavailable.textContent = "平均期待値：分岐確率不明のため算出不可";
-    resultCard.appendChild(unavailable);
-    appendLoopTotals(resultCard, calculator, routeOutcomes.minExperience, routeOutcomes.maxExperience);
-    appendCustomLoopInput(resultCard, calculator, routeOutcomes.minExperience, routeOutcomes.maxExperience);
-    container.appendChild(resultCard);
+    card.appendChild(details);
   }
 
   function appendLoopTotals(card, calculator, minExperience, maxExperience) {
