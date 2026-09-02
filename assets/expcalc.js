@@ -6,7 +6,7 @@
 
   let characters = CHAR_NAMES.map((n, i) => ({
     id: "c" + i, name: n,
-    swordType: "", unit: "", isCaptain: false, isKiwame: false, activationDate: "",
+    swordType: "", level: "", unit: "", isCaptain: false, isKiwame: false, activationDate: "",
     currentExp: null, targetExp: null, perLoopExp: null
   }));
 
@@ -25,13 +25,14 @@
       let c = characters.find(x => x.id === sc.id);
       if (!c) {
         c = {
-          id: sc.id, name: sc.name, swordType: "", unit: "", isCaptain: false, isKiwame: false, activationDate: "",
+          id: sc.id, name: sc.name, swordType: "", level: "", unit: "", isCaptain: false, isKiwame: false, activationDate: "",
           currentExp: null, targetExp: null, perLoopExp: null
         };
         characters.push(c);
       }
       c.name = sc.name;
       c.swordType = sc.swordType || "";
+      c.level = sc.level || "";
       c.unit = sc.unit || "";
       c.isCaptain = !!sc.isCaptain;
       c.isKiwame = !!sc.isKiwame;
@@ -151,6 +152,7 @@
     infoCard.innerHTML = `
       <div class="info-name">${c.name}</div>
       <div class="info-row"><span>刀種</span><span>${c.swordType || ""}</span></div>
+      <div class="info-row"><span>レベル</span><span>${c.level ? `Lv.${c.level}` : ""}</span></div>
       <div class="info-row"><span>配属部隊</span><span>${c.unit || ""}${c.unit && c.isCaptain ? '<span class="captain-badge">部隊長</span>' : ""}</span></div>
       <div class="info-row"><span>顕現した年月日</span><span>${c.activationDate || ""}</span></div>
     `;
@@ -173,7 +175,7 @@
         teammates.forEach(member => {
           const row = document.createElement("div");
           row.className = "unit-member";
-          row.innerHTML = `<span>${member.name}</span><span>${member.swordType || "刀種未設定"}${member.isKiwame ? "　極" : "　初"}</span>`;
+          row.innerHTML = `<span>${member.name}</span><span>${member.swordType || "刀種未設定"}${member.isKiwame ? "　極" : "　初"}${member.level ? `　Lv.${member.level}` : ""}</span>`;
           unitCard.appendChild(row);
         });
       }
