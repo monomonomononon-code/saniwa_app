@@ -12,6 +12,13 @@
 
   let selectedId = characters[0] ? characters[0].id : null;
   let activeTool = null;
+  let mapCategory = "";
+  let selectedBattlefield = "";
+
+  const BATTLEFIELDS = {
+    past: ["①維新の記憶", "②江戸の記憶"],
+    event: ["大阪城", "夜花奪還作成"]
+  };
 
   function notify(text) {
     try { window.parent && window.parent.postMessage({ source: "expcalc", text: text }, "*"); }
@@ -180,6 +187,40 @@
         });
       }
       el.appendChild(unitCard);
+
+      const mapSelector = document.createElement("div");
+      mapSelector.className = "map-selector";
+      const mapButtons = document.createElement("div");
+      mapButtons.className = "map-category-buttons";
+      [
+        ["past", "過去の合戦場"],
+        ["event", "イベントマップ"]
+      ].forEach(([category, label]) => {
+        const button = document.createElement("button");
+        button.className = "map-category-button" + (mapCategory === category ? " selected" : "");
+        button.textContent = mapCategory === category ? `⚔ ${label}` : label;
+        button.onclick = () => {
+          mapCategory = category;
+          selectedBattlefield = "";
+          render();
+        };
+        mapButtons.appendChild(button);
+      });
+      mapSelector.appendChild(mapButtons);
+
+      if (mapCategory) {
+        const battlefieldLabel = document.createElement("div");
+        battlefieldLabel.className = "select-label battlefield-label";
+        battlefieldLabel.textContent = "合戦場を選択";
+        mapSelector.appendChild(battlefieldLabel);
+        const battlefieldSelect = document.createElement("select");
+        battlefieldSelect.className = "char-select battlefield-select";
+        battlefieldSelect.innerHTML = `<option value="">選択してください</option>${BATTLEFIELDS[mapCategory].map(name => `<option value="${name}">${name}</option>`).join("")}`;
+        battlefieldSelect.value = selectedBattlefield;
+        battlefieldSelect.onchange = e => { selectedBattlefield = e.target.value; };
+        mapSelector.appendChild(battlefieldSelect);
+      }
+      el.appendChild(mapSelector);
     }
 
     const expCard = document.createElement("div");
