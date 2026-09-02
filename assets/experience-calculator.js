@@ -272,6 +272,88 @@
     };
   }
 
+  // 公式確率がない分岐だけは、各遷移を均等確率として期待値を算出します。
+  // 公式確率が全て登録されたマップでは、この関数ではなく calculateMapExpectedExperience を使います。
+  function calculateMapProvisionalExpectedExperience(options) {
+    const input = options || {};
+    const map = MAP_EXPERIENCE[input.stageName];
+    const graph = map && map.graph;
+    if (!graph || !graph.startNodeId || !graph.nodes) {
+      return { valid: false, reason: "route_structure_data_missing" };
+    }
+
+    const outgoingByNode = {};
+    for (const connection of graph.connections || []) {
+      if (!connection || !connection.from || !connection.to) {
+        return { valid: false, reason: "route_structure_data_missing" };
+      }
+      (outgoingByNode[connection.from] ||= []).push(connection);
+    }
+
+    const nodeProbabilities = {};
+    let invalidGraph = false;
+    let usedProvisionalProbabilities = false;
+    function visit(nodeId, probability, ancestry) {
+      const node = graph.nodes[nodeId];
+      if (!node || ancestry.includes(nodeId)) {
+        invalidGraph = true;
+        return;
+      }
+      nodeProbabilities[nodeId] = (nodeProbabilities[nodeId] || 0) + probability;
+      if (node.terminal) return;
+
+      const connections = outgoingByNode[nodeId];
+      if (!connections || connections.length === 0) {
+        invalidGraph = true;
+        return;
+      }
+      const officialProbabilities = connections.every(connection => Number.isFinite(connection.probability));
+      const totalProbability = officialProbabilities
+        ? connections.reduce((sum, connection) => sum + connection.probability, 0)
+        : null;
+      if (officialProbabilities && Math.abs(totalProbability - 1) > 1e-9) {
+        invalidGraph = true;
+        return;
+      }
+      if (!officialProbabilities) usedProvisionalProbabilities = true;
+      const fallbackProbability = 1 / connections.length;
+      connections.forEach(connection => {
+        const branchProbability = officialProbabilities ? connection.probability : fallbackProbability;
+        visit(connection.to, probability * branchProbability, [...ancestry, nodeId]);
+      });
+    }
+
+    visit(graph.startNodeId, 1, []);
+    if (invalidGraph) return { valid: false, reason: "route_structure_data_missing" };
+
+    const battleResults = Object.entries(nodeProbabilities)
+      .map(([nodeId, arrivalProbability]) => ({ node: graph.nodes[nodeId], arrivalProbability }))
+      .filter(result => result.node.type === "normal" || result.node.type === "boss")
+      .map(result => ({
+        ...result,
+        calculation: calculateExperience({
+          baseExperience: result.node.baseExperience,
+          isCaptain: input.isCaptain,
+          mvpMode: input.mvpMode,
+          unitSize: input.unitSize,
+          rank: input.rank,
+          isDoubleExperience: input.isDoubleExperience,
+          extraMultipliers: input.extraMultipliers
+        })
+      }));
+    if (battleResults.some(result => !result.calculation.valid)) {
+      return { valid: false, reason: "battle_data_missing" };
+    }
+
+    return {
+      valid: true,
+      map,
+      battles: battleResults,
+      usedProvisionalProbabilities,
+      rawExperience: battleResults.reduce((sum, result) => sum + result.calculation.rawExperience * result.arrivalProbability, 0)
+    };
+  }
+
   // 分岐確率を使わず、開始から各終点までの到達可能なルートを列挙します。
   // 確率未設定でも、ルート別の獲得経験値・最小値・最大値を算出できます。
   function calculateMapRouteOutcomes(options) {
@@ -385,6 +467,7 @@
     calculateExperience,
     calculateRouteExperience,
     calculateMapExpectedExperience,
+    calculateMapProvisionalExpectedExperience,
     calculateMapRouteOutcomes,
     roundExperience,
     formatExperience
