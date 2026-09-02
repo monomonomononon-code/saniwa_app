@@ -411,7 +411,13 @@
     const summary = document.createElement("summary");
     summary.textContent = "ルート別詳細";
     details.appendChild(summary);
-    outcomes.forEach(outcome => {
+    const uniqueOutcomes = outcomes.filter((outcome, index) => {
+      return outcomes.findIndex(other => (
+        other.terminal.id === outcome.terminal.id &&
+        Math.abs(other.rawExperience - outcome.rawExperience) < 1e-9
+      )) === index;
+    });
+    uniqueOutcomes.forEach(outcome => {
       const row = document.createElement("div");
       row.className = "route-outcome";
       const routeLabel = outcome.terminal.terminal === "boss" ? "ボス到達時" : "逸れ時";
