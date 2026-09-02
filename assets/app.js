@@ -48,7 +48,6 @@
         <div class="app-icon-label">本丸設定</div>
       </button>
     </div>
-
     <div class="feed-section">
       <div class="feed-title"><span class="dot"></span>最近の更新</div>
       <div class="feed-list" id="feed-list"></div>
@@ -192,11 +191,7 @@
     backBtn.className = "back-btn";
     backBtn.textContent = "← ホーム";
     backBtn.onclick = () => showView("home-view");
-    const titleEl = document.createElement("div");
-    titleEl.className = "sub-title";
-    titleEl.textContent = title;
     topbar.appendChild(backBtn);
-    topbar.appendChild(titleEl);
     const frameWrap = document.createElement("div");
     frameWrap.className = "sub-frame-wrap";
     const iframe = document.createElement("iframe");
