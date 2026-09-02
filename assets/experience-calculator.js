@@ -272,6 +272,94 @@
     };
   }
 
+  // 分岐確率を使わず、開始から各終点までの到達可能なルートを列挙します。
+  // 確率未設定でも、ルート別の獲得経験値・最小値・最大値を算出できます。
+  function calculateMapRouteOutcomes(options) {
+    const input = options || {};
+    const map = MAP_EXPERIENCE[input.stageName];
+    const graph = map && map.graph;
+    if (!graph || !graph.startNodeId || !graph.nodes) {
+      return { valid: false, reason: "route_structure_data_missing" };
+    }
+
+    const outgoingByNode = {};
+    for (const connection of graph.connections || []) {
+      if (!connection || !connection.from || !connection.to) {
+        return { valid: false, reason: "route_structure_data_missing" };
+      }
+      (outgoingByNode[connection.from] ||= []).push(connection);
+    }
+
+    const paths = [];
+    let invalidGraph = false;
+    function visit(nodeId, nodePath, connectionPath) {
+      const node = graph.nodes[nodeId];
+      if (!node || nodePath.some(item => item.id === nodeId)) {
+        invalidGraph = true;
+        return;
+      }
+      const nextNodePath = [...nodePath, node];
+      if (node.terminal) {
+        paths.push({ nodes: nextNodePath, connections: connectionPath, terminal: node });
+        return;
+      }
+      const connections = outgoingByNode[nodeId];
+      if (!connections || connections.length === 0) {
+        invalidGraph = true;
+        return;
+      }
+      connections.forEach(connection => visit(connection.to, nextNodePath, [...connectionPath, connection]));
+    }
+
+    visit(graph.startNodeId, [], []);
+    if (invalidGraph || paths.length === 0) {
+      return { valid: false, reason: "route_structure_data_missing" };
+    }
+
+    const outcomes = paths.map(path => {
+      const battles = path.nodes
+        .filter(node => node.type === "normal" || node.type === "boss")
+        .map(node => ({
+          node,
+          calculation: calculateExperience({
+            baseExperience: node.baseExperience,
+            isCaptain: input.isCaptain,
+            mvpMode: input.mvpMode,
+            unitSize: input.unitSize,
+            rank: input.rank,
+            isDoubleExperience: input.isDoubleExperience,
+            extraMultipliers: input.extraMultipliers
+          })
+        }));
+      if (battles.some(result => !result.calculation.valid)) {
+        return { invalid: true };
+      }
+      return {
+        terminal: path.terminal,
+        nodes: path.nodes,
+        battles,
+        rawExperience: battles.reduce((sum, result) => sum + result.calculation.rawExperience, 0),
+        probabilityConfigured: path.connections.every(connection => Number.isFinite(connection.probability))
+      };
+    });
+    if (outcomes.some(outcome => outcome.invalid)) {
+      return { valid: false, reason: "battle_data_missing" };
+    }
+
+    const values = outcomes.map(outcome => outcome.rawExperience);
+    const minExperience = Math.min(...values);
+    const maxExperience = Math.max(...values);
+    return {
+      valid: true,
+      map,
+      outcomes,
+      probabilitiesConfigured: outcomes.every(outcome => outcome.probabilityConfigured),
+      allOutcomesEqual: values.every(value => Math.abs(value - values[0]) < 1e-9),
+      minExperience,
+      maxExperience
+    };
+  }
+
   // 丸め規則を計算本体から分離。現在の表示は切り捨てです。
   function roundExperience(value, method) {
     const numericValue = Number(value);
@@ -297,6 +385,7 @@
     calculateExperience,
     calculateRouteExperience,
     calculateMapExpectedExperience,
+    calculateMapRouteOutcomes,
     roundExperience,
     formatExperience
   };
