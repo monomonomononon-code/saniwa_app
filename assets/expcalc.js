@@ -6,7 +6,7 @@
 
   let characters = CHAR_NAMES.map((n, i) => ({
     id: "c" + i, name: n,
-    swordType: "", unit: "", isCaptain: false, activationDate: "",
+    swordType: "", unit: "", isCaptain: false, isKiwame: false, activationDate: "",
     currentExp: null, targetExp: null, perLoopExp: null
   }));
 
@@ -25,7 +25,7 @@
       let c = characters.find(x => x.id === sc.id);
       if (!c) {
         c = {
-          id: sc.id, name: sc.name, swordType: "", unit: "", isCaptain: false, activationDate: "",
+          id: sc.id, name: sc.name, swordType: "", unit: "", isCaptain: false, isKiwame: false, activationDate: "",
           currentExp: null, targetExp: null, perLoopExp: null
         };
         characters.push(c);
@@ -34,6 +34,7 @@
       c.swordType = sc.swordType || "";
       c.unit = sc.unit || "";
       c.isCaptain = !!sc.isCaptain;
+      c.isKiwame = !!sc.isKiwame;
       c.activationDate = sc.activationDate || "";
     });
     if (!selectedId && characters[0]) selectedId = characters[0].id;
@@ -154,6 +155,30 @@
       <div class="info-row"><span>顕現した年月日</span><span>${c.activationDate || ""}</span></div>
     `;
     el.appendChild(infoCard);
+
+    if (c.unit) {
+      const teammates = characters.filter(member => member.id !== c.id && member.unit === c.unit);
+      const unitCard = document.createElement("div");
+      unitCard.className = "unit-card";
+      const unitTitle = document.createElement("div");
+      unitTitle.className = "unit-title";
+      unitTitle.textContent = `${c.unit}の刀剣男士`;
+      unitCard.appendChild(unitTitle);
+      if (teammates.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "unit-empty";
+        empty.textContent = "ほかに配属されている刀剣男士はいません";
+        unitCard.appendChild(empty);
+      } else {
+        teammates.forEach(member => {
+          const row = document.createElement("div");
+          row.className = "unit-member";
+          row.innerHTML = `<span>${member.name}</span><span>${member.swordType || "刀種未設定"}${member.isKiwame ? "　極" : "　未極"}</span>`;
+          unitCard.appendChild(row);
+        });
+      }
+      el.appendChild(unitCard);
+    }
 
     const expCard = document.createElement("div");
     expCard.className = "exp-card";
