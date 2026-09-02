@@ -220,7 +220,7 @@
     "堀川国広","薬研藤四郎","髭切","膝丸","一期一振"
   ];
   let sharedCharacters = SHARED_CHAR_NAMES.map((n, i) => ({
-    id: "c" + i, name: n, swordType: "", activationDate: "", unit: ""
+    id: "c" + i, name: n, swordType: "", activationDate: "", unit: "", isKiwame: false
   }));
 
   const APP_STORAGE_KEY = "saniwa-tool.app.v1";
@@ -293,7 +293,7 @@
       const idx = sharedCharacters.findIndex(c => c.id === data.character.id);
       if (idx === -1) {
         sharedCharacters.push(Object.assign(
-          { id: data.character.id, name: data.character.name, swordType: "", activationDate: "", unit: "" },
+          { id: data.character.id, name: data.character.name, swordType: "", activationDate: "", unit: "", isKiwame: false },
           data.character
         ));
       } else {
