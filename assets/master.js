@@ -92,10 +92,9 @@
       card.className = "char-card";
       card.innerHTML = `
         <div class="ctop">
-          <div class="cname">${c.name}${c.level ? ` Lv.${c.level}` : ""}${c.isKiwame ? " 🌸" : ""}</div>
-          ${c.isCaptain ? '<div class="ccaptain">隊長</div>' : ""}
+          <div class="cname"><span class="character-name">${c.name}</span>${c.level ? `<span class="clevel">Lv.${c.level}</span>` : ""}${c.isKiwame ? '<span class="kiwame-mark">🌸</span>' : ""}</div>
         </div>
-        <div class="ctype">${c.swordType || "刀種未設定"}${c.unit ? "　" + c.unit + "配属中" : ""}</div>
+        <div class="ctype"><span>${c.swordType || "刀種未設定"}</span>${c.unit ? `<span>${c.unit}配属中</span>` : ""}${c.isCaptain ? '<span class="ccaptain">隊長</span>' : ""}</div>
         ${c.memo ? `<div class="cmemo">${escapeHtml(c.memo)}</div>` : ""}
       `;
       card.onclick = () => { editingId = c.id; render(); };
