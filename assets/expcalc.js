@@ -20,10 +20,22 @@
   let isDoubleExperience = false;
 
   const BATTLEFIELDS = {
-    past: ["①維新の記憶", "②江戸の記憶"],
+    past: [
+      "維新の記憶", "江戸の記憶", "織豊の記憶", "戦国の記憶",
+      "武家の記憶", "池田屋の記憶", "延享の記憶", "青野原の記憶"
+    ],
     event: ["大阪城", "夜花奪還作成"]
   };
-  const ISSHIN_STAGES = ["1-1 函館", "1-2 会津", "1-3 宇都宮", "1-4 鳥羽"];
+  const NORMAL_MAPS = {
+    "維新の記憶": ["1-1 函館", "1-2 会津", "1-3 宇都宮", "1-4 鳥羽"],
+    "江戸の記憶": ["2-1 鳥羽", "2-2 江戸", "2-3 江戸（元禄）", "2-4 大阪（大阪冬の陣）"],
+    "織豊の記憶": ["3-1 関ヶ原", "3-2 本能寺", "3-3 越前", "3-4 安土"],
+    "戦国の記憶": ["4-1 長篠", "4-2 三方ヶ原", "4-3 桶狭間", "4-4 京都（西陣）"],
+    "武家の記憶": ["5-1 鎌倉（元弘の乱）", "5-2 博多湾（元寇）", "5-3 墨俣（承久の乱）", "5-4 厚樫山（阿津賀志山の戦い）"],
+    "池田屋の記憶": ["6-1 京都（市中）", "6-2 京都（三条大橋）", "6-3 京都（池田屋二階）", "6-4 京都（池田屋一階）"],
+    "延享の記憶": ["7-1 江戸（新橋）", "7-2 江戸（白金台）", "7-3 江戸（江戸城下）", "7-4 江戸（江戸城内）"],
+    "青野原の記憶": ["8-1 京都（阿弥陀ヶ峰）", "8-2 信濃（上田城）", "8-3 美濃（青野原）", "8-4 京都（五条）"]
+  };
 
   function notify(text) {
     try { window.parent && window.parent.postMessage({ source: "expcalc", text: text }, "*"); }
@@ -236,14 +248,14 @@
         };
         mapSelector.appendChild(battlefieldSelect);
 
-        if (mapCategory === "past" && selectedBattlefield === "①維新の記憶") {
+        if (mapCategory === "past" && NORMAL_MAPS[selectedBattlefield]) {
           const stageLabel = document.createElement("div");
           stageLabel.className = "select-label battlefield-label";
           stageLabel.textContent = "マップを選択";
           mapSelector.appendChild(stageLabel);
           const stageSelect = document.createElement("select");
           stageSelect.className = "char-select battlefield-select";
-          stageSelect.innerHTML = `<option value="">選択してください</option>${ISSHIN_STAGES.map(name => `<option value="${name}">${name}</option>`).join("")}`;
+          stageSelect.innerHTML = `<option value="">選択してください</option>${NORMAL_MAPS[selectedBattlefield].map(name => `<option value="${name}">${name}</option>`).join("")}`;
           stageSelect.value = selectedStage;
           stageSelect.onchange = e => {
             selectedStage = e.target.value;
@@ -346,7 +358,7 @@
     });
     if (!calculation.valid) {
       resultCard.classList.add("pending");
-      resultCard.textContent = "このマップのルート経験値は準備中です";
+      resultCard.textContent = "経験値データ未登録";
       container.appendChild(resultCard);
       return;
     }
