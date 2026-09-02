@@ -210,6 +210,12 @@
   .map-category-button.selected:active { background: var(--wood-dark); }
   .battlefield-label { margin-top: 12px; }
   .battlefield-select { font-size: 14px; }
+  .mvp-note {
+    margin: 6px 2px 0;
+    color: var(--ink-soft);
+    font-size: 10px;
+    line-height: 1.55;
+  }
 
   .exp-card {
     background: var(--tag-bg);
