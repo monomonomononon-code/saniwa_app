@@ -1,0 +1,140 @@
+#app {
+    --paper: #F2EBDD;
+    --paper-deep: #E8DFC9;
+    --wood: #7A4B32;
+    --wood-dark: #5C3722;
+    --gold: #9C7A2E;
+    --gold-dark: #6E5620;
+    --hanko: #A8382C;
+    --ink: #2B2621;
+    --ink-soft: #5C544A;
+    --tag-bg: #FFFDF6;
+    --tag-border: #C9BFA6;
+
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100vh;
+    padding: 20px 14px 60px;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app * { box-sizing: border-box; }
+
+  .header { margin-bottom: 16px; }
+  .header h1 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .header h1 .seal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    background: var(--gold);
+    color: #fff;
+    font-size: 12px;
+    font-family: "Hiragino Mincho ProN", serif;
+    flex-shrink: 0;
+  }
+  .header p { margin: 0; font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
+
+  .select-wrap { margin-bottom: 16px; }
+  .select-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 5px; }
+  .char-select {
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--tag-border);
+    border-radius: 8px;
+    padding: 11px 12px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+
+  .empty-hint {
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: center;
+    padding: 30px 12px;
+    background: var(--paper-deep);
+    border: 1px dashed var(--tag-border);
+    border-radius: 10px;
+  }
+
+  .info-card {
+    background: var(--paper-deep);
+    border: 1px solid var(--tag-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .info-name {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 17px;
+    margin-bottom: 8px;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 5px 0;
+    border-top: 1px solid var(--tag-border);
+  }
+  .info-row span:first-child { color: var(--ink-soft); }
+  .info-row .captain-badge {
+    color: var(--hanko);
+    font-size: 10px;
+    margin-left: 6px;
+  }
+
+  .exp-card {
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 10px;
+    padding: 12px 14px 14px;
+  }
+  .exp-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .exp-row label {
+    width: 116px;
+    flex-shrink: 0;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .exp-row input {
+    flex: 1;
+    min-width: 0;
+    background: #fff;
+    border: 1px solid var(--tag-border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .exp-result {
+    margin-top: 10px;
+    padding: 10px 10px;
+    background: var(--paper-deep);
+    border-radius: 7px;
+    font-size: 14px;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    color: var(--gold-dark);
+    text-align: center;
+  }
+  .exp-result.done { color: var(--hanko); }
+  .exp-result.empty { color: var(--ink-soft); font-family: inherit; font-size: 11.5px; }
+
