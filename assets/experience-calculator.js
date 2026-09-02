@@ -1,20 +1,31 @@
 (function (global) {
   "use strict";
 
-  // routes は分岐に備えて複数持てます。各 battles 要素がルート上の戦闘マスです。
-  const MAP_EXPERIENCE = {
-    "1-1 函館": {
-      id: "1-1-hakodate",
+  function createStandardBossRouteMap(id, normalExperience, bossExperience) {
+    return {
+      id,
       routes: {
         boss: {
           label: "ボス到達ルート",
           battles: [
-            { id: "normal-1", cellId: "A", type: "normal", label: "道中戦", baseExperience: 30 },
-            { id: "boss", cellId: "BOSS", type: "boss", label: "ボス戦", baseExperience: 90 }
+            { id: "normal-1", cellId: "A", type: "normal", label: "道中戦", baseExperience: normalExperience },
+            { id: "boss", cellId: "BOSS", type: "boss", label: "ボス戦", baseExperience: bossExperience }
           ]
         }
       }
-    }
+    };
+  }
+
+  // routes は分岐に備えて複数持てます。各 battles 要素がルート上の戦闘マスです。
+  const MAP_EXPERIENCE = {
+    "1-1 函館": createStandardBossRouteMap("1-1-hakodate", 30, 90),
+    "1-2 会津": createStandardBossRouteMap("1-2-aizu", 50, 150),
+    "1-3 宇都宮": createStandardBossRouteMap("1-3-utsunomiya", 80, 240),
+    "1-4 鳥羽": createStandardBossRouteMap("1-4-toba", 100, 300),
+    "2-1 鳥羽": createStandardBossRouteMap("2-1-toba", 120, 360),
+    "2-2 江戸": createStandardBossRouteMap("2-2-edo", 140, 420),
+    "2-3 江戸（元禄）": createStandardBossRouteMap("2-3-edo-genroku", 170, 510),
+    "2-4 大阪（大阪冬の陣）": createStandardBossRouteMap("2-4-osaka-winter", 200, 600)
   };
 
   const RANK_MULTIPLIERS = {
