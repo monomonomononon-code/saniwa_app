@@ -1,0 +1,513 @@
+html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #F2EBDD;
+  }
+  #app {
+    --paper: #F2EBDD;
+    --paper-deep: #E8DFC9;
+    --wood: #7A4B32;
+    --wood-dark: #5C3722;
+    --moss: #5B6B45;
+    --hanko: #A8382C;
+    --ink: #2B2621;
+    --ink-soft: #5C544A;
+    --tag-border: #C9BFA6;
+
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100vh;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app * { box-sizing: border-box; }
+
+  .view { display: none; min-height: 100vh; }
+  .view.active { display: block; }
+
+  /* ---- ホーム画面 ---- */
+  #home-view { padding: 28px 16px 40px; }
+  .home-header { margin-bottom: 30px; text-align: center; }
+  .home-header .seal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    border-radius: 7px;
+    background: var(--hanko);
+    color: #fff;
+    font-size: 15px;
+    font-family: "Hiragino Mincho ProN", serif;
+    margin-bottom: 8px;
+  }
+  .home-header h1 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    margin: 0 0 6px;
+  }
+  .home-header p {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto 14px;
+  }
+  .search-bar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    padding: 7px 14px;
+  }
+  .search-icon { font-size: 13px; color: var(--ink-soft); flex-shrink: 0; }
+  .search-input-wrap {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .search-input {
+    position: absolute;
+    left: 0; top: 50%;
+    width: 128%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    transform: translateY(-50%) scale(0.8125);
+    transform-origin: left center;
+  }
+  .search-input::placeholder { color: var(--ink-soft); }
+
+  .menu-wrap { position: relative; flex-shrink: 0; }
+  .menu-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    font-family: inherit;
+    color: var(--ink);
+    padding: 2px;
+  }
+  .menu-icon { font-size: 22px; line-height: 1; }
+  .menu-label { font-size: 9px; color: var(--ink-soft); }
+
+  .menu-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 16, 12, 0);
+    z-index: 900;
+    pointer-events: none;
+    transition: background 0.3s ease;
+  }
+  .menu-overlay.open {
+    background: rgba(20, 16, 12, 0.45);
+    pointer-events: auto;
+  }
+  .menu-panel {
+    position: fixed;
+    top: 0; right: 0;
+    width: 82%;
+    max-width: 300px;
+    height: 100%;
+    background: var(--paper);
+    box-shadow: -6px 0 18px rgba(0,0,0,0.25);
+    transform: translateX(100%);
+    transition: transform 0.32s ease;
+    z-index: 901;
+    overflow-y: auto;
+  }
+  .menu-panel.open { transform: translateX(0); }
+  .menu-panel-head {
+    background: linear-gradient(160deg, #8C5D3D, var(--wood-dark));
+    padding: 20px 16px 26px;
+    position: relative;
+  }
+  .menu-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: none;
+    border: none;
+    color: #FBF6EA;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-family: inherit;
+  }
+  .menu-close .x { font-size: 20px; line-height: 1; }
+  .menu-close .lbl { font-size: 9px; }
+  .menu-panel-head .seal-name {
+    color: #FBF6EA;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    margin-top: 6px;
+  }
+  .menu-section-title {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 15px;
+    padding: 18px 16px 6px;
+    text-decoration: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: var(--hanko);
+    text-underline-offset: 5px;
+    display: inline-block;
+    margin: 0 16px;
+  }
+  .menu-list { padding: 6px 6px 24px; }
+  .menu-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--ink);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+  }
+  .menu-row:active { background: var(--paper-deep); }
+  .menu-row .row-icon {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Hiragino Mincho ProN", serif;
+    font-size: 12px;
+    color: #FBF6EA;
+    flex-shrink: 0;
+  }
+  .menu-row.disabled { color: var(--ink-soft); }
+  .menu-row.disabled .row-icon { background: var(--tag-border) !important; }
+  .menu-row .row-tag {
+    margin-left: auto;
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    background: var(--paper-deep);
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  .banner-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto 6px;
+    aspect-ratio: 16 / 9;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+  }
+  .banner-track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.45s ease;
+  }
+  .banner-slide {
+    flex-shrink: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FBF6EA;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+  }
+  .banner-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.35);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .banner-arrow.prev { left: 8px; }
+  .banner-arrow.next { right: 8px; }
+  .banner-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 8px 0 20px;
+  }
+  .banner-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--tag-border);
+    border: none;
+    padding: 0;
+  }
+  .banner-dot.active { background: var(--hanko); width: 14px; border-radius: 999px; transition: width 0.2s; }
+
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .app-icon-btn {
+    background: none;
+    border: none;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+  }
+  .app-icon-glyph {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 22%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 26px;
+    color: #FBF6EA;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.22);
+  }
+  .app-icon-glyph.rooms { background: linear-gradient(160deg, #8C5D3D, var(--wood-dark)); }
+  .app-icon-glyph.network { background: linear-gradient(160deg, #C24B3C, #7E2A20); }
+  .app-icon-glyph.master { background: linear-gradient(160deg, #6E7E52, #454F34); }
+  .app-icon-glyph.soon {
+    background: linear-gradient(160deg, #D8CDB4, var(--tag-border));
+    color: var(--ink-soft);
+    box-shadow: none;
+  }
+  .app-icon-btn:active .app-icon-glyph { transform: scale(0.94); }
+  .app-icon-label {
+    font-size: 10.5px;
+    color: var(--ink);
+    text-align: center;
+    line-height: 1.3;
+  }
+  .app-icon-btn.soon .app-icon-label { color: var(--ink-soft); }
+
+  .home-note {
+    max-width: 320px;
+    margin: 34px auto 0;
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  .feed-section {
+    max-width: 320px;
+    margin: 30px auto 0;
+  }
+  .feed-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+  .feed-title .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--hanko);
+  }
+  .feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-height: 195px;
+    overflow-y: auto;
+    padding: 2px;
+    border: 1px solid var(--tag-border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.35);
+  }
+  .feed-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--paper-deep);
+    border: 1px solid var(--tag-border);
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+  .feed-icon {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Hiragino Mincho ProN", serif;
+    font-size: 9.5px;
+    color: #FBF6EA;
+  }
+  .feed-icon.rooms { background: var(--wood); }
+  .feed-icon.network { background: var(--hanko); }
+  .feed-icon.master { background: var(--moss); }
+  .feed-icon.x { background: #14171A; font-family: sans-serif; font-weight: 700; }
+  .feed-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 11.5px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .feed-time {
+    flex-shrink: 0;
+    font-size: 9.5px;
+    color: var(--ink-soft);
+  }
+  .feed-item.linked { cursor: pointer; }
+  .feed-empty {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    text-align: center;
+    padding: 18px 10px;
+    background: var(--paper-deep);
+    border: 1px dashed var(--tag-border);
+    border-radius: 9px;
+  }
+
+  .feed-add-toggle {
+    width: 100%;
+    background: none;
+    border: 1px dashed var(--tag-border);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 11px;
+    font-family: inherit;
+    color: var(--ink-soft);
+    margin-top: 8px;
+  }
+  .feed-add-form {
+    display: none;
+    margin-top: 8px;
+    background: var(--paper-deep);
+    border: 1px solid var(--tag-border);
+    border-radius: 9px;
+    padding: 10px;
+  }
+  .feed-add-form.open { display: block; }
+  .feed-add-form select,
+  .feed-add-form input {
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--tag-border);
+    border-radius: 6px;
+    padding: 7px 8px;
+    font-size: 16px;
+    font-family: inherit;
+    margin-bottom: 7px;
+  }
+  .feed-add-submit {
+    width: 100%;
+    background: var(--hanko);
+    color: #FBF6EA;
+    border: none;
+    border-radius: 7px;
+    padding: 9px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+
+  .gov-section {
+    max-width: 320px;
+    margin: 30px auto 10px;
+  }
+  .gov-banner {
+    background: var(--hanko);
+    color: #FBF6EA;
+    text-align: center;
+    padding: 9px;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    border-radius: 6px 6px 0 0;
+  }
+  .gov-box {
+    border: 2px solid var(--ink);
+    border-top: none;
+    background: #fff;
+    padding: 6px 16px 12px;
+    border-radius: 0 0 6px 6px;
+  }
+  .gov-link {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--ink);
+    text-decoration: none;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--tag-border);
+  }
+  .gov-link:last-of-type { border-bottom: none; }
+  .gov-link .gov-mark { color: var(--hanko); font-family: "Hiragino Mincho ProN", serif; flex-shrink: 0; }
+  .gov-link .gov-name { text-decoration: underline; text-underline-offset: 3px; }
+  .gov-note {
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.03em;
+  }
+
+  /* ---- サブビュー(iframe側) ---- */
+  .sub-topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--paper-deep);
+    border-bottom: 1px solid var(--tag-border);
+  }
+  .back-btn {
+    background: var(--wood);
+    color: #FBF6EA;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .back-btn:active { background: var(--wood-dark); }
+  .sub-topbar .sub-title {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 14px;
+  }
+  .sub-frame-wrap { height: calc(100vh - 44px); }
+  .sub-frame-wrap iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+

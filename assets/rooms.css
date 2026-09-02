@@ -1,0 +1,352 @@
+#app {
+    --paper: #F2EBDD;
+    --paper-deep: #E8DFC9;
+    --tatami: #9AA179;
+    --tatami-dark: #838B65;
+    --tatami-line: #6E7452;
+    --wood: #7A4B32;
+    --wood-dark: #5C3722;
+    --hanko: #A8382C;
+    --ink: #2B2621;
+    --ink-soft: #5C544A;
+    --tag-bg: #FFFDF6;
+    --tag-border: #C9BFA6;
+
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100vh;
+    padding: 20px 14px 100px;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app * { box-sizing: border-box; }
+
+  .header {
+    margin-bottom: 18px;
+  }
+  .header h1 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    margin: 0 0 4px;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .header h1 .seal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    background: var(--hanko);
+    color: #fff;
+    font-size: 12px;
+    font-family: "Hiragino Mincho ProN", serif;
+    flex-shrink: 0;
+  }
+  .header p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+
+  .tray {
+    background: var(--paper-deep);
+    border: 1px solid var(--tag-border);
+    border-radius: 10px;
+    padding: 12px 12px 14px;
+    margin-bottom: 20px;
+  }
+  .tray-label {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tray-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-height: 34px;
+  }
+  .tray-empty {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    opacity: 0.7;
+    padding: 6px 2px;
+  }
+
+  .chip {
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    line-height: 1;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    white-space: nowrap;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+  }
+  .chip:active { cursor: grabbing; }
+  .chip.captain {
+    background: #F6E9C9;
+    border-color: var(--hanko);
+  }
+
+  .room-tag {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+  }
+  .room-tag:active { cursor: grabbing; }
+  .room-tag.captain {
+    background: #F6E9C9;
+    border-color: var(--hanko);
+    box-shadow: 0 1px 3px rgba(168,56,44,0.35);
+  }
+
+  .rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row dense;
+    gap: 12px;
+  }
+  @media (max-width: 420px) {
+    .rooms-grid { gap: 8px; }
+  }
+
+  .room-card {
+    background: var(--wood);
+    border-radius: 10px;
+    padding: 7px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    min-width: 0;
+  }
+  .room-card.size-large {
+    grid-column: span 2;
+  }
+  .room-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 3px 6px;
+  }
+  .room-name-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.35);
+    color: #FBF6EA;
+    font-size: 16px;
+    font-family: "Hiragino Mincho ProN", serif;
+    padding: 2px 2px 3px;
+    min-width: 0;
+  }
+  .room-name-input:focus { outline: none; border-bottom-color: #fff; }
+  .room-template-select {
+    background: var(--wood-dark);
+    color: #FBF6EA;
+    border: none;
+    border-radius: 5px;
+    font-size: 10.5px;
+    padding: 3px 4px;
+    width: 54px;
+    flex-shrink: 0;
+  }
+
+  .room-surface {
+    position: relative;
+    border-radius: 5px;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    background: var(--tatami);
+  }
+  .room-surface.aspect-wide {
+    aspect-ratio: 8 / 3;
+  }
+  .room-surface.dragover {
+    outline: 2px dashed rgba(255,255,255,0.7);
+    outline-offset: -4px;
+  }
+  .room-surface svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .room-hint {
+    position: absolute;
+    bottom: 6px;
+    left: 8px;
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.55);
+    pointer-events: none;
+  }
+
+  .add-room-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .add-room-btn {
+    flex: 1;
+    background: var(--wood);
+    color: #FBF6EA;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 6px;
+    font-size: 13px;
+    font-family: inherit;
+    letter-spacing: 0.02em;
+  }
+  .add-room-btn:active { background: var(--wood-dark); }
+  .add-room-btn.large { background: var(--hanko); }
+  .add-room-btn.large:active { background: #8A2E24; }
+  .add-room-btn.wide { flex: 1; }
+
+  .room-note-input {
+    width: 100%;
+    background: rgba(255,255,255,0.12);
+    border: none;
+    border-radius: 5px;
+    color: #FBF6EA;
+    font-size: 16px;
+    padding: 5px 7px;
+    margin: 0 0 6px;
+  }
+  .room-note-input::placeholder { color: rgba(255,255,255,0.55); }
+  .room-note-input:focus { outline: 1px solid rgba(255,255,255,0.5); }
+
+  .type-picker {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .type-btn {
+    flex: 1;
+    background: var(--paper-deep);
+    border: 1px solid var(--tag-border);
+    border-radius: 7px;
+    padding: 9px 4px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .type-btn.active {
+    background: var(--hanko);
+    border-color: var(--hanko);
+    color: #FBF6EA;
+  }
+
+  .m-field-label {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    margin: 0 0 4px;
+  }
+  .m-input {
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--tag-border);
+    border-radius: 7px;
+    padding: 9px 10px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+  .m-input:focus { outline: 1px solid var(--hanko); }
+
+  .modal-cancel {
+    margin-top: 8px;
+    width: 100%;
+    background: transparent;
+    color: var(--ink-soft);
+    border: none;
+    padding: 8px;
+    font-size: 12.5px;
+    font-family: inherit;
+  }
+
+  .ghost-chip {
+    position: fixed;
+    z-index: 999;
+    pointer-events: none;
+    background: var(--tag-bg);
+    border: 1px solid var(--hanko);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    white-space: nowrap;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 16, 12, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+  }
+  .modal-card {
+    background: var(--paper);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 320px;
+    padding: 20px 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .modal-card .m-eyebrow {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-bottom: 2px;
+  }
+  .modal-card h2 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 21px;
+    margin: 0 0 12px;
+  }
+  .modal-card .m-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    padding: 8px 0;
+    border-top: 1px solid var(--tag-border);
+  }
+  .modal-card .m-row span:first-child { color: var(--ink-soft); }
+  .modal-card .m-note {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+  .modal-close {
+    margin-top: 16px;
+    width: 100%;
+    background: var(--wood);
+    color: #FBF6EA;
+    border: none;
+    border-radius: 8px;
+    padding: 11px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .modal-close:active { background: var(--wood-dark); }
+
