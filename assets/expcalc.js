@@ -401,8 +401,8 @@
       note.textContent = "※分岐確率が未登録のため、各分岐を均等確率として算出した暫定値です";
       resultCard.appendChild(note);
     }
-    appendLoopTotals(resultCard, calculator, expected.rawExperience);
-    appendCustomLoopInput(resultCard, calculator, expected.rawExperience);
+    appendLoopTotals(resultCard, calculator, expected.rawExperience, undefined, expected.rewards);
+    appendCustomLoopInput(resultCard, calculator, expected.rawExperience, undefined, expected.rewards);
     if (isProvisional) appendRouteDetails(resultCard, calculator, routeOutcomes.outcomes);
     container.appendChild(resultCard);
   }
@@ -429,20 +429,28 @@
     card.appendChild(details);
   }
 
-  function appendLoopTotals(card, calculator, minExperience, maxExperience) {
+  function formatRewardExpectations(rewards, count) {
+    return Object.entries(rewards || {}).map(([name, amount]) => {
+      const formatted = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 2 }).format(amount * count);
+      return `${name} ${formatted}枚`;
+    }).join("・");
+  }
+
+  function appendLoopTotals(card, calculator, minExperience, maxExperience, rewards) {
     const totals = document.createElement("div");
     totals.className = "loop-totals";
     [10, 50, 100, 200, 500].forEach(count => {
       const row = document.createElement("div");
       const minimum = calculator.formatExperience(minExperience * count);
       const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
-      row.innerHTML = `<span>${count}周</span><strong>${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`}</strong>`;
+      const rewardText = formatRewardExpectations(rewards, count);
+      row.innerHTML = `<span>${count}周</span><strong>${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`}</strong>${rewardText ? `<small class="loop-reward">${rewardText}</small>` : ""}`;
       totals.appendChild(row);
     });
     card.appendChild(totals);
   }
 
-  function appendCustomLoopInput(card, calculator, minExperience, maxExperience) {
+  function appendCustomLoopInput(card, calculator, minExperience, maxExperience, rewards) {
     const customRow = document.createElement("div");
     customRow.className = "custom-loop-row";
     const customLabel = document.createElement("label");
@@ -463,7 +471,8 @@
       }
       const minimum = calculator.formatExperience(minExperience * count);
       const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
-      customResult.textContent = `${count}周：${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP`;
+      const rewardText = formatRewardExpectations(rewards, count);
+      customResult.textContent = `${count}周：${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP${rewardText ? `／${rewardText}` : ""}`;
     };
     customRow.append(customLabel, customInput);
     card.append(customRow, customResult);
