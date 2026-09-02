@@ -68,9 +68,21 @@
     margin-bottom: 4px;
   }
   .char-card .cname {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 3px;
+    min-width: 0;
     font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
     font-size: 14px;
   }
+  .char-card .clevel {
+    flex-shrink: 0;
+    color: var(--ink-soft);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    font-size: 10.5px;
+  }
+  .char-card .kiwame-mark { flex-shrink: 0; }
   .char-card .ccaptain {
     flex-shrink: 0;
     font-size: 9.5px;
@@ -80,6 +92,10 @@
     border-radius: 5px;
   }
   .char-card .ctype {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
     font-size: 10.5px;
     color: var(--ink-soft);
   }
