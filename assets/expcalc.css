@@ -252,6 +252,55 @@
     color: var(--ink-soft);
     font-size: 10px;
   }
+  .loop-totals {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 12px;
+  }
+  .loop-totals div {
+    padding: 6px 2px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.55);
+    font-size: 9px;
+  }
+  .loop-totals span,
+  .loop-totals strong { display: block; }
+  .loop-totals span { color: var(--ink-soft); }
+  .loop-totals strong {
+    margin-top: 2px;
+    color: var(--ink);
+    font-size: 10px;
+  }
+  .custom-loop-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    text-align: left;
+  }
+  .custom-loop-row label {
+    flex-shrink: 0;
+    color: var(--ink-soft);
+    font-size: 11px;
+  }
+  .custom-loop-row input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--tag-border);
+    border-radius: 6px;
+    padding: 7px 8px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+  }
+  .custom-loop-result {
+    min-height: 16px;
+    margin-top: 5px;
+    color: var(--gold-dark);
+    font-size: 12px;
+  }
   .calculated-experience.pending {
     color: var(--ink-soft);
     border-color: var(--tag-border);
