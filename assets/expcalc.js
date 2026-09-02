@@ -17,6 +17,7 @@
   let selectedStage = "";
   let selectedBattleResult = "";
   let selectedMvp = "部隊内で均等";
+  let isDoubleExperience = false;
 
   const BATTLEFIELDS = {
     past: ["①維新の記憶", "②江戸の記憶"],
@@ -209,6 +210,7 @@
           selectedStage = "";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
+          isDoubleExperience = false;
           render();
         };
         mapButtons.appendChild(button);
@@ -229,6 +231,7 @@
           selectedStage = "";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
+          isDoubleExperience = false;
           render();
         };
         mapSelector.appendChild(battlefieldSelect);
@@ -246,6 +249,7 @@
             selectedStage = e.target.value;
             selectedBattleResult = "";
             selectedMvp = "部隊内で均等";
+            isDoubleExperience = false;
             render();
           };
           mapSelector.appendChild(stageSelect);
@@ -259,7 +263,6 @@
             resultSelect.className = "char-select battlefield-select";
             resultSelect.innerHTML = `<option value="">選択してください</option>${["完全勝利S", "勝利A", "勝利B", "勝利C"].map(name => `<option value="${name}">${name}</option>`).join("")}`;
             resultSelect.value = selectedBattleResult;
-            resultSelect.onchange = e => { selectedBattleResult = e.target.value; };
             resultSelect.onchange = e => {
               selectedBattleResult = e.target.value;
               render();
@@ -287,6 +290,16 @@
                 mvpNote.textContent = "※周回をしていて部隊員の桜が剥がれない状態を指します";
                 mapSelector.appendChild(mvpNote);
               }
+
+              const doubleExperienceRow = document.createElement("label");
+              doubleExperienceRow.className = "double-experience-row";
+              const doubleExperienceCheck = document.createElement("input");
+              doubleExperienceCheck.type = "checkbox";
+              doubleExperienceCheck.checked = isDoubleExperience;
+              doubleExperienceCheck.onchange = e => { isDoubleExperience = e.target.checked; };
+              doubleExperienceRow.appendChild(doubleExperienceCheck);
+              doubleExperienceRow.append("経験値2倍CP");
+              mapSelector.appendChild(doubleExperienceRow);
             }
           }
         }
@@ -355,3 +368,4 @@
 
   render();
 })();
+
