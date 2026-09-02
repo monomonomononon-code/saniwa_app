@@ -60,26 +60,32 @@
     guaranteedBossArrival: true,
     nodes: {
       sortie: { id: "sortie", type: "start", label: "出陣" },
-      A: { id: "A", type: "unknown", label: "A", knownTerminalId: "D" },
-      B: { id: "B", type: "unknown", label: "B", knownTerminalId: "D" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 50 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 50 },
       C: { id: "C", type: "resource", label: "C" },
       D: { id: "D", type: "boss", label: "D", baseExperience: 150, terminal: "boss" }
     },
     connections: [
       { from: "sortie", to: "A", probability: null },
-      { from: "sortie", to: "B", probability: null }
+      { from: "sortie", to: "B", probability: null },
+      { from: "A", to: "D", probability: 1 },
+      { from: "B", to: "C", probability: 1 },
+      { from: "C", to: "D", probability: 1 }
     ]
   };
 
   MAP_EXPERIENCE["1-3 宇都宮"].graph = {
-    startNodeId: null,
+    startNodeId: "sortie",
     nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
       A: { id: "A", type: "normal", label: "A", baseExperience: 80 },
       B: { id: "B", type: "resource", label: "B" },
       C: { id: "C", type: "normal", label: "C", baseExperience: 80, terminal: "other" },
       D: { id: "D", type: "boss", label: "D", baseExperience: 240, terminal: "boss" }
     },
     connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 1 },
       { from: "B", to: "C", probability: null },
       { from: "B", to: "D", probability: null }
     ]
@@ -94,12 +100,16 @@
       C: { id: "C", type: "normal", label: "C", baseExperience: 100 },
       D: { id: "D", type: "resource", label: "D" },
       E: { id: "E", type: "normal", label: "E", baseExperience: 100 },
-      F: { id: "F", type: "normal", label: "F", baseExperience: 100 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 100, terminal: "other" },
       G: { id: "G", type: "boss", label: "G", baseExperience: 300, terminal: "boss" }
     },
     connections: [
       { from: "sortie", to: "A", probability: null },
       { from: "sortie", to: "C", probability: null },
+      { from: "A", to: "B", probability: 1 },
+      { from: "B", to: "E", probability: 1 },
+      { from: "C", to: "D", probability: 1 },
+      { from: "D", to: "E", probability: 1 },
       { from: "E", to: "F", probability: null },
       { from: "E", to: "G", probability: null }
     ]
