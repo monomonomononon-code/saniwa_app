@@ -209,6 +209,108 @@
     ]
   };
 
+  // 織豊の記憶：明示されたマス種別・接続・終点・確率のみを登録。
+  MAP_EXPERIENCE["3-1 関ヶ原"] = createStandardBossRouteMap("3-1-sekigahara", 230, 690);
+  MAP_EXPERIENCE["3-1 関ヶ原"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 230 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 230 },
+      C: { id: "C", type: "boss", label: "C", baseExperience: 690, terminal: "boss" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 230 },
+      E: { id: "E", type: "resource", label: "E（砥石×20）", terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: null },
+      { from: "sortie", to: "B", probability: null },
+      { from: "A", to: "D", probability: 1 },
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "D", probability: null },
+      { from: "D", to: "E", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["3-2 本能寺"] = createStandardBossRouteMap("3-2-honnouji", 250, 750);
+  MAP_EXPERIENCE["3-2 本能寺"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 250 },
+      B: { id: "B", type: "resource", label: "B（依頼札×1）" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 250, terminal: "other" },
+      D: { id: "D", type: "resource", label: "D（玉鋼×30）" },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 250, terminal: "other" },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 250 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 250 },
+      H: { id: "H", type: "boss", label: "H", baseExperience: 750, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 0.4 },
+      { from: "sortie", to: "F", probability: 0.6 },
+      { from: "A", to: "B", probability: 0.6 },
+      { from: "A", to: "D", probability: 0.4 },
+      { from: "B", to: "C", probability: 1 },
+      { from: "D", to: "E", probability: 1 },
+      { from: "F", to: "G", probability: 1 },
+      { from: "G", to: "D", probability: null },
+      { from: "G", to: "H", probability: null }
+    ]
+  };
+
+  MAP_EXPERIENCE["3-3 越前"] = createStandardBossRouteMap("3-3-echizen", 280, 840);
+  MAP_EXPERIENCE["3-3 越前"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 280 },
+      B: { id: "B", type: "resource", label: "B（木炭×50）" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 280 },
+      D: { id: "D", type: "boss", label: "D", baseExperience: 840, terminal: "boss" },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 280 },
+      F: { id: "F", type: "resource", label: "F（玉鋼×50）", terminal: "other" },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 280, terminal: "other" },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 280, terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 0.6 },
+      { from: "A", to: "E", probability: 0.4 },
+      { from: "B", to: "C", probability: 1 },
+      { from: "C", to: "D", probability: null },
+      { from: "C", to: "G", probability: null },
+      { from: "E", to: "F", probability: 0.5 },
+      { from: "E", to: "H", probability: 0.5 }
+    ]
+  };
+
+  MAP_EXPERIENCE["3-4 安土"] = createStandardBossRouteMap("3-4-azuchi", 320, 960);
+  MAP_EXPERIENCE["3-4 安土"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 320 },
+      B: { id: "B", type: "resource", label: "B（砥石×40）" },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 320, terminal: "other" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 320 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 320 },
+      F: { id: "F", type: "resource", label: "F（依頼札×1）", terminal: "other" },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 320 },
+      H: { id: "H", type: "boss", label: "H", baseExperience: 960, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 0.25 },
+      { from: "sortie", to: "D", probability: 0.75 },
+      { from: "A", to: "B", probability: 1 },
+      { from: "B", to: "C", probability: 1 },
+      { from: "D", to: "E", probability: null },
+      { from: "D", to: "G", probability: null },
+      { from: "E", to: "F", probability: 1 },
+      { from: "G", to: "B", probability: null },
+      { from: "G", to: "H", probability: null }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
