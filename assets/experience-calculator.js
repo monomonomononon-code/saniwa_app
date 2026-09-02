@@ -311,6 +311,141 @@
     ]
   };
 
+  // 戦国の記憶：明示されたマス種別・接続・終点・確率・編成条件のみを登録。
+  MAP_EXPERIENCE["4-1 長篠"] = createStandardBossRouteMap("4-1-nagashino", 360, 1080);
+  MAP_EXPERIENCE["4-1 長篠"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 360 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 360 },
+      C: { id: "C", type: "resource", label: "C（冷却材×40）", terminal: "other" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 360 },
+      E: { id: "E", type: "resource", label: "E（依頼札×1）" },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 360 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 360 },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 360 },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 360 },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 360 },
+      K: { id: "K", type: "boss", label: "K", baseExperience: 1080, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: null },
+      { from: "sortie", to: "B", probability: null },
+      { from: "sortie", to: "B", probability: 1, condition: { type: "unit_contains_sword_type", swordType: "大太刀" } },
+      { from: "A", to: "C", probability: null },
+      { from: "A", to: "D", probability: null },
+      { from: "B", to: "E", probability: null },
+      { from: "B", to: "F", probability: null },
+      { from: "D", to: "G", probability: 1 },
+      { from: "E", to: "F", probability: 1 },
+      { from: "G", to: "J", probability: 1 },
+      { from: "F", to: "H", probability: null },
+      { from: "F", to: "I", probability: null },
+      { from: "F", to: "J", probability: null },
+      { from: "H", to: "I", probability: 1 },
+      { from: "I", to: "J", probability: 1 },
+      { from: "J", to: "K", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["4-2 三方ヶ原"] = createStandardBossRouteMap("4-2-mikatagahara", 390, 1170);
+  MAP_EXPERIENCE["4-2 三方ヶ原"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 390 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 390 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 390 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 390 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 390 },
+      F: { id: "F", type: "resource", label: "F（砥石×60）" },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 390 },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 390, terminal: "other" },
+      I: { id: "I", type: "boss", label: "I", baseExperience: 1170, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: null },
+      { from: "sortie", to: "B", probability: null },
+      { from: "sortie", to: "C", probability: null },
+      { from: "A", to: "D", probability: 1 },
+      { from: "B", to: "D", probability: 1 },
+      { from: "C", to: "D", probability: 1 },
+      { from: "D", to: "E", probability: null },
+      { from: "D", to: "F", probability: null },
+      { from: "E", to: "F", probability: null },
+      { from: "E", to: "G", probability: null },
+      { from: "F", to: "H", probability: 1 },
+      { from: "G", to: "I", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["4-3 桶狭間"] = createStandardBossRouteMap("4-3-okehazama", 400, 1200);
+  MAP_EXPERIENCE["4-3 桶狭間"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 400 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 400 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 400 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 400 },
+      E: { id: "E", type: "resource", label: "E（木炭×65）", terminal: "other" },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 400 },
+      G: { id: "G", type: "resource", label: "G（冷却材×65）" },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 400 },
+      I: { id: "I", type: "resource", label: "I（玉鋼×65）", terminal: "other" },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 400 },
+      K: { id: "K", type: "boss", label: "K", baseExperience: 1200, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 0.5 },
+      { from: "A", to: "C", probability: 0.5 },
+      { from: "B", to: "D", probability: 0.667 },
+      { from: "B", to: "H", probability: 0.333 },
+      { from: "C", to: "D", probability: 1 },
+      { from: "D", to: "E", probability: 0.5 },
+      { from: "D", to: "F", probability: 0.5 },
+      { from: "F", to: "G", probability: 1 },
+      { from: "G", to: "H", probability: 1 },
+      { from: "H", to: "I", probability: 0.55 },
+      { from: "H", to: "J", probability: 0.45 },
+      { from: "J", to: "K", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["4-4 京都（西陣）"] = createStandardBossRouteMap("4-4-kyoto-nishijin", 420, 1260);
+  MAP_EXPERIENCE["4-4 京都（西陣）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 420 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 420 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 420 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 420 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 420 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 420 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 420 },
+      H: { id: "H", type: "resource", label: "H（冷却材×65）" },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 420 },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 420 },
+      K: { id: "K", type: "resource", label: "K（依頼札×1）" },
+      L: { id: "L", type: "boss", label: "L", baseExperience: 1260, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "C", probability: null },
+      { from: "A", to: "D", probability: null },
+      { from: "B", to: "H", probability: 1 },
+      { from: "C", to: "E", probability: 1 },
+      { from: "D", to: "E", probability: 1 },
+      { from: "E", to: "F", probability: 1 },
+      { from: "F", to: "G", probability: null },
+      { from: "F", to: "J", probability: null }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -329,6 +464,22 @@
     const size = Number(unitSize);
     if (!Number.isFinite(size) || size < 1) return 1.0;
     return ((size - 1) / size * 1.0) + (1 / size * 2.0);
+  }
+
+  function conditionMatches(condition, input) {
+    if (!condition) return false;
+    if (condition.type === "unit_contains_sword_type") {
+      return Array.isArray(input.unitMembers) && input.unitMembers.some(member => member.swordType === condition.swordType);
+    }
+    return false;
+  }
+
+  // 条件付き接続が成立する場合は、それを通常のランダム接続より優先します。
+  function getActiveConnections(connections, input) {
+    const conditionalConnections = connections.filter(connection => connection.condition && conditionMatches(connection.condition, input));
+    return conditionalConnections.length > 0
+      ? conditionalConnections
+      : connections.filter(connection => !connection.condition);
   }
 
   function getMapRoute(stageName, routeId) {
@@ -434,8 +585,8 @@
       nodeProbabilities[nodeId] = (nodeProbabilities[nodeId] || 0) + probability;
       if (node.terminal) return;
 
-      const connections = outgoingByNode[nodeId];
-      if (!connections || connections.length === 0) {
+      const connections = getActiveConnections(outgoingByNode[nodeId] || [], input);
+      if (connections.length === 0) {
         invalidGraph = true;
         return;
       }
@@ -508,8 +659,8 @@
       nodeProbabilities[nodeId] = (nodeProbabilities[nodeId] || 0) + probability;
       if (node.terminal) return;
 
-      const connections = outgoingByNode[nodeId];
-      if (!connections || connections.length === 0) {
+      const connections = getActiveConnections(outgoingByNode[nodeId] || [], input);
+      if (connections.length === 0) {
         invalidGraph = true;
         return;
       }
@@ -591,8 +742,8 @@
         paths.push({ nodes: nextNodePath, connections: connectionPath, terminal: node });
         return;
       }
-      const connections = outgoingByNode[nodeId];
-      if (!connections || connections.length === 0) {
+      const connections = getActiveConnections(outgoingByNode[nodeId] || [], input);
+      if (connections.length === 0) {
         invalidGraph = true;
         return;
       }
