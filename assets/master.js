@@ -88,7 +88,7 @@
       card.className = "char-card";
       card.innerHTML = `
         <div class="ctop">
-          <div class="cname">${c.name}</div>
+          <div class="cname">${c.name}${c.isKiwame ? " 🌸" : ""}</div>
           ${c.isCaptain ? '<div class="ccaptain">隊長</div>' : ""}
         </div>
         <div class="ctype">${c.swordType || "刀種未設定"}${c.unit ? "　" + c.unit + "配属中" : ""}</div>
