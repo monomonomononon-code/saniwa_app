@@ -16,6 +16,7 @@
   let selectedBattlefield = "";
   let selectedStage = "";
   let selectedBattleResult = "";
+  let selectedMvp = "部隊内で均等";
 
   const BATTLEFIELDS = {
     past: ["①維新の記憶", "②江戸の記憶"],
@@ -207,6 +208,7 @@
           selectedBattlefield = "";
           selectedStage = "";
           selectedBattleResult = "";
+          selectedMvp = "部隊内で均等";
           render();
         };
         mapButtons.appendChild(button);
@@ -226,6 +228,7 @@
           selectedBattlefield = e.target.value;
           selectedStage = "";
           selectedBattleResult = "";
+          selectedMvp = "部隊内で均等";
           render();
         };
         mapSelector.appendChild(battlefieldSelect);
@@ -242,6 +245,7 @@
           stageSelect.onchange = e => {
             selectedStage = e.target.value;
             selectedBattleResult = "";
+            selectedMvp = "部隊内で均等";
             render();
           };
           mapSelector.appendChild(stageSelect);
@@ -256,7 +260,34 @@
             resultSelect.innerHTML = `<option value="">選択してください</option>${["完全勝利S", "勝利A", "勝利B", "勝利C"].map(name => `<option value="${name}">${name}</option>`).join("")}`;
             resultSelect.value = selectedBattleResult;
             resultSelect.onchange = e => { selectedBattleResult = e.target.value; };
+            resultSelect.onchange = e => {
+              selectedBattleResult = e.target.value;
+              render();
+            };
             mapSelector.appendChild(resultSelect);
+
+            if (selectedBattleResult) {
+              const mvpLabel = document.createElement("div");
+              mvpLabel.className = "select-label battlefield-label";
+              mvpLabel.textContent = "誉";
+              mapSelector.appendChild(mvpLabel);
+              const mvpSelect = document.createElement("select");
+              mvpSelect.className = "char-select battlefield-select";
+              mvpSelect.innerHTML = `${["毎回誉を取る", "誉を取らない", "部隊内で均等"].map(name => `<option value="${name}">${name}</option>`).join("")}`;
+              mvpSelect.value = selectedMvp;
+              mvpSelect.onchange = e => {
+                selectedMvp = e.target.value;
+                render();
+              };
+              mapSelector.appendChild(mvpSelect);
+
+              if (selectedMvp === "部隊内で均等") {
+                const mvpNote = document.createElement("div");
+                mvpNote.className = "mvp-note";
+                mvpNote.textContent = "※周回をしていて部隊員の桜が剥がれない状態を指します";
+                mapSelector.appendChild(mvpNote);
+              }
+            }
           }
         }
       }
@@ -324,4 +355,3 @@
 
   render();
 })();
-
