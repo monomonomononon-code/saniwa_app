@@ -197,7 +197,10 @@
     swordTypeSelect.value = c.swordType;
     swordTypeSelect.onchange = e => {
       c.swordType = e.target.value;
-      if (!c.swordType) c.isKiwame = false;
+      if (!c.swordType) {
+        c.isKiwame = false;
+        if (Number(c.level) > 99) c.level = 99;
+      }
       render();
     };
     card.appendChild(swordTypeSelect);
@@ -205,11 +208,15 @@
     if (c.swordType) {
       const kiwameRow = document.createElement("div");
       kiwameRow.className = "toggle-row";
-      kiwameRow.innerHTML = `<div class="tlabel">極にする</div>`;
+      kiwameRow.innerHTML = `<div class="tlabel">極</div>`;
       const kiwameBtn = document.createElement("button");
       kiwameBtn.className = "toggle-switch" + (c.isKiwame ? " on" : "");
       kiwameBtn.innerHTML = `<span class="knob"></span>`;
-      kiwameBtn.onclick = () => { c.isKiwame = !c.isKiwame; render(); };
+      kiwameBtn.onclick = () => {
+        c.isKiwame = !c.isKiwame;
+        if (!c.isKiwame && Number(c.level) > 99) c.level = 99;
+        render();
+      };
       kiwameRow.appendChild(kiwameBtn);
       card.appendChild(kiwameRow);
     }
@@ -220,7 +227,8 @@
     card.appendChild(levelLabel);
     const levelSelect = document.createElement("select");
     levelSelect.className = "m-input";
-    levelSelect.innerHTML = `<option value="">未選択</option>${Array.from({ length: 199 }, (_, index) => `<option value="${index + 1}">${index + 1}</option>`).join("")}`;
+    const maxLevel = c.isKiwame ? 199 : 99;
+    levelSelect.innerHTML = `<option value="">未選択</option>${Array.from({ length: maxLevel }, (_, index) => `<option value="${index + 1}">${index + 1}</option>`).join("")}`;
     levelSelect.value = c.level || "";
     levelSelect.onchange = e => {
       c.level = e.target.value === "" ? "" : Number(e.target.value);
