@@ -321,7 +321,7 @@
       B: { id: "B", type: "normal", label: "B", baseExperience: 360 },
       C: { id: "C", type: "resource", label: "C（冷却材×40）", terminal: "other" },
       D: { id: "D", type: "normal", label: "D", baseExperience: 360 },
-      E: { id: "E", type: "resource", label: "E（依頼札×1）" },
+      E: { id: "E", type: "resource", label: "E（依頼札×1）", rewards: { "依頼札": 1 } },
       F: { id: "F", type: "normal", label: "F", baseExperience: 360 },
       G: { id: "G", type: "normal", label: "G", baseExperience: 360 },
       H: { id: "H", type: "normal", label: "H", baseExperience: 360 },
@@ -532,6 +532,17 @@
     };
   }
 
+  function calculateExpectedRewards(nodeProbabilities, nodes) {
+    const rewards = {};
+    Object.entries(nodeProbabilities).forEach(([nodeId, arrivalProbability]) => {
+      const nodeRewards = nodes[nodeId].rewards || {};
+      Object.entries(nodeRewards).forEach(([name, amount]) => {
+        if (Number.isFinite(amount)) rewards[name] = (rewards[name] || 0) + amount * arrivalProbability;
+      });
+    });
+    return rewards;
+  }
+
   // 各戦闘マスへ同じ補正ロジックを適用し、ルート全体を合算します。
   function calculateRouteExperience(options) {
     const input = options || {};
@@ -629,6 +640,7 @@
       map,
       battles: battleResults,
       bossArrivalProbability: battleResults.find(result => result.node.terminal === "boss")?.arrivalProbability || 0,
+      rewards: calculateExpectedRewards(nodeProbabilities, graph.nodes),
       rawExperience: battleResults.reduce((sum, result) => sum + result.calculation.rawExperience * result.arrivalProbability, 0)
     };
   }
@@ -711,6 +723,7 @@
       map,
       battles: battleResults,
       usedProvisionalProbabilities,
+      rewards: calculateExpectedRewards(nodeProbabilities, graph.nodes),
       rawExperience: battleResults.reduce((sum, result) => sum + result.calculation.rawExperience * result.arrivalProbability, 0)
     };
   }
