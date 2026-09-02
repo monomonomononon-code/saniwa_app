@@ -48,7 +48,7 @@
         <div class="app-icon-label">本丸設定</div>
       </button>
     </div>
-    <div class="home-note">アイコンをタップすると各ツールが開きます。戻るときは上の「← ホーム」から。</div>
+
     <div class="feed-section">
       <div class="feed-title"><span class="dot"></span>最近の更新</div>
       <div class="feed-list" id="feed-list"></div>
