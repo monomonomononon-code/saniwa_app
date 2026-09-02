@@ -12,6 +12,16 @@
             { id: "boss", cellId: "BOSS", type: "boss", label: "ボス戦", baseExperience: bossExperience }
           ]
         }
+      },
+      // 実際の接続・終点・分岐確率は資料が揃ってから登録します。
+      // ここでは経験値データだけを先に保持し、確率未設定では期待値計算を行いません。
+      graph: {
+        startNodeId: null,
+        nodes: {
+          "normal-1": { id: "normal-1", type: "normal", label: "道中戦", baseExperience: normalExperience },
+          boss: { id: "boss", type: "boss", label: "ボス戦", baseExperience: bossExperience, terminal: "boss" }
+        },
+        connections: []
       }
     };
   }
@@ -122,6 +132,79 @@
     };
   }
 
+  // マスの到達確率を辿り、各戦闘マスの期待経験値を合算します。
+  // 接続確率が一つでも未設定なら、推測せず invalid を返します。
+  function calculateMapExpectedExperience(options) {
+    const input = options || {};
+    const map = MAP_EXPERIENCE[input.stageName];
+    const graph = map && map.graph;
+    if (!graph || !graph.startNodeId || !graph.nodes) {
+      return { valid: false, reason: "route_probability_data_missing" };
+    }
+
+    const outgoingByNode = {};
+    for (const connection of graph.connections || []) {
+      if (!connection || !connection.from || !connection.to || !Number.isFinite(connection.probability)) {
+        return { valid: false, reason: "route_probability_data_missing" };
+      }
+      (outgoingByNode[connection.from] ||= []).push(connection);
+    }
+
+    const nodeProbabilities = {};
+    let invalidGraph = false;
+    function visit(nodeId, probability, ancestry) {
+      const node = graph.nodes[nodeId];
+      if (!node || ancestry.includes(nodeId)) {
+        invalidGraph = true;
+        return;
+      }
+      nodeProbabilities[nodeId] = (nodeProbabilities[nodeId] || 0) + probability;
+      if (node.terminal) return;
+
+      const connections = outgoingByNode[nodeId];
+      if (!connections || connections.length === 0) {
+        invalidGraph = true;
+        return;
+      }
+      const totalProbability = connections.reduce((sum, connection) => sum + connection.probability, 0);
+      if (Math.abs(totalProbability - 1) > 1e-9) {
+        invalidGraph = true;
+        return;
+      }
+      connections.forEach(connection => visit(connection.to, probability * connection.probability, [...ancestry, nodeId]));
+    }
+
+    visit(graph.startNodeId, 1, []);
+    if (invalidGraph) return { valid: false, reason: "route_probability_data_missing" };
+
+    const battleResults = Object.entries(nodeProbabilities)
+      .map(([nodeId, arrivalProbability]) => ({ node: graph.nodes[nodeId], arrivalProbability }))
+      .filter(result => result.node.type === "normal" || result.node.type === "boss")
+      .map(result => ({
+        ...result,
+        calculation: calculateExperience({
+          baseExperience: result.node.baseExperience,
+          isCaptain: input.isCaptain,
+          mvpMode: input.mvpMode,
+          unitSize: input.unitSize,
+          rank: input.rank,
+          isDoubleExperience: input.isDoubleExperience,
+          extraMultipliers: input.extraMultipliers
+        })
+      }));
+    if (battleResults.some(result => !result.calculation.valid)) {
+      return { valid: false, reason: "battle_calculation_failed" };
+    }
+
+    return {
+      valid: true,
+      map,
+      battles: battleResults,
+      bossArrivalProbability: battleResults.find(result => result.node.terminal === "boss")?.arrivalProbability || 0,
+      rawExperience: battleResults.reduce((sum, result) => sum + result.calculation.rawExperience * result.arrivalProbability, 0)
+    };
+  }
+
   // 丸め規則を計算本体から分離。現在の表示は切り捨てです。
   function roundExperience(value, method) {
     const numericValue = Number(value);
@@ -146,6 +229,7 @@
     getMvpMultiplier,
     calculateExperience,
     calculateRouteExperience,
+    calculateMapExpectedExperience,
     roundExperience,
     formatExperience
   };
