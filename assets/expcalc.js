@@ -14,11 +14,13 @@
   let activeTool = null;
   let mapCategory = "";
   let selectedBattlefield = "";
+  let selectedStage = "";
 
   const BATTLEFIELDS = {
     past: ["①維新の記憶", "②江戸の記憶"],
     event: ["大阪城", "夜花奪還作成"]
   };
+  const ISSHIN_STAGES = ["1-1 箱館", "1-2 会津", "1-3 宇都宮", "1-4 鳥羽"];
 
   function notify(text) {
     try { window.parent && window.parent.postMessage({ source: "expcalc", text: text }, "*"); }
@@ -202,6 +204,7 @@
         button.onclick = () => {
           mapCategory = category;
           selectedBattlefield = "";
+          selectedStage = "";
           render();
         };
         mapButtons.appendChild(button);
@@ -217,8 +220,25 @@
         battlefieldSelect.className = "char-select battlefield-select";
         battlefieldSelect.innerHTML = `<option value="">選択してください</option>${BATTLEFIELDS[mapCategory].map(name => `<option value="${name}">${name}</option>`).join("")}`;
         battlefieldSelect.value = selectedBattlefield;
-        battlefieldSelect.onchange = e => { selectedBattlefield = e.target.value; };
+        battlefieldSelect.onchange = e => {
+          selectedBattlefield = e.target.value;
+          selectedStage = "";
+          render();
+        };
         mapSelector.appendChild(battlefieldSelect);
+
+        if (mapCategory === "past" && selectedBattlefield === "①維新の記憶") {
+          const stageLabel = document.createElement("div");
+          stageLabel.className = "select-label battlefield-label";
+          stageLabel.textContent = "マップを選択";
+          mapSelector.appendChild(stageLabel);
+          const stageSelect = document.createElement("select");
+          stageSelect.className = "char-select battlefield-select";
+          stageSelect.innerHTML = `<option value="">選択してください</option>${ISSHIN_STAGES.map(name => `<option value="${name}">${name}</option>`).join("")}`;
+          stageSelect.value = selectedStage;
+          stageSelect.onchange = e => { selectedStage = e.target.value; };
+          mapSelector.appendChild(stageSelect);
+        }
       }
       el.appendChild(mapSelector);
     }
