@@ -429,7 +429,7 @@
       H: { id: "H", type: "resource", label: "H（冷却材×65）" },
       I: { id: "I", type: "normal", label: "I", baseExperience: 420 },
       J: { id: "J", type: "normal", label: "J", baseExperience: 420 },
-      K: { id: "K", type: "resource", label: "K（依頼札×1）" },
+      K: { id: "K", type: "resource", label: "K（依頼札×1）", terminal: "other" },
       L: { id: "L", type: "boss", label: "L", baseExperience: 1260, terminal: "boss" }
     },
     connections: [
@@ -438,11 +438,15 @@
       { from: "A", to: "C", probability: null },
       { from: "A", to: "D", probability: null },
       { from: "B", to: "H", probability: 1 },
+      { from: "H", to: "I", probability: 1 },
+      { from: "I", to: "F", probability: 1 },
       { from: "C", to: "E", probability: 1 },
       { from: "D", to: "E", probability: 1 },
       { from: "E", to: "F", probability: 1 },
       { from: "F", to: "G", probability: null },
-      { from: "F", to: "J", probability: null }
+      { from: "F", to: "J", probability: null },
+      { from: "G", to: "L", probability: 1 },
+      { from: "J", to: "K", probability: 1 }
     ]
   };
 
