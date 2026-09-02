@@ -95,13 +95,15 @@
   }
   .tool-menu-back {
     margin: 0 0 14px;
-    padding: 0;
+    padding: 7px 14px;
     border: none;
-    background: transparent;
-    color: var(--gold-dark);
-    font: inherit;
+    border-radius: 999px;
+    background: var(--gold);
+    color: #FBF6EA;
+    font-family: inherit;
     font-size: 12px;
   }
+  .tool-menu-back:active { background: var(--gold-dark); }
 
   .select-wrap { margin-bottom: 16px; }
   .select-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 5px; }
