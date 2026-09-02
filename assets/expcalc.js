@@ -15,7 +15,6 @@
   let mapCategory = "";
   let selectedBattlefield = "";
   let selectedStage = "";
-  let selectedEncounter = "normal";
   let selectedBattleResult = "";
   let selectedMvp = "部隊内で均等";
   let isDoubleExperience = false;
@@ -209,7 +208,6 @@
           mapCategory = category;
           selectedBattlefield = "";
           selectedStage = "";
-          selectedEncounter = "normal";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
           isDoubleExperience = false;
@@ -231,7 +229,6 @@
         battlefieldSelect.onchange = e => {
           selectedBattlefield = e.target.value;
           selectedStage = "";
-          selectedEncounter = "normal";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
           isDoubleExperience = false;
@@ -250,7 +247,6 @@
           stageSelect.value = selectedStage;
           stageSelect.onchange = e => {
             selectedStage = e.target.value;
-            selectedEncounter = "normal";
             selectedBattleResult = "";
             selectedMvp = "部隊内で均等";
             isDoubleExperience = false;
@@ -259,20 +255,6 @@
           mapSelector.appendChild(stageSelect);
 
           if (selectedStage) {
-            const encounterLabel = document.createElement("div");
-            encounterLabel.className = "select-label battlefield-label";
-            encounterLabel.textContent = "戦闘種別";
-            mapSelector.appendChild(encounterLabel);
-            const encounterSelect = document.createElement("select");
-            encounterSelect.className = "char-select battlefield-select";
-            encounterSelect.innerHTML = `<option value="normal">道中戦</option><option value="boss">ボス戦</option>`;
-            encounterSelect.value = selectedEncounter;
-            encounterSelect.onchange = e => {
-              selectedEncounter = e.target.value;
-              render();
-            };
-            mapSelector.appendChild(encounterSelect);
-
             const resultLabel = document.createElement("div");
             resultLabel.className = "select-label battlefield-label";
             resultLabel.textContent = "想定する戦闘結果";
@@ -349,34 +331,61 @@
   function renderCalculatedExperience(container, character) {
     const calculator = window.ExperienceCalculator;
     if (!calculator) return;
-    const baseExperience = calculator.getMapExperience(selectedStage, selectedEncounter);
     const resultCard = document.createElement("div");
     resultCard.className = "calculated-experience";
 
-    if (baseExperience === null) {
-      resultCard.classList.add("pending");
-      resultCard.textContent = "このマップの基礎経験値は準備中です";
-      container.appendChild(resultCard);
-      return;
-    }
-
     const unitSize = characters.filter(member => member.unit === character.unit).length;
-    const calculation = calculator.calculateExperience({
-      baseExperience,
+    const calculation = calculator.calculateRouteExperience({
+      stageName: selectedStage,
+      routeId: "boss",
       isCaptain: character.isCaptain,
       mvpMode: selectedMvp,
       unitSize,
       rank: selectedBattleResult,
       isDoubleExperience
     });
-    if (!calculation.valid) return;
+    if (!calculation.valid) {
+      resultCard.classList.add("pending");
+      resultCard.textContent = "このマップのルート経験値は準備中です";
+      container.appendChild(resultCard);
+      return;
+    }
 
-    const encounterLabel = selectedEncounter === "boss" ? "ボス戦" : "道中戦";
     resultCard.innerHTML = `
-      <div class="calculated-experience-label">1戦あたりの獲得経験値（${encounterLabel}）</div>
+      <div class="calculated-experience-label">1周あたりの獲得経験値</div>
       <div class="calculated-experience-value">${calculator.formatExperience(calculation.rawExperience)}</div>
-      <div class="calculated-experience-detail">基礎 ${baseExperience} × 補正 ${calculation.totalMultiplier.toFixed(4)}</div>
+      <div class="calculated-experience-detail">${calculation.route.label}：${calculation.battles.map(result => `${result.battle.label} ${result.battle.baseExperience}`).join(" ＋ ")}</div>
     `;
+
+    const totals = document.createElement("div");
+    totals.className = "loop-totals";
+    [10, 50, 100, 200, 500].forEach(count => {
+      const row = document.createElement("div");
+      row.innerHTML = `<span>${count}周</span><strong>${calculator.formatExperience(calculation.rawExperience * count)}</strong>`;
+      totals.appendChild(row);
+    });
+    resultCard.appendChild(totals);
+
+    const customRow = document.createElement("div");
+    customRow.className = "custom-loop-row";
+    const customLabel = document.createElement("label");
+    customLabel.textContent = "任意の周回数";
+    const customInput = document.createElement("input");
+    customInput.type = "number";
+    customInput.inputMode = "numeric";
+    customInput.min = "1";
+    customInput.step = "1";
+    customInput.placeholder = "周回数";
+    const customResult = document.createElement("div");
+    customResult.className = "custom-loop-result";
+    customInput.oninput = e => {
+      const count = Number(e.target.value);
+      customResult.textContent = Number.isInteger(count) && count > 0
+        ? `${count}周：${calculator.formatExperience(calculation.rawExperience * count)}`
+        : "";
+    };
+    customRow.append(customLabel, customInput);
+    resultCard.append(customRow, customResult);
     container.appendChild(resultCard);
   }
 
