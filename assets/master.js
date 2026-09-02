@@ -38,7 +38,7 @@
         type: "character_update",
         character: {
           id: c.id, name: c.name, swordType: c.swordType,
-          activationDate: c.activationDate, unit: c.unit, isCaptain: c.isCaptain, isKiwame: !!c.isKiwame
+          level: c.level, activationDate: c.activationDate, unit: c.unit, isCaptain: c.isCaptain, isKiwame: !!c.isKiwame
         }
       }, "*");
     } catch (e) {}
