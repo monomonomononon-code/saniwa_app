@@ -346,12 +346,14 @@
     const resultCard = document.createElement("div");
     resultCard.className = "calculated-experience";
 
-    const unitSize = characters.filter(member => member.unit === character.unit).length;
+    const unitMembers = characters.filter(member => member.unit === character.unit);
+    const unitSize = unitMembers.length;
     const calculationOptions = {
       stageName: selectedStage,
       isCaptain: character.isCaptain,
       mvpMode: selectedMvp,
       unitSize,
+      unitMembers,
       rank: selectedBattleResult,
       isDoubleExperience
     };
