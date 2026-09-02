@@ -450,6 +450,152 @@
     ]
   };
 
+  // 武家の記憶：明示されたマス種別・接続・終点・確率・編成条件のみを登録。
+  MAP_EXPERIENCE["5-1 鎌倉（元弘の乱）"] = createStandardBossRouteMap("5-1-kamakura", 440, 1320);
+  MAP_EXPERIENCE["5-1 鎌倉（元弘の乱）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 440 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 440 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 440 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 440, terminal: "other" },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 440 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 440 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 440 },
+      H: { id: "H", type: "boss", label: "H", baseExperience: 1320, terminal: "boss" },
+      I: { id: "I", type: "resource", label: "I（木炭×60）", rewards: { "木炭": 60 }, terminal: "other" },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 440, terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "J", probability: null },
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "F", probability: null },
+      { from: "C", to: "D", probability: null },
+      { from: "C", to: "E", probability: null },
+      { from: "E", to: "G", probability: 1 },
+      { from: "F", to: "G", probability: null },
+      { from: "F", to: "I", probability: null },
+      { from: "G", to: "H", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["5-2 博多湾（元寇）"] = createStandardBossRouteMap("5-2-hakatabay", 460, 1380);
+  MAP_EXPERIENCE["5-2 博多湾（元寇）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 460 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 460 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 460 },
+      D: { id: "D", type: "resource", label: "D（冷却材×85）", rewards: { "冷却材": 85 } },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 460, terminal: "other" },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 460 },
+      G: { id: "G", type: "resource", label: "G（木炭×70）", rewards: { "木炭": 70 } },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 460 },
+      I: { id: "I", type: "resource", label: "I（玉鋼×60）", rewards: { "玉鋼": 60 }, terminal: "other" },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 460, terminal: "other" },
+      K: { id: "K", type: "boss", label: "K", baseExperience: 1380, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 1 },
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "F", probability: null },
+      { from: "B", to: "C", probability: 0.1, condition: { type: "unit_sword_type_count_at_least", swordType: "脇差", count: 3 } },
+      { from: "B", to: "F", probability: 0.9, condition: { type: "unit_sword_type_count_at_least", swordType: "脇差", count: 3 } },
+      { from: "C", to: "D", probability: 1 },
+      { from: "D", to: "E", probability: 1 },
+      { from: "F", to: "G", probability: 1 },
+      { from: "G", to: "H", probability: 0.2 },
+      { from: "G", to: "J", probability: 0.2 },
+      { from: "G", to: "K", probability: 0.6 },
+      { from: "H", to: "I", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["5-3 墨俣（承久の乱）"] = createStandardBossRouteMap("5-3-sunomata", 480, 1440);
+  MAP_EXPERIENCE["5-3 墨俣（承久の乱）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 480 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 480 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 480, terminal: "other" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 480 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 480 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 480 },
+      G: { id: "G", type: "resource", label: "G（砥石×90）", rewards: { "砥石": 90 } },
+      H: { id: "H", type: "resource", label: "H（玉鋼×90）", rewards: { "玉鋼": 90 } },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 480 },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 480 },
+      K: { id: "K", type: "normal", label: "K", baseExperience: 480 },
+      L: { id: "L", type: "boss", label: "L", baseExperience: 1440, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "D", probability: null },
+      { from: "B", to: "C", probability: 1 },
+      { from: "D", to: "E", probability: null },
+      { from: "D", to: "F", probability: null },
+      { from: "D", to: "G", probability: null },
+      { from: "E", to: "F", probability: null },
+      { from: "E", to: "H", probability: null },
+      { from: "F", to: "H", probability: null },
+      { from: "F", to: "I", probability: null },
+      { from: "G", to: "I", probability: 1 },
+      { from: "H", to: "J", probability: 1 },
+      { from: "I", to: "J", probability: null },
+      { from: "I", to: "K", probability: null },
+      { from: "J", to: "L", probability: 1 },
+      { from: "K", to: "L", probability: 1 }
+    ]
+  };
+
+  MAP_EXPERIENCE["5-4 厚樫山（阿津賀志山の戦い）"] = createStandardBossRouteMap("5-4-atsukashiyama", 500, 1500);
+  MAP_EXPERIENCE["5-4 厚樫山（阿津賀志山の戦い）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 500 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 500 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 500 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 500 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 500 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 500 },
+      G: { id: "G", type: "resource", label: "G（木炭×80）", rewards: { "木炭": 80 } },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 500, terminal: "other" },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 500 },
+      J: { id: "J", type: "boss", label: "J", baseExperience: 1500, terminal: "boss" },
+      K: { id: "K", type: "normal", label: "K", baseExperience: 500 },
+      L: { id: "L", type: "resource", label: "L（冷却材×90）", rewards: { "冷却材": 90 }, terminal: "other" },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 500 },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 500, terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "C", probability: null },
+      { from: "B", to: "D", probability: null },
+      { from: "B", to: "E", probability: null },
+      { from: "C", to: "F", probability: 1 },
+      { from: "D", to: "H", probability: null },
+      { from: "D", to: "I", probability: null },
+      { from: "E", to: "D", probability: null },
+      { from: "E", to: "F", probability: null },
+      { from: "F", to: "G", probability: null },
+      { from: "F", to: "H", probability: null },
+      { from: "G", to: "I", probability: 1 },
+      { from: "I", to: "M", probability: 1 },
+      { from: "M", to: "J", probability: null },
+      { from: "M", to: "N", probability: null },
+      { from: "M", to: "J", probability: 1, condition: { type: "unit_contains_all_sword_types", swordTypes: ["短刀", "脇差", "打刀", "太刀"] } }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -474,6 +620,17 @@
     if (!condition) return false;
     if (condition.type === "unit_contains_sword_type") {
       return Array.isArray(input.unitMembers) && input.unitMembers.some(member => member.swordType === condition.swordType);
+    }
+    if (condition.type === "unit_sword_type_count_at_least") {
+      const count = Array.isArray(input.unitMembers)
+        ? input.unitMembers.filter(member => member.swordType === condition.swordType).length
+        : 0;
+      return count >= condition.count;
+    }
+    if (condition.type === "unit_contains_all_sword_types") {
+      return Array.isArray(condition.swordTypes) && condition.swordTypes.every(swordType => (
+        Array.isArray(input.unitMembers) && input.unitMembers.some(member => member.swordType === swordType)
+      ));
     }
     return false;
   }
