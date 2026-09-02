@@ -153,6 +153,36 @@
     font-size: 10px;
     margin-left: 6px;
   }
+  .unit-card {
+    margin-bottom: 12px;
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .unit-title {
+    margin-bottom: 7px;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 14px;
+  }
+  .unit-member {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 0;
+    border-top: 1px solid var(--tag-border);
+    font-size: 12px;
+  }
+  .unit-member span:last-child {
+    color: var(--ink-soft);
+    text-align: right;
+  }
+  .unit-empty {
+    padding-top: 7px;
+    border-top: 1px solid var(--tag-border);
+    color: var(--ink-soft);
+    font-size: 11px;
+  }
 
   .exp-card {
     background: var(--tag-bg);
