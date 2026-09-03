@@ -367,18 +367,6 @@
       return;
     }
 
-    if (!routeOutcomes.probabilitiesConfigured && routeOutcomes.allOutcomesEqual) {
-      resultCard.innerHTML = `
-        <div class="calculated-experience-label">1周あたりの獲得経験値</div>
-        <div class="calculated-experience-value">${calculator.formatExperience(routeOutcomes.minExperience)}</div>
-        <div class="calculated-experience-detail">すべての到達可能ルートで獲得経験値が同一です</div>
-      `;
-      appendLoopTotals(resultCard, calculator, routeOutcomes.minExperience);
-      appendCustomLoopInput(resultCard, calculator, routeOutcomes.minExperience);
-      container.appendChild(resultCard);
-      return;
-    }
-
     const expected = routeOutcomes.probabilitiesConfigured
       ? calculator.calculateMapExpectedExperience(calculationOptions)
       : calculator.calculateMapProvisionalExpectedExperience(calculationOptions);
@@ -391,9 +379,7 @@
 
     const isProvisional = !routeOutcomes.probabilitiesConfigured && expected.usedProvisionalProbabilities;
     resultCard.innerHTML = `
-      <div class="calculated-experience-label">${isProvisional ? "1周あたりの暫定期待経験値" : "1周あたりの獲得経験値"}</div>
-      <div class="calculated-experience-value">${calculator.formatExperience(expected.rawExperience)}</div>
-      <div class="calculated-experience-detail">${isProvisional ? "均等確率による暫定計算" : `平均期待値（ボス到達率 ${(expected.bossArrivalProbability * 100).toFixed(1)}%）`}</div>
+      <div class="calculated-experience-label">周回数別の獲得期待値</div>
     `;
     if (isProvisional) {
       const note = document.createElement("div");
@@ -432,8 +418,8 @@
   function formatRewardExpectations(rewards, count) {
     return Object.entries(rewards || {}).map(([name, amount]) => {
       const formatted = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 2 }).format(amount * count);
-      return `${name} ${formatted}枚`;
-    }).join("・");
+      return `${name} ${formatted}${name === "依頼札" ? "枚" : ""}`;
+    }).join("\n");
   }
 
   function appendLoopTotals(card, calculator, minExperience, maxExperience, rewards) {
@@ -444,7 +430,13 @@
       const minimum = calculator.formatExperience(minExperience * count);
       const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
       const rewardText = formatRewardExpectations(rewards, count);
-      row.innerHTML = `<span>${count}周</span><strong>${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`}</strong>${rewardText ? `<small class="loop-reward">${rewardText}</small>` : ""}`;
+      row.innerHTML = `<span>${count}周</span><strong>${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP</strong>`;
+      if (rewardText) {
+        const rewardLabel = document.createElement("small");
+        rewardLabel.className = "loop-reward";
+        rewardLabel.textContent = rewardText;
+        row.appendChild(rewardLabel);
+      }
       totals.appendChild(row);
     });
     card.appendChild(totals);
@@ -472,7 +464,7 @@
       const minimum = calculator.formatExperience(minExperience * count);
       const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
       const rewardText = formatRewardExpectations(rewards, count);
-      customResult.textContent = `${count}周：${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP${rewardText ? `／${rewardText}` : ""}`;
+      customResult.textContent = `${count}周：${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP${rewardText ? `\n${rewardText}` : ""}`;
     };
     customRow.append(customLabel, customInput);
     card.append(customRow, customResult);
