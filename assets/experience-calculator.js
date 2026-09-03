@@ -671,6 +671,63 @@
     ]
   };
 
+  MAP_EXPERIENCE["6-2 京都（三条大橋）"] = createStandardBossRouteMap("6-2-kyoto-sanjo", 520, 1620);
+  MAP_EXPERIENCE["6-2 京都（三条大橋）"].metadata = {
+    routeTendencies: [{
+      swordType: "短刀",
+      description: "短刀数による到達傾向は、短刀6振りでのA→D固定以外は具体的な確率未登録",
+      probability: null,
+      applyToCalculation: false
+    }]
+  };
+  MAP_EXPERIENCE["6-2 京都（三条大橋）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 520 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 520 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 520, terminal: "other" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 250 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 250 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 250 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 250 },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 250 },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 250 },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 250 },
+      K: { id: "K", type: "resource", label: "K（冷却材×70）", rewards: { "冷却材": 70 } },
+      L: { id: "L", type: "normal", label: "L", baseExperience: 520, terminal: "other" },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 520 },
+      N: { id: "N", type: "resource", label: "N（玉鋼×80）", rewards: { "玉鋼": 80 } },
+      O: { id: "O", type: "normal", label: "O", baseExperience: 520, terminal: "other" },
+      P: { id: "P", type: "normal", label: "P", baseExperience: 550 },
+      Q: { id: "Q", type: "normal", label: "Q", baseExperience: 580 },
+      R: { id: "R", type: "normal", label: "R", baseExperience: 520, terminal: "other" },
+      S: { id: "S", type: "boss", label: "S", baseExperience: 1620, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "D", probability: null },
+      { from: "A", to: "D", probability: 1, condition: { type: "unit_all_sword_type", swordType: "短刀", size: 6 } },
+      { from: "B", to: "C", probability: 1 },
+      { from: "D", to: "E", probability: 1 },
+      { from: "E", to: "F", probability: 1 },
+      { from: "F", to: "G", probability: 1 },
+      { from: "G", to: "H", probability: 1 },
+      { from: "H", to: "I", probability: 1 },
+      { from: "I", to: "J", probability: 1 },
+      { from: "J", to: "K", probability: null },
+      { from: "J", to: "M", probability: null },
+      { from: "K", to: "L", probability: 1 },
+      { from: "M", to: "N", probability: null },
+      { from: "M", to: "P", probability: null },
+      { from: "N", to: "O", probability: 1 },
+      { from: "P", to: "Q", probability: 1 },
+      { from: "Q", to: "R", probability: null },
+      { from: "Q", to: "S", probability: null }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -693,6 +750,11 @@
 
   function conditionMatches(condition, input) {
     if (!condition) return false;
+    if (condition.type === "unit_all_sword_type") {
+      return Array.isArray(input.unitMembers)
+        && input.unitMembers.length === condition.size
+        && input.unitMembers.every(member => member.swordType === condition.swordType);
+    }
     if (condition.type === "unit_contains_sword_type") {
       return Array.isArray(input.unitMembers) && input.unitMembers.some(member => member.swordType === condition.swordType);
     }
