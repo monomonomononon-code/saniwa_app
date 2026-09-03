@@ -425,7 +425,7 @@
   function appendLoopTotals(card, calculator, minExperience, maxExperience, rewards) {
     const totals = document.createElement("div");
     totals.className = "loop-totals";
-    [10, 50, 100, 200, 500].forEach(count => {
+    [50, 100, 200, 500].forEach(count => {
       const row = document.createElement("div");
       const minimum = calculator.formatExperience(minExperience * count);
       const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
