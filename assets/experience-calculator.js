@@ -954,6 +954,60 @@
     ]
   };
 
+  MAP_EXPERIENCE["7-3 江戸（江戸城下）"] = createStandardBossRouteMap("7-3-edo-castle-town", 500, 3000);
+  MAP_EXPERIENCE["7-3 江戸（江戸城下）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 500 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 500 },
+      C: { id: "C", type: "resource", label: "C（木炭×70）", rewards: { "木炭": 70 }, terminal: "other" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 500 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 1000 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 500 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 600 },
+      H: { id: "H", type: "resource", label: "H（砥石×70）", rewards: { "砥石": 70 }, terminal: "other" },
+      I: { id: "I", type: "boss", label: "I", baseExperience: 3000, terminal: "boss" },
+      J: { id: "J", type: "resource", label: "J（冷却材×70）", rewards: { "冷却材": 70 } },
+      K: { id: "K", type: "boss", label: "K", baseExperience: 3000, terminal: "boss" },
+      L: { id: "L", type: "resource", label: "L（玉鋼×70）", rewards: { "玉鋼": 70 }, terminal: "other" },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 500 },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 500 },
+      O: { id: "O", type: "normal", label: "O", baseExperience: 1000 },
+      P: { id: "P", type: "normal", label: "P", baseExperience: 1500 },
+      Q: { id: "Q", type: "normal", label: "Q", baseExperience: 500 },
+      R: { id: "R", type: "normal", label: "R", baseExperience: 500 }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 0.6 },
+      { from: "A", to: "M", probability: 0.4 },
+      { from: "A", to: "B", probability: 0.2, condition: { type: "unit_sword_type_count_at_least", swordType: "大太刀", count: 2 } },
+      { from: "A", to: "M", probability: 0.8, condition: { type: "unit_sword_type_count_at_least", swordType: "大太刀", count: 2 } },
+      { from: "B", to: "C", probability: 0.1 },
+      { from: "B", to: "D", probability: 0.9 },
+      { from: "D", to: "E", probability: 1 },
+      { from: "E", to: "F", probability: 0.8 },
+      { from: "E", to: "J", probability: 0.1 },
+      { from: "E", to: "L", probability: 0.1 },
+      { from: "F", to: "G", probability: 1 },
+      { from: "G", to: "H", probability: 0.1 },
+      { from: "G", to: "I", probability: 0.9 },
+      { from: "G", to: "H", probability: 0.6, condition: { type: "unit_sword_type_count_at_least", swordType: "短刀", count: 4 } },
+      { from: "G", to: "I", probability: 0.4, condition: { type: "unit_sword_type_count_at_least", swordType: "短刀", count: 4 } },
+      { from: "J", to: "G", probability: 1 },
+      { from: "M", to: "N", probability: 1 },
+      { from: "N", to: "O", probability: 1 },
+      { from: "O", to: "P", probability: 0.1 },
+      { from: "O", to: "R", probability: 0.9 },
+      { from: "O", to: "P", probability: 0.8, condition: { type: "unit_sword_type_count_at_least", swordType: "大太刀", count: 3 } },
+      { from: "O", to: "R", probability: 0.2, condition: { type: "unit_sword_type_count_at_least", swordType: "大太刀", count: 3 } },
+      { from: "P", to: "Q", probability: 1 },
+      { from: "R", to: "Q", probability: 1 },
+      { from: "Q", to: "K", probability: 1 }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -1169,7 +1223,9 @@
       valid: true,
       map,
       battles: battleResults,
-      bossArrivalProbability: battleResults.find(result => result.node.terminal === "boss")?.arrivalProbability || 0,
+      bossArrivalProbability: battleResults.reduce((sum, result) => (
+        sum + (result.node.terminal === "boss" ? result.arrivalProbability : 0)
+      ), 0),
       rewards: calculateExpectedRewards(nodeProbabilities, graph.nodes),
       rawExperience: battleResults.reduce((sum, result) => sum + result.calculation.rawExperience * result.arrivalProbability, 0)
     };
