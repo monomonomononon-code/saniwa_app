@@ -596,6 +596,81 @@
     ]
   };
 
+  MAP_EXPERIENCE["6-1 京都（市中）"] = createStandardBossRouteMap("6-1-kyoto-shichu", 510, 1600);
+  // 確率未公表の傾向は記録のみ。条件付き接続・数値補正には使用しません。
+  MAP_EXPERIENCE["6-1 京都（市中）"].metadata = {
+    routeTendencies: [
+      {
+        scope: "boss_arrival",
+        swordType: "短刀",
+        effectMaxCount: 5,
+        description: "部隊内の短刀数が多いほどボスへ到達しやすく、短刀5振り以上で効果最大",
+        probability: null,
+        applyToCalculation: false
+      },
+      {
+        from: "G",
+        to: "H",
+        swordType: "短刀",
+        minCount: 5,
+        description: "短刀5振り以上でHへ高確率（具体的な確率は未公表）",
+        probability: null,
+        applyToCalculation: false
+      }
+    ]
+  };
+  MAP_EXPERIENCE["6-1 京都（市中）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 510 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 510 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 510, terminal: "other" },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 510 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 510, terminal: "other" },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 510 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 510 },
+      H: { id: "H", type: "resource", label: "H（冷却材×80）", rewards: { "冷却材": 80 } },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 510, terminal: "other" },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 510 },
+      K: { id: "K", type: "normal", label: "K", baseExperience: 510, terminal: "other" },
+      L: { id: "L", type: "normal", label: "L", baseExperience: 510 },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 510, terminal: "other" },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 510 },
+      O: { id: "O", type: "normal", label: "O", baseExperience: 510, terminal: "other" },
+      P: { id: "P", type: "boss", label: "P", baseExperience: 1600, terminal: "boss" },
+      Q: { id: "Q", type: "resource", label: "Q（砥石×70）", rewards: { "砥石": 70 } },
+      R: { id: "R", type: "normal", label: "R", baseExperience: 510 },
+      S: { id: "S", type: "normal", label: "S", baseExperience: 510, terminal: "other" },
+      T: { id: "T", type: "normal", label: "T", baseExperience: 510 },
+      U: { id: "U", type: "normal", label: "U", baseExperience: 510, terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "F", probability: null },
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "D", probability: null },
+      { from: "D", to: "E", probability: null },
+      { from: "D", to: "Q", probability: null },
+      { from: "F", to: "G", probability: 1 },
+      { from: "G", to: "H", probability: null },
+      { from: "G", to: "J", probability: null },
+      { from: "H", to: "I", probability: 1 },
+      { from: "J", to: "K", probability: null },
+      { from: "J", to: "L", probability: null },
+      { from: "L", to: "M", probability: null },
+      { from: "L", to: "N", probability: null },
+      { from: "N", to: "O", probability: null },
+      { from: "N", to: "P", probability: null },
+      { from: "Q", to: "R", probability: 1 },
+      { from: "R", to: "T", probability: null },
+      { from: "R", to: "S", probability: null },
+      { from: "T", to: "U", probability: null },
+      { from: "T", to: "P", probability: null }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
