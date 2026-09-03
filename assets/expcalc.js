@@ -413,7 +413,7 @@
 
     const isProvisional = !routeOutcomes.probabilitiesConfigured && expected.usedProvisionalProbabilities;
     resultCard.innerHTML = `
-      <div class="calculated-experience-label">周回数別の獲得期待値</div>
+      <div class="calculated-experience-label">${expected.map.routeType === "linear" ? "周回数別の獲得経験値" : "周回数別の獲得期待値"}</div>
     `;
     if (isProvisional) {
       const note = document.createElement("div");
