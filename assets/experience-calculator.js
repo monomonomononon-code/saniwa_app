@@ -840,6 +840,59 @@
     ]
   };
 
+  MAP_EXPERIENCE["7-1 江戸（新橋）"] = createStandardBossRouteMap("7-1-edo-shinbashi", 300, 3000);
+  MAP_EXPERIENCE["7-1 江戸（新橋）"].metadata = {
+    branchNotes: [{
+      from: "A",
+      description: "部隊に太刀・大太刀・槍・薙刀のいずれかが1振り以上いる場合、Bへ約2/3、Kへ約1/3",
+      approximate: true
+    }]
+  };
+  MAP_EXPERIENCE["7-1 江戸（新橋）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 300 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 300 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 400 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 1000 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 400 },
+      F: { id: "F", type: "resource", label: "F（依頼札×1）", rewards: { "依頼札": 1 }, terminal: "other" },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 1000 },
+      H: { id: "H", type: "resource", label: "H（玉鋼×100）", rewards: { "玉鋼": 100 } },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 1000 },
+      J: { id: "J", type: "boss", label: "J", baseExperience: 3000, terminal: "boss" },
+      K: { id: "K", type: "normal", label: "K", baseExperience: 300 },
+      L: { id: "L", type: "resource", label: "L（木炭×140）", rewards: { "木炭": 140 }, terminal: "other" },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 400 },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 1000 },
+      O: { id: "O", type: "normal", label: "O", baseExperience: 400 },
+      P: { id: "P", type: "resource", label: "P（冷却材×100）", rewards: { "冷却材": 100 }, terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: null },
+      { from: "A", to: "K", probability: null },
+      { from: "A", to: "B", probability: 2 / 3, condition: { type: "unit_contains_any_sword_type", swordTypes: ["太刀", "大太刀", "槍", "薙刀"] } },
+      { from: "A", to: "K", probability: 1 / 3, condition: { type: "unit_contains_any_sword_type", swordTypes: ["太刀", "大太刀", "槍", "薙刀"] } },
+      { from: "B", to: "C", probability: 1 },
+      { from: "C", to: "D", probability: null },
+      { from: "C", to: "G", probability: null },
+      { from: "D", to: "E", probability: 1 },
+      { from: "E", to: "F", probability: null },
+      { from: "E", to: "I", probability: null },
+      { from: "G", to: "H", probability: 1 },
+      { from: "H", to: "I", probability: 1 },
+      { from: "I", to: "J", probability: 1 },
+      { from: "K", to: "L", probability: null },
+      { from: "K", to: "M", probability: null },
+      { from: "M", to: "N", probability: 1 },
+      { from: "N", to: "O", probability: 1 },
+      { from: "O", to: "P", probability: null },
+      { from: "O", to: "I", probability: null }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -869,6 +922,10 @@
     }
     if (condition.type === "unit_contains_sword_type") {
       return Array.isArray(input.unitMembers) && input.unitMembers.some(member => member.swordType === condition.swordType);
+    }
+    if (condition.type === "unit_contains_any_sword_type") {
+      return Array.isArray(condition.swordTypes) && Array.isArray(input.unitMembers)
+        && input.unitMembers.some(member => condition.swordTypes.includes(member.swordType));
     }
     if (condition.type === "unit_sword_type_count_at_least") {
       const count = Array.isArray(input.unitMembers)
