@@ -121,10 +121,10 @@
     nodes: {
       sortie: { id: "sortie", type: "start", label: "出陣" },
       A: { id: "A", type: "normal", label: "A", baseExperience: 120 },
-      B: { id: "B", type: "resource", label: "B（玉鋼）", terminal: "other" },
+      B: { id: "B", type: "resource", label: "B（玉鋼）", rewards: { "玉鋼": 1 }, terminal: "other" },
       C: { id: "C", type: "normal", label: "C", baseExperience: 120, terminal: "other" },
       D: { id: "D", type: "normal", label: "D", baseExperience: 120 },
-      E: { id: "E", type: "resource", label: "E（砥石）" },
+      E: { id: "E", type: "resource", label: "E（砥石）", rewards: { "砥石": 1 } },
       F: { id: "F", type: "boss", label: "F", baseExperience: 360, terminal: "boss" }
     },
     connections: [
@@ -142,7 +142,7 @@
     nodes: {
       sortie: { id: "sortie", type: "start", label: "出陣" },
       A: { id: "A", type: "normal", label: "A", baseExperience: 140 },
-      B: { id: "B", type: "resource", label: "B（木炭）" },
+      B: { id: "B", type: "resource", label: "B（木炭）", rewards: { "木炭": 1 } },
       C: { id: "C", type: "normal", label: "C", baseExperience: 140, terminal: "other" },
       D: { id: "D", type: "normal", label: "D", baseExperience: 140 },
       E: { id: "E", type: "normal", label: "E", baseExperience: 140 },
@@ -166,7 +166,7 @@
       A: { id: "A", type: "normal", label: "A", baseExperience: 170 },
       B: { id: "B", type: "normal", label: "B", baseExperience: 170 },
       C: { id: "C", type: "normal", label: "C", baseExperience: 170, terminal: "other" },
-      D: { id: "D", type: "resource", label: "D（冷却材）" },
+      D: { id: "D", type: "resource", label: "D（冷却材）", rewards: { "冷却材": 1 } },
       E: { id: "E", type: "normal", label: "E", baseExperience: 170 },
       F: { id: "F", type: "normal", label: "F", baseExperience: 170 },
       G: { id: "G", type: "boss", label: "G", baseExperience: 510, terminal: "boss" }
@@ -195,7 +195,7 @@
       D: { id: "D", type: "normal", label: "D", baseExperience: 200 },
       E: { id: "E", type: "boss", label: "E", baseExperience: 600, terminal: "boss" },
       F: { id: "F", type: "normal", label: "F", baseExperience: 200 },
-      G: { id: "G", type: "resource", label: "G（依頼札）", terminal: "other" }
+      G: { id: "G", type: "resource", label: "G（依頼札）", rewards: { "依頼札": 1 }, terminal: "other" }
     },
     connections: [
       { from: "sortie", to: "A", probability: 1 },
@@ -219,7 +219,7 @@
       B: { id: "B", type: "normal", label: "B", baseExperience: 230 },
       C: { id: "C", type: "boss", label: "C", baseExperience: 690, terminal: "boss" },
       D: { id: "D", type: "normal", label: "D", baseExperience: 230 },
-      E: { id: "E", type: "resource", label: "E（砥石×20）", terminal: "other" }
+      E: { id: "E", type: "resource", label: "E（砥石×20）", rewards: { "砥石": 20 }, terminal: "other" }
     },
     connections: [
       { from: "sortie", to: "A", probability: null },
@@ -237,9 +237,9 @@
     nodes: {
       sortie: { id: "sortie", type: "start", label: "出陣" },
       A: { id: "A", type: "normal", label: "A", baseExperience: 250 },
-      B: { id: "B", type: "resource", label: "B（依頼札×1）" },
+      B: { id: "B", type: "resource", label: "B（依頼札×1）", rewards: { "依頼札": 1 } },
       C: { id: "C", type: "normal", label: "C", baseExperience: 250, terminal: "other" },
-      D: { id: "D", type: "resource", label: "D（玉鋼×30）" },
+      D: { id: "D", type: "resource", label: "D（玉鋼×30）", rewards: { "玉鋼": 30 } },
       E: { id: "E", type: "normal", label: "E", baseExperience: 250, terminal: "other" },
       F: { id: "F", type: "normal", label: "F", baseExperience: 250 },
       G: { id: "G", type: "normal", label: "G", baseExperience: 250 },
@@ -264,11 +264,11 @@
     nodes: {
       sortie: { id: "sortie", type: "start", label: "出陣" },
       A: { id: "A", type: "normal", label: "A", baseExperience: 280 },
-      B: { id: "B", type: "resource", label: "B（木炭×50）" },
+      B: { id: "B", type: "resource", label: "B（木炭×50）", rewards: { "木炭": 50 } },
       C: { id: "C", type: "normal", label: "C", baseExperience: 280 },
       D: { id: "D", type: "boss", label: "D", baseExperience: 840, terminal: "boss" },
       E: { id: "E", type: "normal", label: "E", baseExperience: 280 },
-      F: { id: "F", type: "resource", label: "F（玉鋼×50）", terminal: "other" },
+      F: { id: "F", type: "resource", label: "F（玉鋼×50）", rewards: { "玉鋼": 50 }, terminal: "other" },
       G: { id: "G", type: "normal", label: "G", baseExperience: 280, terminal: "other" },
       H: { id: "H", type: "normal", label: "H", baseExperience: 280, terminal: "other" }
     },
@@ -290,11 +290,11 @@
     nodes: {
       sortie: { id: "sortie", type: "start", label: "出陣" },
       A: { id: "A", type: "normal", label: "A", baseExperience: 320 },
-      B: { id: "B", type: "resource", label: "B（砥石×40）" },
+      B: { id: "B", type: "resource", label: "B（砥石×40）", rewards: { "砥石": 40 } },
       C: { id: "C", type: "normal", label: "C", baseExperience: 320, terminal: "other" },
       D: { id: "D", type: "normal", label: "D", baseExperience: 320 },
       E: { id: "E", type: "normal", label: "E", baseExperience: 320 },
-      F: { id: "F", type: "resource", label: "F（依頼札×1）", terminal: "other" },
+      F: { id: "F", type: "resource", label: "F（依頼札×1）", rewards: { "依頼札": 1 }, terminal: "other" },
       G: { id: "G", type: "normal", label: "G", baseExperience: 320 },
       H: { id: "H", type: "boss", label: "H", baseExperience: 960, terminal: "boss" }
     },
@@ -319,7 +319,7 @@
       sortie: { id: "sortie", type: "start", label: "出陣" },
       A: { id: "A", type: "normal", label: "A", baseExperience: 360 },
       B: { id: "B", type: "normal", label: "B", baseExperience: 360 },
-      C: { id: "C", type: "resource", label: "C（冷却材×40）", terminal: "other" },
+      C: { id: "C", type: "resource", label: "C（冷却材×40）", rewards: { "冷却材": 40 }, terminal: "other" },
       D: { id: "D", type: "normal", label: "D", baseExperience: 360 },
       E: { id: "E", type: "resource", label: "E（依頼札×1）", rewards: { "依頼札": 1 } },
       F: { id: "F", type: "normal", label: "F", baseExperience: 360 },
@@ -359,7 +359,7 @@
       C: { id: "C", type: "normal", label: "C", baseExperience: 390 },
       D: { id: "D", type: "normal", label: "D", baseExperience: 390 },
       E: { id: "E", type: "normal", label: "E", baseExperience: 390 },
-      F: { id: "F", type: "resource", label: "F（砥石×60）" },
+      F: { id: "F", type: "resource", label: "F（砥石×60）", rewards: { "砥石": 60 } },
       G: { id: "G", type: "normal", label: "G", baseExperience: 390 },
       H: { id: "H", type: "normal", label: "H", baseExperience: 390, terminal: "other" },
       I: { id: "I", type: "boss", label: "I", baseExperience: 1170, terminal: "boss" }
@@ -389,11 +389,11 @@
       B: { id: "B", type: "normal", label: "B", baseExperience: 400 },
       C: { id: "C", type: "normal", label: "C", baseExperience: 400 },
       D: { id: "D", type: "normal", label: "D", baseExperience: 400 },
-      E: { id: "E", type: "resource", label: "E（木炭×65）", terminal: "other" },
+      E: { id: "E", type: "resource", label: "E（木炭×65）", rewards: { "木炭": 65 }, terminal: "other" },
       F: { id: "F", type: "normal", label: "F", baseExperience: 400 },
-      G: { id: "G", type: "resource", label: "G（冷却材×65）" },
+      G: { id: "G", type: "resource", label: "G（冷却材×65）", rewards: { "冷却材": 65 } },
       H: { id: "H", type: "normal", label: "H", baseExperience: 400 },
-      I: { id: "I", type: "resource", label: "I（玉鋼×65）", terminal: "other" },
+      I: { id: "I", type: "resource", label: "I（玉鋼×65）", rewards: { "玉鋼": 65 }, terminal: "other" },
       J: { id: "J", type: "normal", label: "J", baseExperience: 400 },
       K: { id: "K", type: "boss", label: "K", baseExperience: 1200, terminal: "boss" }
     },
@@ -426,10 +426,10 @@
       E: { id: "E", type: "normal", label: "E", baseExperience: 420 },
       F: { id: "F", type: "normal", label: "F", baseExperience: 420 },
       G: { id: "G", type: "normal", label: "G", baseExperience: 420 },
-      H: { id: "H", type: "resource", label: "H（冷却材×65）" },
+      H: { id: "H", type: "resource", label: "H（冷却材×65）", rewards: { "冷却材": 65 } },
       I: { id: "I", type: "normal", label: "I", baseExperience: 420 },
       J: { id: "J", type: "normal", label: "J", baseExperience: 420 },
-      K: { id: "K", type: "resource", label: "K（依頼札×1）", terminal: "other" },
+      K: { id: "K", type: "resource", label: "K（依頼札×1）", rewards: { "依頼札": 1 }, terminal: "other" },
       L: { id: "L", type: "boss", label: "L", baseExperience: 1260, terminal: "boss" }
     },
     connections: [
@@ -740,7 +740,7 @@
 
     const outgoingByNode = {};
     for (const connection of graph.connections || []) {
-      if (!connection || !connection.from || !connection.to || !Number.isFinite(connection.probability)) {
+      if (!connection || !connection.from || !connection.to) {
         return { valid: false, reason: "route_probability_data_missing" };
       }
       (outgoingByNode[connection.from] ||= []).push(connection);
@@ -763,7 +763,7 @@
         return;
       }
       const totalProbability = connections.reduce((sum, connection) => sum + connection.probability, 0);
-      if (Math.abs(totalProbability - 1) > 1e-9) {
+      if (connections.some(connection => !Number.isFinite(connection.probability) || connection.probability < 0 || connection.probability > 1) || Math.abs(totalProbability - 1) > 1e-9) {
         invalidGraph = true;
         return;
       }
