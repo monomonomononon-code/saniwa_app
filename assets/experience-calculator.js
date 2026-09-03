@@ -1204,6 +1204,66 @@
     ]
   };
 
+  MAP_EXPERIENCE["8-4 京都（五条）"] = createStandardBossRouteMap("8-4-kyoto-gojo-third-map", 900, 5000);
+  MAP_EXPERIENCE["8-4 京都（五条）"].metadata = {
+    mapPhase: 3,
+    description: "第三MAP（2回目のボス撃破以降）の周回のみを対象とする"
+  };
+  MAP_EXPERIENCE["8-4 京都（五条）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 900 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 900 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 900 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 900 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 900 },
+      F: { id: "F", type: "resource", label: "F（冷却材×135）", rewards: { "冷却材": 135 }, terminal: "other" },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 900 },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 900 },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 900 },
+      J: { id: "J", type: "resource", label: "J（玉鋼×135）", rewards: { "玉鋼": 135 } },
+      K: { id: "K", type: "normal", label: "K", baseExperience: 900, terminal: "other" },
+      L: { id: "L", type: "resource", label: "L（砥石×135）", rewards: { "砥石": 135 } },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 950 },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 950 },
+      O: { id: "O", type: "normal", label: "O", baseExperience: 950 },
+      P: { id: "P", type: "normal", label: "P", baseExperience: 950 },
+      Q: { id: "Q", type: "resource", label: "Q（依頼札×1）", rewards: { "依頼札": 1 } },
+      R: { id: "R", type: "normal", label: "R", baseExperience: 950, terminal: "other" },
+      S: { id: "S", type: "normal", label: "S", baseExperience: 950 },
+      T: { id: "T", type: "resource", label: "T（木炭×135）", rewards: { "木炭": 135 } },
+      U: { id: "U", type: "normal", label: "U", baseExperience: 950 },
+      V: { id: "V", type: "normal", label: "V", baseExperience: 950 },
+      W: { id: "W", type: "boss", label: "W", baseExperience: 5000, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 1 },
+      { from: "B", to: "C", probability: 1 },
+      { from: "C", to: "D", probability: 0.26 },
+      { from: "C", to: "G", probability: 0.74 },
+      { from: "D", to: "E", probability: 1 },
+      { from: "E", to: "F", probability: 1 },
+      { from: "G", to: "H", probability: 1 },
+      { from: "H", to: "I", probability: 0.23 },
+      { from: "H", to: "L", probability: 0.77 },
+      { from: "I", to: "J", probability: 1 },
+      { from: "J", to: "K", probability: 1 },
+      { from: "L", to: "M", probability: 1 },
+      { from: "M", to: "N", probability: 1 },
+      { from: "N", to: "O", probability: 1 },
+      { from: "O", to: "P", probability: 1 },
+      { from: "P", to: "Q", probability: 0.27 },
+      { from: "P", to: "S", probability: 0.73 },
+      { from: "Q", to: "R", probability: 1 },
+      { from: "S", to: "T", probability: 1 },
+      { from: "T", to: "U", probability: 1 },
+      { from: "U", to: "V", probability: 1 },
+      { from: "V", to: "W", probability: 1 }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
