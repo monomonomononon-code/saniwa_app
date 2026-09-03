@@ -893,6 +893,67 @@
     ]
   };
 
+  MAP_EXPERIENCE["7-2 江戸（白金台）"] = createStandardBossRouteMap("7-2-edo-shirokanedai", 300, 3000);
+  MAP_EXPERIENCE["7-2 江戸（白金台）"].metadata = {
+    routeTendencies: [{
+      from: "sortie",
+      to: "M",
+      swordType: "大太刀",
+      count: 3,
+      description: "部隊内の大太刀が3振り以上いるとMへ進みやすいとされるが、具体的な確率は未登録",
+      probability: null,
+      applyToCalculation: false
+    }]
+  };
+  MAP_EXPERIENCE["7-2 江戸（白金台）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 300 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 400 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 550 },
+      D: { id: "D", type: "resource", label: "D（木炭×100）", rewards: { "木炭": 100 }, terminal: "other" },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 200 },
+      F: { id: "F", type: "resource", label: "F（砥石×100）", rewards: { "砥石": 100 }, terminal: "other" },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 1000 },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 1000 },
+      I: { id: "I", type: "resource", label: "I（玉鋼×100）", rewards: { "玉鋼": 100 } },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 550 },
+      K: { id: "K", type: "boss", label: "K", baseExperience: 3000, terminal: "boss" },
+      L: { id: "L", type: "normal", label: "L", baseExperience: 400 },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 300 },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 550 },
+      O: { id: "O", type: "normal", label: "O", baseExperience: 400 },
+      P: { id: "P", type: "normal", label: "P", baseExperience: 1000 },
+      Q: { id: "Q", type: "normal", label: "Q", baseExperience: 550 },
+      R: { id: "R", type: "resource", label: "R（冷却材×100）", rewards: { "冷却材": 100 }, terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: null },
+      { from: "sortie", to: "M", probability: null },
+      // 太鼓鐘貞宗がいない場合はO、いる場合は条件付き固定接続Bを優先。
+      { from: "A", to: "O", probability: 1 },
+      { from: "A", to: "B", probability: 1, condition: { type: "unit_contains_character_name", name: "太鼓鐘貞宗" } },
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "E", probability: null },
+      { from: "C", to: "D", probability: 1 },
+      { from: "E", to: "F", probability: null },
+      { from: "E", to: "G", probability: null },
+      { from: "G", to: "H", probability: 1 },
+      { from: "H", to: "K", probability: 1 },
+      { from: "M", to: "N", probability: 1 },
+      { from: "N", to: "O", probability: 1 },
+      { from: "O", to: "J", probability: null },
+      { from: "O", to: "P", probability: null },
+      { from: "J", to: "I", probability: 1 },
+      { from: "I", to: "H", probability: 1 },
+      { from: "P", to: "Q", probability: 1 },
+      { from: "Q", to: "L", probability: null },
+      { from: "Q", to: "R", probability: null },
+      { from: "L", to: "K", probability: 1 }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -915,6 +976,12 @@
 
   function conditionMatches(condition, input) {
     if (!condition) return false;
+    if (condition.type === "unit_contains_character_name") {
+      // 初・極は同じ登録名で、isKiwameのみが異なるため両方とも対象にする。
+      return Array.isArray(input.unitMembers) && input.unitMembers.some(member => (
+        typeof member.name === "string" && member.name.trim() === condition.name
+      ));
+    }
     if (condition.type === "unit_all_sword_type") {
       return Array.isArray(input.unitMembers)
         && input.unitMembers.length === condition.size
