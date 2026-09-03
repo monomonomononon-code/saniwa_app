@@ -15,6 +15,7 @@
   let mapCategory = "";
   let selectedBattlefield = "";
   let selectedStage = "";
+  let selectedMapVariant = "";
   let selectedBattleResult = "";
   let selectedMvp = "部隊内で均等";
   let isDoubleExperience = false;
@@ -220,6 +221,7 @@
           mapCategory = category;
           selectedBattlefield = "";
           selectedStage = "";
+          selectedMapVariant = "";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
           isDoubleExperience = false;
@@ -241,6 +243,7 @@
         battlefieldSelect.onchange = e => {
           selectedBattlefield = e.target.value;
           selectedStage = "";
+          selectedMapVariant = "";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
           isDoubleExperience = false;
@@ -259,6 +262,7 @@
           stageSelect.value = selectedStage;
           stageSelect.onchange = e => {
             selectedStage = e.target.value;
+            selectedMapVariant = "";
             selectedBattleResult = "";
             selectedMvp = "部隊内で均等";
             isDoubleExperience = false;
@@ -266,7 +270,36 @@
           };
           mapSelector.appendChild(stageSelect);
 
-          if (selectedStage) {
+          const mapVariants = window.ExperienceCalculator.getMapVariants(selectedStage);
+          if (mapVariants.length > 0) {
+            const routeLabel = document.createElement("label");
+            routeLabel.className = "select-label battlefield-label";
+            routeLabel.style.display = "block";
+            routeLabel.textContent = "ルートを選択";
+            routeLabel.htmlFor = "map-variant-select";
+            mapSelector.appendChild(routeLabel);
+            const routeSelect = document.createElement("select");
+            routeSelect.id = "map-variant-select";
+            routeSelect.className = "char-select battlefield-select";
+            routeSelect.innerHTML = '<option value="">選択してください</option>';
+            mapVariants.forEach(variant => {
+              const option = document.createElement("option");
+              option.value = variant.id;
+              option.textContent = variant.label;
+              routeSelect.appendChild(option);
+            });
+            routeSelect.value = selectedMapVariant;
+            routeSelect.onchange = e => {
+              selectedMapVariant = e.target.value;
+              selectedBattleResult = "";
+              selectedMvp = "部隊内で均等";
+              isDoubleExperience = false;
+              render();
+            };
+            mapSelector.appendChild(routeSelect);
+          }
+
+          if (selectedStage && (mapVariants.length === 0 || mapVariants.some(variant => variant.id === selectedMapVariant))) {
             const resultLabel = document.createElement("div");
             resultLabel.className = "select-label battlefield-label";
             resultLabel.textContent = "想定する戦闘結果";
@@ -350,6 +383,7 @@
     const unitSize = unitMembers.length;
     const calculationOptions = {
       stageName: selectedStage,
+      variantId: selectedMapVariant,
       isCaptain: character.isCaptain,
       mvpMode: selectedMvp,
       unitSize,
