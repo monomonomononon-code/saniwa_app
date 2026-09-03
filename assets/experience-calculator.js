@@ -1008,6 +1008,28 @@
     ]
   };
 
+  // 合計偵察値は自動判定せず、ユーザーが選択したルートのデータだけを使用する。
+  MAP_EXPERIENCE["7-4 江戸（江戸城内）"] = {
+    id: "7-4-edo-castle",
+    variants: {
+      long: { id: "7-4-long", label: "長距離ルート（合計偵察値319以下）", dataStatus: "unregistered", graph: null },
+      medium: { id: "7-4-medium", label: "中距離ルート（合計偵察値320以上499以下）", dataStatus: "unregistered", graph: null },
+      short: { id: "7-4-short", label: "短距離ルート（合計偵察値500以上）", dataStatus: "unregistered", graph: null }
+    }
+  };
+
+  function getMapVariants(stageName) {
+    const map = MAP_EXPERIENCE[stageName];
+    return Object.entries(map && map.variants || {}).map(([id, variant]) => ({ id, label: variant.label }));
+  }
+
+  function getMapForCalculation(stageName, variantId) {
+    const map = MAP_EXPERIENCE[stageName];
+    if (!map || !map.variants) return map;
+    // 未選択・不正なIDでは、別ルートへフォールバックしない。
+    return Object.prototype.hasOwnProperty.call(map.variants, variantId) ? map.variants[variantId] : null;
+  }
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -1159,7 +1181,8 @@
   // 接続確率が一つでも未設定なら、推測せず invalid を返します。
   function calculateMapExpectedExperience(options) {
     const input = options || {};
-    const map = MAP_EXPERIENCE[input.stageName];
+    const map = getMapForCalculation(input.stageName, input.variantId);
+    if (map && map.dataStatus === "unregistered") return { valid: false, reason: "base_experience_missing" };
     const graph = map && map.graph;
     if (!graph || !graph.startNodeId || !graph.nodes) {
       return { valid: false, reason: "route_probability_data_missing" };
@@ -1235,7 +1258,8 @@
   // 公式確率が全て登録されたマップでは、この関数ではなく calculateMapExpectedExperience を使います。
   function calculateMapProvisionalExpectedExperience(options) {
     const input = options || {};
-    const map = MAP_EXPERIENCE[input.stageName];
+    const map = getMapForCalculation(input.stageName, input.variantId);
+    if (map && map.dataStatus === "unregistered") return { valid: false, reason: "base_experience_missing" };
     const graph = map && map.graph;
     if (!graph || !graph.startNodeId || !graph.nodes) {
       return { valid: false, reason: "route_structure_data_missing" };
@@ -1318,7 +1342,8 @@
   // 確率未設定でも、ルート別の獲得経験値・最小値・最大値を算出できます。
   function calculateMapRouteOutcomes(options) {
     const input = options || {};
-    const map = MAP_EXPERIENCE[input.stageName];
+    const map = getMapForCalculation(input.stageName, input.variantId);
+    if (map && map.dataStatus === "unregistered") return { valid: false, reason: "base_experience_missing" };
     const graph = map && map.graph;
     if (!graph || !graph.startNodeId || !graph.nodes) {
       return { valid: false, reason: "route_structure_data_missing" };
@@ -1420,6 +1445,7 @@
 
   const api = {
     MAP_EXPERIENCE,
+    getMapVariants,
     RANK_MULTIPLIERS,
     getMapRoute,
     getMapExperience,
