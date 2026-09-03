@@ -1008,13 +1008,32 @@
     ]
   };
 
+  // 明示された一本道の通過順を使用する。最後のマスだけがボス終点。
+  function createLinearMapVariant(id, label, cellIds, normalExperience, bossExperience) {
+    const nodes = {};
+    const connections = [];
+    cellIds.forEach((cellId, index) => {
+      const isBoss = index === cellIds.length - 1;
+      nodes[cellId] = {
+        id: cellId, label: cellId, type: isBoss ? "boss" : "normal",
+        baseExperience: isBoss ? bossExperience : normalExperience,
+        ...(isBoss ? { terminal: "boss" } : {})
+      };
+      if (!isBoss) connections.push({ from: cellId, to: cellIds[index + 1], probability: 1 });
+    });
+    return { id, label, routeType: "linear", graph: { startNodeId: cellIds[0], nodes, connections } };
+  }
+
   // 合計偵察値は自動判定せず、ユーザーが選択したルートのデータだけを使用する。
   MAP_EXPERIENCE["7-4 江戸（江戸城内）"] = {
     id: "7-4-edo-castle",
     variants: {
-      long: { id: "7-4-long", label: "長距離ルート（合計偵察値319以下）", dataStatus: "unregistered", graph: null },
-      medium: { id: "7-4-medium", label: "中距離ルート（合計偵察値320以上499以下）", dataStatus: "unregistered", graph: null },
-      short: { id: "7-4-short", label: "短距離ルート（合計偵察値500以上）", dataStatus: "unregistered", graph: null }
+      long: createLinearMapVariant("7-4-long", "長距離ルート（合計偵察値319以下）",
+        ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"], 400, 2000),
+      medium: createLinearMapVariant("7-4-medium", "中距離ルート（合計偵察値320以上499以下）",
+        ["A", "B", "C", "D", "E", "F", "G", "H"], 800, 4000),
+      short: createLinearMapVariant("7-4-short", "短距離ルート（合計偵察値500以上）",
+        ["A", "B", "C", "D", "E"], 1200, 6000)
     }
   };
 
