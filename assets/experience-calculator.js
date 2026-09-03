@@ -1049,6 +1049,55 @@
     return Object.prototype.hasOwnProperty.call(map.variants, variantId) ? map.variants[variantId] : null;
   }
 
+  MAP_EXPERIENCE["8-1 京都（阿弥陀ヶ峰）"] = createStandardBossRouteMap("8-1-kyoto-amidagamine", 750, 3500);
+  MAP_EXPERIENCE["8-1 京都（阿弥陀ヶ峰）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 750 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 750 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 750 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 750 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 800 },
+      F: { id: "F", type: "resource", label: "F（冷却材×120）", rewards: { "冷却材": 120 }, terminal: "other" },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 800 },
+      H: { id: "H", type: "normal", label: "H", baseExperience: 800 },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 800 },
+      J: { id: "J", type: "boss", label: "J", baseExperience: 3500, terminal: "boss" },
+      K: { id: "K", type: "normal", label: "K", baseExperience: 800 },
+      L: { id: "L", type: "resource", label: "L（玉鋼×120）", rewards: { "玉鋼": 120 }, terminal: "other" },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 750 },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 750 },
+      O: { id: "O", type: "resource", label: "O（砥石×120）", rewards: { "砥石": 120 }, terminal: "other" },
+      P: { id: "P", type: "resource", label: "P（木炭×120）", rewards: { "木炭": 120 } },
+      Q: { id: "Q", type: "normal", label: "Q", baseExperience: 750 },
+      R: { id: "R", type: "normal", label: "R", baseExperience: 750 },
+      S: { id: "S", type: "resource", label: "S（依頼札×1）", rewards: { "依頼札": 1 }, terminal: "other" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 1 },
+      { from: "B", to: "C", probability: 0.71 },
+      { from: "B", to: "M", probability: 0.14 },
+      { from: "B", to: "P", probability: 0.15 },
+      { from: "C", to: "D", probability: 1 },
+      { from: "D", to: "E", probability: 0.9 },
+      { from: "D", to: "Q", probability: 0.1 },
+      { from: "E", to: "F", probability: 0.1 },
+      { from: "E", to: "G", probability: 0.9 },
+      { from: "G", to: "H", probability: 1 },
+      { from: "H", to: "I", probability: 1 },
+      { from: "I", to: "J", probability: 0.91 },
+      { from: "I", to: "K", probability: 0.09 },
+      { from: "K", to: "L", probability: 1 },
+      { from: "M", to: "N", probability: 1 },
+      { from: "N", to: "O", probability: 1 },
+      { from: "P", to: "Q", probability: 1 },
+      { from: "Q", to: "R", probability: 1 },
+      { from: "R", to: "S", probability: 1 }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
