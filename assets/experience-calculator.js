@@ -1098,6 +1098,60 @@
     ]
   };
 
+  MAP_EXPERIENCE["8-2 信濃（上田城）"] = createStandardBossRouteMap("8-2-shinano-ueda", 800, 4000);
+  MAP_EXPERIENCE["8-2 信濃（上田城）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 800 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 800 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 800 },
+      D: { id: "D", type: "resource", label: "D（玉鋼×125）", rewards: { "玉鋼": 125 }, terminal: "other" },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 800 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 800 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 800 },
+      H: { id: "H", type: "resource", label: "H（冷却材×125）", rewards: { "冷却材": 125 }, terminal: "other" },
+      I: { id: "I", type: "normal", label: "I", baseExperience: 800 },
+      J: { id: "J", type: "resource", label: "J（依頼札×1）", rewards: { "依頼札": 1 }, terminal: "other" },
+      K: { id: "K", type: "normal", label: "K", baseExperience: 800 },
+      L: { id: "L", type: "normal", label: "L", baseExperience: 800 },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 800 },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 800 },
+      O: { id: "O", type: "resource", label: "O（木炭×125）", rewards: { "木炭": 125 }, terminal: "other" },
+      P: { id: "P", type: "normal", label: "P", baseExperience: 1000 },
+      Q: { id: "Q", type: "normal", label: "Q", baseExperience: 850 },
+      R: { id: "R", type: "normal", label: "R", baseExperience: 850 },
+      S: { id: "S", type: "resource", label: "S（砥石×125）", rewards: { "砥石": 125 }, terminal: "other" },
+      T: { id: "T", type: "normal", label: "T", baseExperience: 850 },
+      U: { id: "U", type: "normal", label: "U", baseExperience: 850 },
+      V: { id: "V", type: "boss", label: "V", baseExperience: 4000, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 1 },
+      { from: "B", to: "C", probability: null },
+      { from: "B", to: "E", probability: null },
+      { from: "C", to: "D", probability: 1 },
+      { from: "E", to: "F", probability: 1 },
+      { from: "F", to: "G", probability: null },
+      { from: "F", to: "K", probability: null },
+      { from: "G", to: "H", probability: null },
+      { from: "G", to: "I", probability: null },
+      { from: "I", to: "J", probability: 1 },
+      { from: "K", to: "L", probability: 1 },
+      { from: "L", to: "M", probability: 1 },
+      { from: "M", to: "N", probability: null },
+      { from: "M", to: "P", probability: null },
+      { from: "N", to: "O", probability: 1 },
+      { from: "P", to: "Q", probability: 1 },
+      { from: "Q", to: "R", probability: null },
+      { from: "Q", to: "T", probability: null },
+      { from: "R", to: "S", probability: 1 },
+      { from: "T", to: "U", probability: 1 },
+      { from: "U", to: "V", probability: 1 }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
