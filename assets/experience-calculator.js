@@ -728,6 +728,59 @@
     ]
   };
 
+  MAP_EXPERIENCE["6-3 京都（池田屋二階）"] = createStandardBossRouteMap("6-3-kyoto-ikedaya-second-floor", 530, 1640);
+  MAP_EXPERIENCE["6-3 京都（池田屋二階）"].metadata = {
+    routeTendencies: [{
+      swordType: "短刀",
+      count: 4,
+      description: "部隊内の短刀が4振り以上いるとボスへ到達しやすいとされるが、具体的な確率は未登録",
+      probability: null,
+      applyToCalculation: false
+    }]
+  };
+  MAP_EXPERIENCE["6-3 京都（池田屋二階）"].graph = {
+    startNodeId: "sortie",
+    nodes: {
+      sortie: { id: "sortie", type: "start", label: "出陣" },
+      A: { id: "A", type: "normal", label: "A", baseExperience: 530 },
+      B: { id: "B", type: "normal", label: "B", baseExperience: 270 },
+      C: { id: "C", type: "normal", label: "C", baseExperience: 270 },
+      D: { id: "D", type: "normal", label: "D", baseExperience: 270 },
+      E: { id: "E", type: "normal", label: "E", baseExperience: 270 },
+      F: { id: "F", type: "normal", label: "F", baseExperience: 270 },
+      G: { id: "G", type: "normal", label: "G", baseExperience: 270 },
+      H: { id: "H", type: "resource", label: "H（木炭×40）", rewards: { "木炭": 40 }, terminal: "other" },
+      I: { id: "I", type: "resource", label: "I（玉鋼×10）", rewards: { "玉鋼": 10 } },
+      J: { id: "J", type: "normal", label: "J", baseExperience: 530, terminal: "other" },
+      K: { id: "K", type: "normal", label: "K", baseExperience: 560 },
+      L: { id: "L", type: "normal", label: "L", baseExperience: 590 },
+      M: { id: "M", type: "normal", label: "M", baseExperience: 530, terminal: "other" },
+      N: { id: "N", type: "normal", label: "N", baseExperience: 620 },
+      O: { id: "O", type: "normal", label: "O", baseExperience: 530 },
+      P: { id: "P", type: "resource", label: "P（依頼札×1）", rewards: { "依頼札": 1 }, terminal: "other" },
+      Q: { id: "Q", type: "boss", label: "Q", baseExperience: 1640, terminal: "boss" }
+    },
+    connections: [
+      { from: "sortie", to: "A", probability: 1 },
+      { from: "A", to: "B", probability: 1 },
+      { from: "B", to: "C", probability: 1 },
+      { from: "C", to: "D", probability: 1 },
+      { from: "D", to: "E", probability: 1 },
+      { from: "E", to: "F", probability: 1 },
+      { from: "F", to: "G", probability: 1 },
+      { from: "G", to: "H", probability: null },
+      { from: "G", to: "I", probability: null },
+      { from: "I", to: "J", probability: null },
+      { from: "I", to: "K", probability: null },
+      { from: "K", to: "L", probability: 1 },
+      { from: "L", to: "M", probability: null },
+      { from: "L", to: "N", probability: null },
+      { from: "N", to: "O", probability: null },
+      { from: "N", to: "Q", probability: null },
+      { from: "O", to: "P", probability: 1 }
+    ]
+  };
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
