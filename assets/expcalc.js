@@ -25,8 +25,9 @@
       "維新の記憶", "江戸の記憶", "織豊の記憶", "戦国の記憶",
       "武家の記憶", "池田屋の記憶", "延享の記憶", "青野原の記憶"
     ],
-    event: ["大阪城", "夜花奪還作成"]
+    event: ["大阪城", "夜花奪還作戦"]
   };
+  const EVENT_STAGES = { "夜花奪還作戦": "yoka-2026-edo-shitamachi" };
   const NORMAL_MAPS = {
     "維新の記憶": ["1-1 函館", "1-2 会津", "1-3 宇都宮", "1-4 鳥羽"],
     "江戸の記憶": ["2-1 鳥羽", "2-2 江戸", "2-3 江戸（元禄）", "2-4 大阪（大阪冬の陣）"],
@@ -242,7 +243,7 @@
         battlefieldSelect.value = selectedBattlefield;
         battlefieldSelect.onchange = e => {
           selectedBattlefield = e.target.value;
-          selectedStage = "";
+          selectedStage = mapCategory === "event" ? EVENT_STAGES[selectedBattlefield] || "" : "";
           selectedMapVariant = "";
           selectedBattleResult = "";
           selectedMvp = "部隊内で均等";
@@ -269,7 +270,9 @@
             render();
           };
           mapSelector.appendChild(stageSelect);
+        }
 
+        if (selectedStage) {
           const mapVariants = window.ExperienceCalculator.getMapVariants(selectedStage);
           if (mapVariants.length > 0) {
             const routeLabel = document.createElement("label");
@@ -391,6 +394,11 @@
       rank: selectedBattleResult,
       isDoubleExperience
     };
+    if (mapCategory === "event") {
+      renderEventCalculation(resultCard, calculator, calculationOptions);
+      container.appendChild(resultCard);
+      return;
+    }
     const routeOutcomes = calculator.calculateMapRouteOutcomes(calculationOptions);
     if (!routeOutcomes.valid) {
       resultCard.classList.add("pending");
@@ -427,6 +435,50 @@
     container.appendChild(resultCard);
   }
 
+  function renderEventCalculation(card, calculator, options) {
+    const result = calculator.calculateEventMapExperience(options);
+    if (!result.valid) { card.textContent = "ルート構造データ未登録"; return; }
+    const title = document.createElement("div");
+    title.className = "calculated-experience-label";
+    title.textContent = `${result.map.eventName} ${result.map.year}・${result.map.mapName}`;
+    card.appendChild(title);
+    if (result.usedProvisionalProbabilities) {
+      const note = document.createElement("div");
+      note.className = "provisional-note";
+      note.textContent = "※分岐確率が未登録のため、各分岐を均等確率として算出した暫定値です";
+      card.appendChild(note);
+    }
+    const resourceNote = document.createElement("div");
+    resourceNote.className = "provisional-note";
+    resourceNote.textContent = "※資材種類は等確率と仮定し、資材量は50＝40%・100＝40%・150＝20%で計算しています。";
+    card.appendChild(resourceNote);
+    const experienceNote = document.createElement("div");
+    experienceNote.className = "mvp-note";
+    experienceNote.textContent = result.experienceAvailable
+      ? (result.experienceSource === "measured_average" ? "実測1周平均経験値（倍率適用前）に既存の補正を適用しています。" : "登録された苦無出現率に基づく経験値です。")
+      : (result.reason === "invalid_measurement" ? "実測値が不正なため経験値を算出できません。" : "苦無出現率が未登録のため経験値は算出待ちです。資材期待値と戦闘回数は下記で確認できます。");
+    card.appendChild(experienceNote);
+    appendLoopTotals(card, calculator, result.rawExperience, undefined, result.rewards);
+    appendCustomLoopInput(card, calculator, result.rawExperience, undefined, result.rewards);
+    const details = document.createElement("details");
+    details.className = "route-details";
+    const summary = document.createElement("summary");
+    summary.textContent = "ルート別戦闘回数（ボス戦を含む・全ルートGボス到達）";
+    details.appendChild(summary);
+    result.outcomes.forEach(outcome => {
+      const row = document.createElement("div");
+      row.className = "route-outcome";
+      const path = document.createElement("span");
+      path.textContent = outcome.nodeIds.filter(id => id !== "sortie").join(" → ");
+      path.style.overflowWrap = "anywhere";
+      const count = document.createElement("strong");
+      count.textContent = `${outcome.battleCount}戦`;
+      row.append(path, count);
+      details.appendChild(row);
+    });
+    card.appendChild(details);
+  }
+
   function appendRouteDetails(card, calculator, outcomes) {
     const details = document.createElement("details");
     details.className = "route-details";
@@ -461,10 +513,10 @@
     totals.className = "loop-totals";
     [50, 100, 200, 500].forEach(count => {
       const row = document.createElement("div");
-      const minimum = calculator.formatExperience(minExperience * count);
+      const minimum = minExperience === null ? null : calculator.formatExperience(minExperience * count);
       const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
       const rewardText = formatRewardExpectations(rewards, count);
-      row.innerHTML = `<span>${count}周</span><strong>${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP</strong>`;
+      row.innerHTML = `<span>${count}周</span><strong>${minimum === null ? "経験値：算出待ち" : `${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP`}</strong>`;
       if (rewardText) {
         const rewardLabel = document.createElement("small");
         rewardLabel.className = "loop-reward";
@@ -495,10 +547,10 @@
         customResult.textContent = "";
         return;
       }
-      const minimum = calculator.formatExperience(minExperience * count);
+      const minimum = minExperience === null ? null : calculator.formatExperience(minExperience * count);
       const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
       const rewardText = formatRewardExpectations(rewards, count);
-      customResult.textContent = `${count}周：${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP${rewardText ? `\n${rewardText}` : ""}`;
+      customResult.textContent = `${count}周：${minimum === null ? "経験値：算出待ち" : `${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP`}${rewardText ? `\n${rewardText}` : ""}`;
     };
     customRow.append(customLabel, customInput);
     card.append(customRow, customResult);
