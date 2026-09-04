@@ -22,7 +22,7 @@
 .report-date.today { background: var(--report-purple-soft); }
 .report-date.selected { box-shadow: inset 0 0 0 2px var(--report-purple); font-weight: 700; }
 .report-record-dot { position: absolute; left: 50%; bottom: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--report-purple); transform: translateX(-50%); }
-.report-complete-mark { position: absolute; z-index: 2; top: -7px; right: -5px; font-size: 24px; line-height: 1; filter: saturate(.9); pointer-events: none; }
+.report-complete-mark { position: absolute; z-index: 2; top: -2px; right: 4px; font-size: 24px; line-height: 1; filter: saturate(.9); pointer-events: none; }
 .report-day-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #D8CEB9; }
 .report-day-head h2 { margin: 0; font: 600 19px/1.5 "Hiragino Mincho ProN", "Yu Mincho", serif; }
 .report-primary { min-height: 42px; border: 0; border-radius: 10px; padding: 9px 18px; background: var(--report-purple); color: #FFFDF6; font: inherit; }
