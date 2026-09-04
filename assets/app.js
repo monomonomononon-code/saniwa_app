@@ -284,6 +284,10 @@
     const data = e.data;
     if (!data || !data.source) return;
     if (data.source !== "rooms" && data.source !== "network" && data.source !== "master" && data.source !== "expcalc") return;
+    if (data.source === "expcalc" && data.type === "open_character_list" && e.source === expcalcSub.iframe.contentWindow) {
+      showView("master-view");
+      return;
+    }
 
     if (data.type === "ready") {
       try { e.source && e.source.postMessage({ type: "characters_sync", characters: sharedCharacters }, "*"); } catch (err) {}
