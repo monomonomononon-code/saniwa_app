@@ -121,19 +121,39 @@
     const rounds = element("span", "", `${formatNumber(record.rounds, 0)}周`);
     head.append(heading, rounds);
     card.appendChild(head);
-    (record.characters || []).forEach(character => {
+    const members = Array.isArray(record.members) ? record.members : [];
+    const expResults = Array.isArray(record.expResults) ? record.expResults : [];
+    const memberNames = members.map(member => member.name).filter(Boolean);
+    const memberBlock = element("div", "report-run-members");
+    memberBlock.append(element("span", "report-exp-subtitle", "周回メンバー"), element("p", "", memberNames.join(" / ") || "記録なし"));
+    card.appendChild(memberBlock);
+    const calculated = element("div", "report-calculated-members");
+    calculated.appendChild(element("span", "report-exp-subtitle", "経験値計算済み"));
+    if (!expResults.length) calculated.appendChild(element("p", "report-empty-line", record.legacyTargetUnknown ? "旧形式の記録のため、計算対象を判別できません" : "なし"));
+    expResults.forEach(result => {
+      const resultBox = element("div", "report-calculated-result");
       const row = element("div", "report-exp-row");
-      row.append(element("span", "", character.name || "刀剣男士"), element("strong", "", `${formatNumber(character.experience)} EXP`));
-      card.appendChild(row);
+      row.append(element("span", "", result.name || "刀剣男士"), element("strong", "", `${formatNumber(result.exp)} EXP`));
+      resultBox.appendChild(row);
+      const labels = conditionLabels(result.conditions);
+      if (Number(result.expMultiplier) > 1 && !labels.includes("経験値2倍")) labels.push(`経験値×${formatNumber(result.expMultiplier)}`);
+      if (labels.length) resultBox.appendChild(element("p", "report-exp-conditions", labels.join(" ／ ")));
+      calculated.appendChild(resultBox);
     });
+    card.appendChild(calculated);
+    if (!record.legacyTargetUnknown) {
+      const calculatedKeys = new Set(expResults.map(result => result.characterId || result.name));
+      const uncalculated = members.filter(member => !calculatedKeys.has(member.id || member.name)).map(member => member.name);
+      const pending = element("div", "report-uncalculated-members");
+      pending.append(element("span", "report-exp-subtitle", "未計算"), element("p", "", uncalculated.join(" / ") || "なし"));
+      card.appendChild(pending);
+    }
     const resources = Object.entries(record.resources || {}).filter(([, amount]) => Number(amount));
     if (resources.length) {
       const resourceBox = element("div", "report-exp-resources");
       resources.forEach(([name, amount]) => resourceBox.appendChild(element("span", "", `${name} ${formatNumber(amount)}${name === "依頼札" ? "枚" : ""}`)));
       card.appendChild(resourceBox);
     }
-    const labels = conditionLabels(record.conditions);
-    if (labels.length) card.appendChild(element("p", "report-exp-conditions", labels.join(" ／ ")));
     if (editable) {
       const remove = element("button", "report-remove", "削除");
       remove.type = "button";
