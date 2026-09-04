@@ -1,0 +1,94 @@
+:root {
+  --report-purple: #70536B;
+  --report-purple-dark: #594253;
+  --report-purple-soft: #E7DDE5;
+  --report-line: #CFC3AA;
+  --report-card: #FFFDF6;
+}
+.report-calendar,
+.report-day { margin-top: 14px; padding: 14px; border: 1px solid var(--report-line); border-radius: 14px; background: rgb(255 253 246 / .7); }
+.report-month-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; margin-bottom: 10px; }
+.report-month-nav h2 { margin: 0; text-align: center; font: 600 20px/1.3 "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: .08em; }
+.report-month-nav button { width: 44px; height: 40px; border: 1px solid #BFAFC0; border-radius: 999px; background: #FFFDF6; color: var(--report-purple); font-size: 26px; }
+.report-weekdays,
+.report-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.report-weekdays span { padding: 4px 0 8px; text-align: center; color: #746B61; font-size: 12px; }
+.report-weekdays span:first-child { color: #A33D43; }
+.report-weekdays span:last-child { color: #406987; }
+.report-date { position: relative; aspect-ratio: 1; min-width: 0; border: 0; border-radius: 10px; background: transparent; color: #2B2621; font: inherit; }
+.report-date:nth-child(7n + 1) { color: #A33D43; }
+.report-date:nth-child(7n) { color: #406987; }
+.report-date.outside { opacity: .32; }
+.report-date.today { background: var(--report-purple-soft); }
+.report-date.selected { box-shadow: inset 0 0 0 2px var(--report-purple); font-weight: 700; }
+.report-record-dot { position: absolute; left: 50%; bottom: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--report-purple); transform: translateX(-50%); }
+.report-day-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #D8CEB9; }
+.report-day-head h2 { margin: 0; font: 600 19px/1.5 "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.report-primary { min-height: 42px; border: 0; border-radius: 10px; padding: 9px 18px; background: var(--report-purple); color: #FFFDF6; font: inherit; }
+.report-primary:active { background: var(--report-purple-dark); }
+.report-day-empty { min-height: 150px; display: grid; place-content: center; justify-items: center; gap: 8px; color: #786F64; text-align: center; }
+.report-day-empty-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--report-purple-soft); color: var(--report-purple); font-family: serif; }
+.report-view-section { padding: 15px 0; border-bottom: 1px solid #DED4C0; }
+.report-view-section:last-child { border-bottom: 0; }
+.report-view-section h3,
+.report-form-section h3 { margin: 0 0 9px; color: var(--report-purple-dark); font: 600 16px/1.4 "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.report-view-list { margin: 0; padding-left: 1.25em; line-height: 1.8; }
+.report-empty-line,
+.report-help { margin: 0; color: #776E64; font-size: 13px; line-height: 1.6; }
+.report-summary-table { display: grid; gap: 6px; }
+.report-summary-row,
+.report-exp-row { display: flex; justify-content: space-between; gap: 14px; line-height: 1.6; }
+.positive { color: #43613F; }
+.negative { color: #A33D43; }
+.report-koban-view { margin: 0; font-weight: 700; }
+.report-exp-list { display: grid; gap: 10px; }
+.report-exp-record { position: relative; padding: 12px; border: 1px solid #D5CAB5; border-radius: 10px; background: #FFFDF6; }
+.report-exp-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; color: var(--report-purple-dark); }
+.report-exp-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; margin-top: 8px; color: #5C544A; font-size: 13px; }
+.report-exp-conditions { margin: 8px 0 0; color: #776E64; font-size: 12px; line-height: 1.5; }
+.report-modal-open { overflow: hidden; }
+.report-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; align-items: end; background: rgb(39 31 34 / .48); }
+.report-modal { width: min(100%, 720px); max-height: 94dvh; margin: 0 auto; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; border-radius: 20px 20px 0 0; background: #F5EDDE; box-shadow: 0 -8px 30px rgb(0 0 0 / .18); overflow: hidden; }
+.report-modal:focus { outline: none; }
+.report-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; border-bottom: 1px solid var(--report-line); }
+.report-modal-kicker { color: var(--report-purple); font-size: 12px; }
+.report-modal-head h2 { margin: 2px 0 0; font: 600 19px/1.4 "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.report-modal-head > button { min-height: 40px; padding: 7px 13px; border: 1px solid #C9BFA6; border-radius: 9px; background: #FFFDF6; color: var(--report-purple); font: inherit; }
+.report-modal-body { overflow-y: auto; padding: 0 16px 20px; overscroll-behavior: contain; }
+.report-form-section { padding: 18px 0; border-bottom: 1px solid #D8CEB9; }
+.report-check-list { display: grid; gap: 8px; }
+.report-check-item { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 8px 10px; border: 1px solid #D5CAB5; border-radius: 9px; background: #FFFDF6; }
+.report-check-item input { width: 20px; height: 20px; accent-color: var(--report-purple); }
+.report-add-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(84px, .34fr) auto; gap: 7px; margin-top: 9px; }
+.report-obtained-row { grid-template-columns: minmax(0, 1fr) 68px auto; }
+.report-add-row input,
+.report-add-row select,
+.report-single-input input,
+.report-resource-row input { width: 100%; min-width: 0; min-height: 42px; border: 1px solid #C9BFA6; border-radius: 8px; padding: 8px 9px; background: #FFFDF6; color: #2B2621; font: inherit; }
+.report-add-row button { min-height: 42px; border: 0; border-radius: 8px; padding: 8px 12px; background: var(--report-purple); color: #FFFDF6; font: inherit; }
+.report-edit-list { display: grid; gap: 7px; margin-top: 10px; }
+.report-edit-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 8px; background: #EAE0D0; }
+.report-remove { flex-shrink: 0; min-height: 34px; border: 1px solid #B98282; border-radius: 7px; padding: 5px 9px; background: #FFF8F3; color: #9C3438; font: inherit; font-size: 13px; }
+.report-resource-editor { margin-top: 10px; border: 1px solid #D5CAB5; border-radius: 10px; overflow: hidden; }
+.report-resource-row { display: grid; grid-template-columns: minmax(64px, .7fr) minmax(72px, 1fr) minmax(60px, .8fr) minmax(60px, .8fr); align-items: center; gap: 6px; min-height: 48px; padding: 5px 7px; border-bottom: 1px solid #E0D6C3; background: #FFFDF6; }
+.report-resource-row:last-child { border-bottom: 0; }
+.report-resource-head { min-height: 32px; background: #EAE0D0; color: #776E64; font-size: 11px; text-align: right; }
+.report-resource-head span:first-child { text-align: left; }
+.report-resource-value { text-align: right; font-size: 13px; overflow-wrap: anywhere; }
+.report-single-input { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.report-auto-total { margin-top: 8px; color: #5C544A; font-size: 13px; text-align: right; }
+.report-modal-actions { padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--report-line); background: #F5EDDE; }
+.report-modal-actions .report-primary { width: 100%; }
+.report-exp-editor-list .report-exp-record { padding-bottom: 48px; }
+.report-exp-editor-list .report-exp-record > .report-remove { position: absolute; right: 10px; bottom: 9px; }
+@media (min-width: 640px) {
+  #report-app { display: grid; grid-template-columns: minmax(300px, .9fr) minmax(320px, 1.1fr); align-items: start; gap: 14px; }
+  .report-calendar, .report-day { margin-top: 0; }
+  .report-modal { align-self: center; max-height: 90dvh; border-radius: 20px; }
+}
+@media (max-width: 420px) {
+  .report-calendar, .report-day { padding: 11px; }
+  .report-add-row { grid-template-columns: 1fr 74px; }
+  .report-add-row select, .report-obtained-row input:first-child { grid-column: 1 / -1; }
+  .report-resource-row { grid-template-columns: 58px minmax(64px, 1fr) minmax(54px, .75fr) minmax(54px, .75fr); gap: 4px; padding-inline: 5px; }
+}
