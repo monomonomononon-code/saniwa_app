@@ -301,6 +301,8 @@ html, body {
   .app-icon-glyph.network { background: linear-gradient(160deg, #C24B3C, #7E2A20); }
   .app-icon-glyph.master { background: linear-gradient(160deg, #6E7E52, #454F34); }
   .app-icon-glyph.expcalc { background: linear-gradient(160deg, #B08F3F, #6E5620); }
+  .app-icon-glyph.journal { background: linear-gradient(160deg, #8A7084, #594253); }
+  #open-journal:focus-visible { outline: 2px solid #70536B; outline-offset: 5px; border-radius: 5px; }
   .app-icon-glyph.soon {
     background: linear-gradient(160deg, #D8CDB4, var(--tag-border));
     color: var(--ink-soft);
