@@ -8,6 +8,7 @@
   try { if (window.frameElement && window.parent.document) { host = window.parent; frame = window.frameElement; } } catch (_) {}
   const viewport = host.visualViewport;
   let opened = false, saved, trigger, records, kind, unlock = [], generation = 0;
+  let selectedTab = null;
   const labels = { rooms: "部屋割り", network: "関係図", master: "刀剣男士" };
   const list = value => Array.isArray(value) ? value.filter(x => x && typeof x === "object") : [];
   function read(key) {
@@ -29,8 +30,8 @@
   function text(tag, value, parent = content) {
     const el = document.createElement(tag); el.textContent = value; parent.append(el); return el;
   }
-  function button(label, action) {
-    const el = text("button", label); el.type = "button"; el.className = "reference-item";
+  function button(label, action, parent = content, className = "reference-item") {
+    const el = text("button", label, parent); el.type = "button"; el.className = className;
     el.addEventListener("click", action); return el;
   }
   function start(heading, back) {
@@ -51,33 +52,104 @@
   function renderList() {
     start(labels[kind]);
     if (kind === "master") {
-      records.characters.forEach(c => button(c.name + (c.level ? " Lv." + c.level : "") + (c.isKiwame ? " 🌸" : ""), () => profile(c)));
+      const grid = text("div", ""); grid.className = "reference-character-grid";
+      records.characters.forEach(c => {
+        const card = button("", () => profile(c), grid, "reference-character-card");
+        const heading = text("span", "", card); heading.className = "reference-character-name";
+        text("span", c.name, heading);
+        if (c.level) text("small", "Lv." + c.level, heading);
+        if (c.isKiwame) text("span", "🌸", heading);
+        const meta = text("span", [c.swordType || "刀種未設定", c.unit ? c.unit + "配属中" : ""].filter(Boolean).join(" "), card);
+        meta.className = "reference-character-meta";
+        if (c.isCaptain) text("span", "隊長", meta).className = "reference-captain";
+        if (c.memo) text("span", c.memo, card).className = "reference-character-memo";
+      });
       if (!records.characters.length) text("p", "刀剣男士データはまだ登録されていません。");
     } else if (kind === "rooms") {
+      const grid = text("div", ""); grid.className = "reference-room-grid";
       records.rooms.forEach(room => {
         const names = list(room.occupants).map(o => name(o.charId));
-        button(room.name + " — " + (names.join("、") || "入居者なし"), () => {
+        const detail = () => {
           start(room.name, true); fields([["メモ", room.note]]);
-          text("h3", "所属する刀剣男士"); names.forEach(n => text("p", n));
+          text("h3", "所属する刀剣男士");
+          list(room.occupants).forEach(o => button(name(o.charId), () => showCharacter(o.charId)));
           if (!names.length) text("p", "入居者はいません。");
           content.focus({ preventScroll: true });
+        };
+        const template = ["a", "b", "c"].includes(room.template) ? room.template : "a";
+        const card = text("article", "", grid); card.className = "reference-room-card" + (template === "b" ? " wide" : "");
+        const head = text("div", "", card); head.className = "reference-room-head";
+        button(room.name, detail, head, "reference-room-name");
+        text("span", { a: "六畳", b: "広間", c: "洋間" }[template], head);
+        text("p", room.note || "備考なし", card).className = "reference-room-note";
+        const surface = text("div", "", card); surface.className = "reference-room-surface";
+        surface.style.backgroundImage = 'url("../assets/reference-room-' + template + '.svg")';
+        list(room.occupants).forEach(o => {
+          const chip = button(name(o.charId), () => showCharacter(o.charId), surface, "reference-room-chip");
+          place(chip, o);
         });
+        if (!names.length) text("span", "入居者なし", surface).className = "reference-room-empty";
       });
       if (!records.rooms.length) text("p", "部屋割りデータはまだ登録されていません。");
     } else {
-      records.tabs.forEach(tab => {
-        text("h3", tab.name);
-        const relationships = list(tab.relationships);
-        relationships.forEach(rel => button(name(rel.from) + " → " + name(rel.to) + "：" + (rel.label || "無題"), () => {
-          start(tab.name, true); text("h3", name(rel.from) + " → " + name(rel.to));
-          text("p", rel.label || "無題");
-          list(rel.episodes).forEach(ep => text("p", ep.text || "（本文なし）"));
-          content.focus({ preventScroll: true });
-        }));
-        if (!relationships.length) text("p", "関係はまだ登録されていません。");
-      });
+      renderNetwork();
       if (!records.tabs.length) text("p", "関係図データはまだ登録されていません。");
     }
+  }
+  function showCharacter(id) {
+    profile(records.characters.find(c => c.id === id) || { name: name(id) });
+  }
+  function place(el, p) {
+    const coord = n => Number.isFinite(Number(n)) ? Number(n) : 50;
+    el.style.left = coord(p.x) + "%"; el.style.top = coord(p.y) + "%";
+  }
+  function renderNetwork() {
+    if (!records.tabs.length) return;
+    const tab = records.tabs.find(t => t.id === selectedTab) || records.tabs[0];
+    selectedTab = tab.id;
+    const tabs = text("div", ""); tabs.className = "reference-network-tabs";
+    records.tabs.forEach(t => {
+      const btn = button(t.name, () => { selectedTab = t.id; renderList(); }, tabs, "reference-network-tab");
+      btn.setAttribute("aria-pressed", String(t === tab));
+    });
+    const canvas = text("div", ""); canvas.className = "reference-network-canvas";
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 100 100"); svg.setAttribute("aria-hidden", "true");
+    const makeSvg = (tag, attrs, parent) => {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k, v)); parent.append(el); return el;
+    };
+    const defs = makeSvg("defs", {}, svg);
+    const marker = makeSvg("marker", { id: "reference-arrow", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 5, markerHeight: 5, orient: "auto-start-reverse" }, defs);
+    makeSvg("path", { d: "M0,0 L10,5 L0,10 z", fill: "#A8382C" }, marker);
+    canvas.append(svg);
+    const relationships = list(tab.relationships), positions = tab.positions || {};
+    const valid = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+    relationships.forEach(rel => {
+      const p1 = positions[rel.from], p2 = positions[rel.to];
+      const detail = () => {
+        start(tab.name, true); text("h3", name(rel.from) + " → " + name(rel.to)); text("p", rel.label || "無題");
+        list(rel.episodes).forEach(ep => text("p", ep.text || "（本文なし）")); content.focus({ preventScroll: true });
+      };
+      if (!valid(p1) || !valid(p2)) { button(name(rel.from) + " → " + name(rel.to) + "：" + (rel.label || "無題"), detail); return; }
+      // Match the source diagram's curved reverse edges and endpoint trimming.
+      const dx = p2.x-p1.x, dy = p2.y-p1.y, dist = Math.hypot(dx,dy) || 1;
+      const offset = relationships.some(r => r.from === rel.to && r.to === rel.from) ? 5 : 0;
+      const mx = (p1.x+p2.x)/2-dy/dist*offset, my = (p1.y+p2.y)/2+dx/dist*offset;
+      const length = Math.hypot(p2.x-mx,p2.y-my) || 1;
+      makeSvg("path", { d: `M ${p1.x} ${p1.y} Q ${mx} ${my} ${p2.x-(p2.x-mx)/length*6} ${p2.y-(p2.y-my)/length*6}`,
+        stroke: "#A8382C", "stroke-width": .6, fill: "none", opacity: .75, "marker-end": "url(#reference-arrow)" }, svg);
+      const label = button(rel.label || "無題", detail, canvas, "reference-edge-label");
+      label.setAttribute("aria-label", name(rel.from) + " → " + name(rel.to) + "：" + (rel.label || "無題"));
+      place(label, {x:mx,y:my});
+    });
+    (Array.isArray(tab.placedIds) ? tab.placedIds : []).forEach(id => {
+      if (!valid(positions[id])) return;
+      const captain = records.characters.find(c => c.id === id)?.isCaptain;
+      const chip = button(name(id), () => showCharacter(id), canvas, "reference-node" + (captain ? " captain" : ""));
+      place(chip, positions[id]);
+    });
+    if (!tab.placedIds?.length) text("p", "配置された刀剣男士はいません。", canvas);
   }
   function position() {
     if (!opened || overlay.hidden) return;
