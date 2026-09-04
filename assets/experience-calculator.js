@@ -1372,10 +1372,19 @@
       } else reason = "invalid_measurement";
     }
     const experienceAvailable = baseExperience !== null;
+    const expectedBattleCount = outcomes.reduce((sum, outcome) => sum + outcome.probability * outcome.battleCount, 0);
+    // 回数別の実測内訳ではなく、実測全体平均を戦闘回数で比例配分した参考値。
+    // 苦無の出現確率への逆算や、メインの1周期待経験値への再加算は行わない。
+    const battleCountReferences = [...new Set(outcomes.map(outcome => outcome.battleCount))].sort((a, b) => a - b).map(battleCount => ({
+      battleCount,
+      rawExperience: experienceSource === "measured_average" && expectedBattleCount > 0
+        ? calculateExperience({ ...input, baseExperience: baseExperience * battleCount / expectedBattleCount }).rawExperience
+        : null
+    }));
     return {
       valid: true, map, usedProvisionalProbabilities, outcomes, rewards, resourceVisits,
       bossArrivalProbability: outcomes.filter(outcome => graph.nodes[outcome.terminal].terminal === "boss").reduce((sum, outcome) => sum + outcome.probability, 0),
-      expectedBattleCount: outcomes.reduce((sum, outcome) => sum + outcome.probability * outcome.battleCount, 0),
+      expectedBattleCount, battleCountReferences,
       experienceAvailable, experienceSource, baseExperience,
       measurementSampleSize: experienceSource === "measured_average" ? measurements.sampleSize || null : null,
       reason: experienceAvailable ? null : reason,
