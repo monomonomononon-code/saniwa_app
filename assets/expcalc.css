@@ -344,6 +344,25 @@
     color: var(--gold-dark);
     font-size: 12px;
   }
+  .report-add-button {
+    width: 100%;
+    min-height: 42px;
+    margin-top: 10px;
+    border: 0;
+    border-radius: 8px;
+    background: #70536B;
+    color: #FFFDF6;
+    font: inherit;
+    font-size: 13px;
+  }
+  .report-add-button:disabled { opacity: .45; }
+  .report-add-status {
+    min-height: 18px;
+    margin-top: 5px;
+    color: #70536B;
+    font-size: 11px;
+    text-align: center;
+  }
   .calculated-experience.pending {
     color: var(--ink-soft);
     border-color: var(--tag-border);
