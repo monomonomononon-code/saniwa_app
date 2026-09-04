@@ -48,7 +48,9 @@
     return el;
   }
   function screen(name) {
+    closeTitleEdit(false);
     for (const id of ["works", "chapters", "editor"]) $(id).hidden = id !== name;
+    $("menu-back").hidden = name === "editor";
     if (name === "editor") $("body").dispatchEvent(new Event("diary-editor-open"));
   }
   function openCard(item, meta, action) {
@@ -100,7 +102,6 @@
   function updateCount() { $("char-count").textContent = `${$("body").value.length.toLocaleString()}文字`; }
   function saveEditor() {
     if (!activeChapter || blocked) return;
-    activeChapter.title = $("chapter-title").value;
     activeChapter.body = $("body").value;
     activeWork.date = today(); updateCount(); persist();
   }
@@ -118,25 +119,46 @@
   $("back-works").addEventListener("click", () => { renderWorks(); screen("works", "new-work"); });
   $("back-chapters").addEventListener("click", () => { saveEditor(); renderChapters(); screen("chapters", "work-title"); });
   $("save").addEventListener("click", saveEditor);
-  $("edit-title").addEventListener("click", () => {
-    $("chapter-title-display").hidden = true;
+  $("chapter-heading").addEventListener("click", () => {
+    if (!activeChapter || blocked) return;
+    $("chapter-title").value = activeChapter.title;
+    $("title-error").textContent = "";
     $("chapter-title-edit").hidden = false;
+    $("chapter-heading").setAttribute("aria-expanded", "true");
     $("chapter-title").focus();
   });
-  function finishTitleEdit() {
-    saveEditor();
-    $("chapter-heading").textContent = titleOf(activeChapter);
+  function closeTitleEdit(restoreFocus) {
     $("chapter-title-edit").hidden = true;
-    $("chapter-title-display").hidden = false;
+    $("chapter-heading").setAttribute("aria-expanded", "false");
+    if (activeChapter) $("chapter-title").value = activeChapter.title;
     $("chapter-title").blur();
+    if (restoreFocus) $("chapter-heading").focus();
+  }
+  function finishTitleEdit() {
+    if (!activeChapter || blocked) return;
+    const previousTitle = activeChapter.title, previousDate = activeWork.date, previousDirty = dirty;
+    activeChapter.title = $("chapter-title").value;
+    activeWork.date = today();
+    if (!persist()) {
+      activeChapter.title = previousTitle; activeWork.date = previousDate; dirty = previousDirty;
+      $("title-error").textContent = "タイトルを保存できませんでした。再度「保存」を押してください。";
+      return;
+    }
+    $("chapter-heading").textContent = titleOf(activeChapter);
+    message("タイトルを保存しました（この端末・ブラウザ内）");
+    closeTitleEdit(true);
   }
   $("title-done").addEventListener("click", finishTitleEdit);
+  $("title-close").addEventListener("click", () => closeTitleEdit(true));
+  $("chapter-title-edit").addEventListener("keydown", event => {
+    if (event.key === "Escape" && !event.isComposing) { event.preventDefault(); closeTitleEdit(true); }
+  });
+  window.addEventListener("hashchange", () => closeTitleEdit(false));
   $("chapter-title").addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault(); finishTitleEdit();
     }
   });
-  $("chapter-title").addEventListener("input", saveEditor);
   const body = $("body"), INDENT = "　";
   function stripIndent() {
     const pos = body.selectionStart;
