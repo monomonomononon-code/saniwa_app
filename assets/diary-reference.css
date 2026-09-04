@@ -60,4 +60,12 @@
 .reference-profile-footer { flex-shrink: 0; padding: 8px 18px 16px; background: var(--paper); }
 #diary-reference-overlay .reference-profile-close { width: 100%; background: #5B6B45; color: #fff; border: 0; border-radius: 7px; }
 .reference-profile-card :focus-visible { outline: 2px solid var(--grape); outline-offset: -2px; }
+.reference-quotes h3 { font-size: 14px; font-weight: normal; color: var(--ink-soft); margin: 10px 0 4px; }
+.reference-quote-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #C9BFA6; }
+.reference-quote-text { flex: 1; min-width: 0; font-size: 16px; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
+#diary-reference-overlay .reference-quote-copy { flex: none; width: 32px; height: 32px; min-height: 32px; padding: 6px; border-radius: 6px; background: #FFFDF6; color: #5B6B45; }
+.reference-quote-copy svg { display: block; width: 18px; height: 18px; }
+.reference-quote-status { font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
+.reference-quote-status:empty { display: none; }
+.reference-copy-buffer { position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none; }
 @media (max-width: 340px) { #diary-reference-content .reference-character-grid, #diary-reference-content .reference-room-grid { grid-template-columns: minmax(0,1fr); } .reference-room-card.wide { grid-column: auto; } }
