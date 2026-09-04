@@ -33,3 +33,20 @@
   box-shadow: 0 -3px 12px rgb(43 38 33 / .08);
 }
 #diary-body.has-keyboard-toolbar { padding-bottom: 80px; scroll-padding-bottom: 80px; }
+#diary #diary-body {
+  display: block;
+  width: calc(100% + 28px);
+  margin-inline: -14px;
+  padding: 12px 14px 100px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+  caret-color: var(--grape);
+}
+#diary .diary-body-label:has(+ textarea:focus) { color: var(--grape); font-weight: 600; }
+#diary-chapter-title-display h2 { flex: 1; min-width: 0; }
+#diary-title-done { margin-top: 8px; }
