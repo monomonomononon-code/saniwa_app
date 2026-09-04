@@ -253,6 +253,13 @@
       } catch (e) {}
     });
   }
+  // Read-only snapshots: references never mutate the source pages or storage.
+  window.readSaniwaReferences = () => ({
+    rooms: roomsSub.iframe.contentWindow?.readSaniwaReference?.(),
+    network: networkSub.iframe.contentWindow?.readSaniwaReference?.(),
+    master: masterSub.iframe.contentWindow?.readSaniwaReference?.(),
+    shared: JSON.parse(JSON.stringify(sharedCharacters))
+  });
 
   function renderFeed() {
     const list = document.getElementById("feed-list");
