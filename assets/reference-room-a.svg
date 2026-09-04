@@ -1,0 +1,18 @@
+<svg viewBox="0 0 400 300" preserveAspectRatio="none">
+      <rect width="400" height="300" fill="#9AA179"/>
+      <g stroke="#6E7452" stroke-width="2" fill="none" opacity="0.55">
+        <rect x="4" y="4" width="192" height="142"/>
+        <rect x="204" y="4" width="192" height="142"/>
+        <rect x="4" y="154" width="192" height="142"/>
+        <rect x="204" y="154" width="192" height="142"/>
+      </g>
+      <g stroke="#6E7452" stroke-width="1" opacity="0.35">
+        <line x1="4" y1="40" x2="196" y2="40"/><line x1="4" y1="75" x2="196" y2="75"/><line x1="4" y1="110" x2="196" y2="110"/>
+        <line x1="204" y1="40" x2="396" y2="40"/><line x1="204" y1="75" x2="396" y2="75"/><line x1="204" y1="110" x2="396" y2="110"/>
+        <line x1="4" y1="190" x2="196" y2="190"/><line x1="4" y1="225" x2="196" y2="225"/><line x1="4" y1="260" x2="196" y2="260"/>
+        <line x1="204" y1="190" x2="396" y2="190"/><line x1="204" y1="225" x2="396" y2="225"/><line x1="204" y1="260" x2="396" y2="260"/>
+      </g>
+      <rect x="0" y="0" width="400" height="10" fill="#5C3722" opacity="0.5"/>
+      <rect x="0" y="0" width="10" height="300" fill="#5C3722" opacity="0.3"/>
+      <rect x="150" y="0" width="55" height="10" fill="#D9CBA3" opacity="0.9"/>
+    </svg>
