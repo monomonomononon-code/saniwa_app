@@ -21,19 +21,20 @@
 #diary label { display: block; margin-bottom: 7px; color: var(--ink-soft); font-size: 13px; }
 #diary input, #diary textarea { width: 100%; min-width: 0; border: 1px solid #C9BFA6; border-radius: 9px; background: #FFFDF6; color: var(--ink); font: inherit; font-size: 16px; padding: 12px; }
 #diary textarea { min-height: 340px; min-height: 45dvh; resize: vertical; line-height: 1.9; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
-.diary-inserts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.diary-inserts { display: grid; grid-template-columns: repeat(4, 2.25rem); justify-content: start; gap: 8px; margin-top: 10px; }
+#diary .diary-inserts button { display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; min-height: 0; padding: 0; border-radius: 6px; font-size: 1rem; line-height: 1; }
 #diary button:disabled, #diary input:disabled, #diary textarea:disabled { cursor: not-allowed; opacity: .55; }
 .diary-inserts.is-keyboard-docked {
   position: absolute;
   z-index: 100;
   margin: 0;
-  padding: 8px 14px;
+  padding: 6px 14px;
   background: var(--paper);
   border-top: 1px solid #C9BFA6;
   box-shadow: 0 -3px 12px rgb(43 38 33 / .08);
 }
 #diary-body.has-keyboard-toolbar { padding-bottom: 80px; scroll-padding-bottom: 80px; }
-.diary-inserts.is-keyboard-docked:not(.is-keyboard-open) { padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+.diary-inserts.is-keyboard-docked:not(.is-keyboard-open) { padding-bottom: max(6px, env(safe-area-inset-bottom, 0px)); }
 #diary #diary-body {
   display: block;
   width: calc(100% + 28px);
