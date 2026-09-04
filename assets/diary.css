@@ -49,5 +49,8 @@
 }
 .diary-editor-actions { display: flex; flex-wrap: nowrap; gap: 8px; margin-left: auto; }
 .diary-body-divider { width: calc(100% + 28px); margin: 12px -14px 0; border: 0; border-top: 1px solid rgb(112 83 107 / .22); }
-#diary-chapter-title-display h2 { flex: 1; min-width: 0; }
-#diary-title-done { margin-top: 8px; }
+.diary-title-row { position: relative; margin: 12px 0; min-width: 0; }
+#diary #diary-chapter-heading { border: 0; background: transparent; color: var(--ink); padding: 6px 0; min-height: 44px; max-width: 100%; font: inherit; text-align: left; overflow-wrap: anywhere; }
+.diary-title-popup { position: absolute; top: 0; right: 0; z-index: 110; width: min(360px, 100%); padding: 14px; background: #FFFDF6; border: 1px solid #C9BFA6; border-radius: 12px; box-shadow: 0 5px 20px rgb(43 38 33 / .15); }
+.diary-title-popup .diary-editor-actions { justify-content: flex-end; margin-top: 10px; }
+#diary-title-error:empty { display: none; }
