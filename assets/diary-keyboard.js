@@ -113,7 +113,7 @@
     // Keyboard visibility has no universal API. Ignore browser chrome changes
     // and pinch zoom; require a substantial height loss while editing on touch.
     const keyboardOpen = Math.max(baselineHeight, layoutHeight) - viewport.height * (viewport.scale || 1) > 100;
-    if (!touchDevice ||
+    if (body.dataset?.referenceOpen === "true" || !touchDevice ||
         diary.hidden || editor.hidden || (frame && !frame.getClientRects().length)) {
       reset();
       return;
@@ -172,6 +172,7 @@
   }
   body.addEventListener("blur", cancelCaretFollow);
   body.addEventListener("diary-editor-open", cancelCaretFollow);
+  body.addEventListener("diary-reference-change", cancelCaretFollow);
   body.addEventListener("diary-content-changed", scheduleCaret);
   body.addEventListener("input", event => { if (!event.isComposing) scheduleCaret(); });
   body.addEventListener("compositionend", scheduleCaret);
