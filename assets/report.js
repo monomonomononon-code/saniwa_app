@@ -67,7 +67,11 @@
       if (outside) button.classList.add("outside");
       if (key === store.localDate(today)) button.classList.add("today");
       if (key === selectedDate) button.classList.add("selected");
-      if (store.hasContent(state.entries[key])) {
+      if (store.isDailyComplete(state.entries[key])) {
+        button.classList.add("daily-complete");
+        button.appendChild(element("span", "report-complete-mark", "💮"));
+        button.setAttribute("aria-label", `${dateLabel(key)}、日課をすべて達成`);
+      } else if (store.hasContent(state.entries[key])) {
         button.classList.add("has-record");
         button.appendChild(element("span", "report-record-dot"));
       }
