@@ -148,6 +148,14 @@
         <section class="report-form-section">
           <h3>小判の収支</h3>
           <label class="report-single-input">手入力<input id="report-koban" type="number" inputmode="numeric" step="1" placeholder="例：3000 または -1500"></label>
+          <div class="report-koban-tools">
+            <div class="report-koban-buttons" aria-label="小判を加算">
+              <button type="button" data-koban-add="200">＋200</button>
+              <button type="button" data-koban-add="400">＋400</button>
+              <button type="button" data-koban-add="700">＋700</button>
+            </div>
+            <label class="report-koban-campaign"><input id="report-koban-triple" type="checkbox">3倍CP</label>
+          </div>
           <div id="report-koban-total" class="report-auto-total"></div>
         </section>
         <section class="report-form-section">
