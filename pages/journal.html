@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#F2EBDD">
   <title>日報・日誌 | 審神者管理ツール</title>
   <link rel="stylesheet" href="../assets/journal.css?v=diary-2">
-  <link rel="stylesheet" href="../assets/diary.css?v=title-popup-5">
+  <link rel="stylesheet" href="../assets/diary.css?v=compact-header-6">
 </head>
 <body>
   <main id="app">
@@ -49,6 +49,7 @@
         <button id="diary-add-chapter" class="diary-add" type="button">＋ 章を追加</button>
       </div>
       <div id="diary-editor" hidden>
+        <div class="diary-editor-header">
         <button id="diary-back-chapters" class="menu-back" type="button"></button>
         <div id="diary-chapter-title-display" class="diary-title-row">
           <h2><button id="diary-chapter-heading" type="button" aria-expanded="false" aria-controls="diary-chapter-title-edit" title="タイトルを編集"></button></h2>
@@ -62,12 +63,9 @@
             </div>
           </div>
         </div>
-        <div class="diary-toolbar">
-          <span id="diary-char-count" class="diary-meta">0文字</span>
-          <div class="diary-editor-actions">
-            <button id="diary-save" class="diary-primary" type="button">保存</button>
-          </div>
+        <button id="diary-save" class="diary-primary" type="button">保存</button>
         </div>
+        <p id="diary-char-count" class="diary-meta diary-count-row">0文字</p>
         <hr class="diary-body-divider">
         <textarea id="diary-body" aria-label="本文" placeholder="本文を入力してください"></textarea>
         <div id="diary-insert-slot">
