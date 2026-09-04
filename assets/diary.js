@@ -47,9 +47,9 @@
     el.addEventListener("click", action);
     return el;
   }
-  function screen(name, heading) {
+  function screen(name) {
     for (const id of ["works", "chapters", "editor"]) $(id).hidden = id !== name;
-    if (heading) $(heading).focus();
+    if (name === "editor") $("body").dispatchEvent(new Event("diary-editor-open"));
   }
   function openCard(item, meta, action) {
     const card = document.createElement("div"); card.className = "diary-card";
@@ -89,6 +89,9 @@
       list.append(openCard(chapter, `${chapter.body.length.toLocaleString()}文字`, () => {
         activeChapter = chapter;
         $("chapter-title").value = chapter.title; $("body").value = chapter.body;
+        $("chapter-heading").textContent = titleOf(chapter);
+        $("chapter-title-edit").hidden = true;
+        $("chapter-title-display").hidden = false;
         $("back-chapters").textContent = "← " + titleOf(activeWork);
         updateCount(); screen("editor", "chapter-title");
       }));
@@ -115,6 +118,24 @@
   $("back-works").addEventListener("click", () => { renderWorks(); screen("works", "new-work"); });
   $("back-chapters").addEventListener("click", () => { saveEditor(); renderChapters(); screen("chapters", "work-title"); });
   $("save").addEventListener("click", saveEditor);
+  $("edit-title").addEventListener("click", () => {
+    $("chapter-title-display").hidden = true;
+    $("chapter-title-edit").hidden = false;
+    $("chapter-title").focus();
+  });
+  function finishTitleEdit() {
+    saveEditor();
+    $("chapter-heading").textContent = titleOf(activeChapter);
+    $("chapter-title-edit").hidden = true;
+    $("chapter-title-display").hidden = false;
+    $("chapter-title").blur();
+  }
+  $("title-done").addEventListener("click", finishTitleEdit);
+  $("chapter-title").addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.isComposing && event.keyCode !== 229) {
+      event.preventDefault(); finishTitleEdit();
+    }
+  });
   $("chapter-title").addEventListener("input", saveEditor);
   const body = $("body"), INDENT = "　";
   function stripIndent() {
@@ -131,6 +152,7 @@
     body.value = body.value.slice(0, pos) + text + body.value.slice(body.selectionEnd);
     const caret = pos + (offset === undefined ? text.length : offset);
     body.focus(); body.setSelectionRange(caret, caret); stripIndent(); saveEditor();
+    body.dispatchEvent(new Event("diary-content-changed"));
   }
   function enter(event) {
     if (event.isComposing || event.keyCode === 229) return;
