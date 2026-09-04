@@ -14,18 +14,25 @@
     charcoal: 0, steel: 0, coolant: 0, whetstone: 0,
     requestToken: 0, helpToken: 0, koban: 0
   });
-  function rewards(amount) {
-    return Object.freeze({ ...EMPTY_REWARDS, charcoal: amount, steel: amount, coolant: amount, whetstone: amount });
+  function rewards(amount, extras) {
+    return Object.freeze({
+      ...EMPTY_REWARDS,
+      charcoal: amount,
+      steel: amount,
+      coolant: amount,
+      whetstone: amount,
+      ...(extras || {})
+    });
   }
   // 数値が明示された集計対象だけを保持する。未提示の「その他報酬」は推測しない。
   const DAILY_TASKS = Object.freeze([
     { id: "login", label: "本丸にアクセス", rewards: rewards(200) },
-    { id: "sortie", label: "いざ「出陣」", rewards: rewards(300) },
-    { id: "expedition", label: "「遠征」に派遣", rewards: rewards(300) },
-    { id: "practice", label: "「演練」に挑戦", rewards: rewards(300) },
-    { id: "duty", label: "「内番」を実施", rewards: rewards(200) },
-    { id: "daily3", label: "「日課」を3個達成", rewards: rewards(500) },
-    { id: "daily5", label: "「日課」を5個達成", rewards: rewards(1000) }
+    { id: "sortie", label: "いざ「出陣」", rewards: rewards(300, { requestToken: 2, helpToken: 1 }) },
+    { id: "expedition", label: "「遠征」に派遣", rewards: rewards(300, { requestToken: 2, helpToken: 1 }) },
+    { id: "practice", label: "「演練」に挑戦", rewards: rewards(300, { requestToken: 2, helpToken: 1 }) },
+    { id: "duty", label: "「内番」を実施", rewards: rewards(200, { helpToken: 1 }) },
+    { id: "daily3", label: "「日課」を3個達成", rewards: rewards(500, { koban: 300 }) },
+    { id: "daily5", label: "「日課」を5個達成", rewards: rewards(1000, { koban: 900 }) }
   ]);
 
   const clone = value => JSON.parse(JSON.stringify(value));
