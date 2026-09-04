@@ -82,6 +82,7 @@
 
   function reset() {
     bar.classList.remove("is-keyboard-docked");
+    bar.classList.remove("is-keyboard-open");
     body.classList.remove("has-keyboard-toolbar");
     for (const name of ["top", "left", "width"]) bar.style.removeProperty(name);
     slot.style.removeProperty("height");
@@ -105,7 +106,7 @@
     // Keyboard visibility has no universal API. Ignore browser chrome changes
     // and pinch zoom; require a substantial height loss while editing on touch.
     const keyboardOpen = Math.max(baselineHeight, layoutHeight) - viewport.height * (viewport.scale || 1) > 100;
-    if (!focused || !touchDevice || !keyboardOpen ||
+    if (!touchDevice ||
         diary.hidden || editor.hidden || (frame && !frame.getClientRects().length)) {
       reset();
       return;
@@ -117,9 +118,11 @@
     const right = Math.min(frame ? window.innerWidth : Infinity, viewport.offsetLeft + viewport.width - originLeft);
     const bottom = Math.min(frame ? window.innerHeight : Infinity, viewport.offsetTop + viewport.height - originTop);
     bar.classList.add("is-keyboard-docked");
+    if (keyboardOpen) bar.classList.add("is-keyboard-open");
+    else bar.classList.remove("is-keyboard-open");
     bar.style.width = Math.max(0, right - left) + "px";
     const height = bar.getBoundingClientRect().height;
-    const top = bottom - height - accessoryClearance;
+    const top = bottom - height - (keyboardOpen ? accessoryClearance : 0);
     if (right <= left || top < Math.max(0, viewport.offsetTop - originTop)) { reset(); return; }
     // Document coordinates avoid relying on an iframe's fixed-position layer
     // while Safari pans the page for the keyboard. No positioned ancestors.
