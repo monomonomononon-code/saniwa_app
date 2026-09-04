@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#F2EBDD">
   <title>日報・日誌 | 審神者管理ツール</title>
   <link rel="stylesheet" href="../assets/journal.css?v=diary-2">
-  <link rel="stylesheet" href="../assets/diary.css?v=1">
+  <link rel="stylesheet" href="../assets/diary.css?v=keyboard-2">
 </head>
 <body>
   <main id="app">
@@ -56,17 +56,20 @@
         <div class="diary-toolbar"><span id="diary-char-count" class="diary-meta">0文字</span><button id="diary-save" class="diary-primary" type="button">保存</button></div>
         <label for="diary-body" class="diary-body-label">本文</label>
         <textarea id="diary-body" placeholder="本文を入力してください"></textarea>
-        <div class="diary-inserts" aria-label="文字を挿入">
+        <div id="diary-insert-slot">
+        <div id="diary-inserts" class="diary-inserts" aria-label="文字を挿入">
           <button id="diary-insert-brackets" type="button" aria-label="かぎ括弧を挿入">「」</button>
           <button id="diary-insert-dash" type="button" aria-label="ダッシュを挿入">――</button>
           <button id="diary-insert-ellipsis" type="button" aria-label="三点リーダーを挿入">……</button>
           <button id="diary-insert-space" type="button" aria-label="全角スペースを挿入">␣</button>
+        </div>
         </div>
       </div>
       <p class="diary-meta">入力内容はこの端末・ブラウザに保存されます。他の利用者には共有されません。</p>
     </section>
   </main>
   <script src="../assets/diary.js?v=1"></script>
+  <script src="../assets/diary-keyboard.js?v=1"></script>
   <script src="../assets/journal.js?v=diary-2"></script>
 </body>
 </html>
