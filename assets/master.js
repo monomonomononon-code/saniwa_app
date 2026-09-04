@@ -20,7 +20,7 @@
     if (Array.isArray(saved) && saved.length) characters = saved;
   } catch (e) {}
   function saveState() {
-    try { localStorage.setItem(MASTER_STORAGE_KEY, JSON.stringify(characters)); } catch (e) {}
+    try { localStorage.setItem(MASTER_STORAGE_KEY, JSON.stringify(characters)); return true; } catch (e) { return false; }
   }
   window.readSaniwaReference = () => JSON.parse(JSON.stringify(characters));
   window.addEventListener("pagehide", saveState);
@@ -298,7 +298,7 @@
     field("身長", "height", "例：170cm");
     field("趣味", "hobby", "例：刀の手入れ");
     field("元主", "formerOwner", "例：織田信長");
-    field("性格", "personality", "例：面倒見がいいが素直じゃない");
+    window.SaniwaQuotes.mount(card, c, saveState);
 
     const memoLabel = document.createElement("div");
     memoLabel.className = "m-field-label";
