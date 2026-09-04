@@ -65,6 +65,7 @@
   function saveState() {
     try { localStorage.setItem(NETWORK_STORAGE_KEY, JSON.stringify({ tabs, activeTabId })); } catch (e) {}
   }
+  window.readSaniwaReference = () => JSON.parse(JSON.stringify({ tabs, activeTabId }));
   window.addEventListener("pagehide", saveState);
   function notify(text) {
     saveState();
