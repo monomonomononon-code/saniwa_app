@@ -27,8 +27,9 @@
   const isIOS = /iPad|iPhone|iPod/.test(nav.userAgent || "") ||
     (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
   // Safari does not expose its floating accessory bar's rectangle to the page.
-  // Reserve a conservative clearance; this is not a measured keyboard height.
-  const accessoryClearance = isIOS ? 64 : 0;
+  // The visual viewport already excludes most keyboard UI. Keep only a small
+  // visual gap, rather than reserving the accessory bar's height a second time.
+  const accessoryClearance = isIOS ? 8 : 0;
   let measuredValue = null, measuredWidth = 0;
 
   function growBody() {
@@ -86,6 +87,8 @@
     body.classList.remove("has-keyboard-toolbar");
     for (const name of ["top", "left", "width"]) bar.style.removeProperty(name);
     slot.style.removeProperty("height");
+    body.style.removeProperty("clip-path");
+    body.style.removeProperty("-webkit-clip-path");
   }
   function update() {
     pending = false;
@@ -130,6 +133,13 @@
     bar.style.top = (top + (window.scrollY || 0)) + "px";
     slot.style.height = height + "px";
     body.classList.add("has-keyboard-toolbar");
+    // Clip the editing surface itself (including its native caret), not just
+    // paint over it with a toolbar. Manual scrolling remains under user control.
+    const bodyRect = body.getBoundingClientRect();
+    const clippedBottom = Math.min(bodyRect.height, Math.max(0, bodyRect.top + bodyRect.height - top));
+    const clip = `inset(0px 0px ${clippedBottom}px 0px)`;
+    body.style.clipPath = clip;
+    body.style.webkitClipPath = clip;
   }
   function schedule() {
     if (!pending) { pending = true; window.requestAnimationFrame(update); }
