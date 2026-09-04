@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#F2EBDD">
   <title>日報・日誌 | 審神者管理ツール</title>
-  <link rel="stylesheet" href="../assets/journal.css?v=1">
+  <link rel="stylesheet" href="../assets/journal.css?v=diary-2">
+  <link rel="stylesheet" href="../assets/diary.css?v=1">
 </head>
 <body>
   <main id="app">
@@ -33,7 +34,39 @@
       </header>
       <p class="empty-note">記録機能は準備中です。</p>
     </section>
+    <section id="diary" aria-labelledby="diary-heading" hidden>
+      <a class="menu-back" href="#menu">← 日報メニュー</a>
+      <header class="header"><h1 id="diary-heading" tabindex="-1"><span class="seal" aria-hidden="true">誌</span>日誌</h1></header>
+      <p id="diary-status" class="diary-status" role="status" aria-live="polite"></p>
+      <div id="diary-works">
+        <div class="diary-toolbar"><h2>作品一覧</h2><button id="diary-new-work" class="diary-primary" type="button">＋ 新規作品</button></div>
+        <div id="diary-work-list" class="diary-list"></div>
+      </div>
+      <div id="diary-chapters" hidden>
+        <button id="diary-back-works" class="menu-back" type="button">← 作品一覧</button>
+        <h2 id="diary-work-title" tabindex="-1"></h2>
+        <p id="diary-work-total" class="diary-meta"></p>
+        <div id="diary-chapter-list" class="diary-list"></div>
+        <button id="diary-add-chapter" class="diary-add" type="button">＋ 章を追加</button>
+      </div>
+      <div id="diary-editor" hidden>
+        <button id="diary-back-chapters" class="menu-back" type="button"></button>
+        <label for="diary-chapter-title">章タイトル</label>
+        <input id="diary-chapter-title" type="text" placeholder="章タイトル">
+        <div class="diary-toolbar"><span id="diary-char-count" class="diary-meta">0文字</span><button id="diary-save" class="diary-primary" type="button">保存</button></div>
+        <label for="diary-body" class="diary-body-label">本文</label>
+        <textarea id="diary-body" placeholder="本文を入力してください"></textarea>
+        <div class="diary-inserts" aria-label="文字を挿入">
+          <button id="diary-insert-brackets" type="button" aria-label="かぎ括弧を挿入">「」</button>
+          <button id="diary-insert-dash" type="button" aria-label="ダッシュを挿入">――</button>
+          <button id="diary-insert-ellipsis" type="button" aria-label="三点リーダーを挿入">……</button>
+          <button id="diary-insert-space" type="button" aria-label="全角スペースを挿入">␣</button>
+        </div>
+      </div>
+      <p class="diary-meta">入力内容はこの端末・ブラウザに保存されます。他の利用者には共有されません。</p>
+    </section>
   </main>
-  <script src="../assets/journal.js?v=1"></script>
+  <script src="../assets/diary.js?v=1"></script>
+  <script src="../assets/journal.js?v=diary-2"></script>
 </body>
 </html>
