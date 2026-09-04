@@ -1271,7 +1271,9 @@
       encounters: { normalBaseExperience: 800, kunaiBaseExperience: 2000, kunaiProbability: null },
       // 実測確率は0〜1。平均経験値は1振りあたり・全倍率適用前の1周平均。
       // 平均経験値がある場合は出現率より優先し、補正は計算時に一度だけ適用する。
-      measurements: { kunaiProbability: null, averageBaseExperiencePerRun: 17127, sampleSize: 132 },
+      doubleExperienceSelection: "manual",
+      // 132周は全員が2倍対象だった実測。基礎値へ戻し、対象者のみチェックで×2。
+      measurements: { kunaiProbability: null, averageBaseExperiencePerRun: 8563.5, sampleSize: 132 },
       resourceDistribution: {
         typeProbabilitiesApproximate: true,
         types: { "木炭": 0.25, "玉鋼": 0.25, "冷却材": 0.25, "砥石": 0.25 },
@@ -1372,23 +1374,26 @@
       } else reason = "invalid_measurement";
     }
     const experienceAvailable = baseExperience !== null;
+    const eventMultiplier = input.isDoubleExperience ? 2 : 1;
+    // 通常と同じ倍率関数へチェック状態を渡す。イベント倍率の別掛けはしない。
+    const eventOptions = input;
     const expectedBattleCount = outcomes.reduce((sum, outcome) => sum + outcome.probability * outcome.battleCount, 0);
     // 回数別の実測内訳ではなく、実測全体平均を戦闘回数で比例配分した参考値。
     // 苦無の出現確率への逆算や、メインの1周期待経験値への再加算は行わない。
     const battleCountReferences = [...new Set(outcomes.map(outcome => outcome.battleCount))].sort((a, b) => a - b).map(battleCount => ({
       battleCount,
       rawExperience: experienceSource === "measured_average" && expectedBattleCount > 0
-        ? calculateExperience({ ...input, baseExperience: baseExperience * battleCount / expectedBattleCount }).rawExperience
+        ? calculateExperience({ ...eventOptions, baseExperience: baseExperience * battleCount / expectedBattleCount }).rawExperience
         : null
     }));
     return {
       valid: true, map, usedProvisionalProbabilities, outcomes, rewards, resourceVisits,
       bossArrivalProbability: outcomes.filter(outcome => graph.nodes[outcome.terminal].terminal === "boss").reduce((sum, outcome) => sum + outcome.probability, 0),
       expectedBattleCount, battleCountReferences,
-      experienceAvailable, experienceSource, baseExperience,
+      experienceAvailable, experienceSource, baseExperience, eventMultiplier,
       measurementSampleSize: experienceSource === "measured_average" ? measurements.sampleSize || null : null,
       reason: experienceAvailable ? null : reason,
-      rawExperience: experienceAvailable ? calculateExperience({ ...input, baseExperience }).rawExperience : null
+      rawExperience: experienceAvailable ? calculateExperience({ ...eventOptions, baseExperience }).rawExperience : null
     };
   }
 
