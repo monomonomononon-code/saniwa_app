@@ -23,3 +23,13 @@
 #diary textarea { min-height: 340px; min-height: 45dvh; resize: vertical; line-height: 1.9; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
 .diary-inserts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 #diary button:disabled, #diary input:disabled, #diary textarea:disabled { cursor: not-allowed; opacity: .55; }
+.diary-inserts.is-keyboard-docked {
+  position: fixed;
+  z-index: 100;
+  margin: 0;
+  padding: 8px 14px;
+  background: var(--paper);
+  border-top: 1px solid #C9BFA6;
+  box-shadow: 0 -3px 12px rgb(43 38 33 / .08);
+}
+#diary-body.has-keyboard-toolbar { padding-bottom: 80px; scroll-padding-bottom: 80px; }
