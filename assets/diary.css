@@ -1,0 +1,25 @@
+#diary { min-width: 0; }
+#diary h2 { margin: 0 0 10px; font-size: 20px; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; overflow-wrap: anywhere; }
+#diary button { font: inherit; cursor: pointer; }
+#diary button:focus-visible, #diary input:focus-visible, #diary textarea:focus-visible { outline: 3px solid var(--grape); outline-offset: 3px; }
+#diary .menu-back { border: 0; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.diary-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0; }
+#diary .diary-toolbar h2 { margin: 0; }
+.diary-primary { border: 1px solid var(--grape); border-radius: 9px; padding: 10px 16px; min-height: 44px; background: var(--grape); color: #FBF6EA; }
+.diary-primary:hover { background: var(--grape-dark); }
+.diary-list { display: grid; gap: 12px; }
+.diary-card { min-width: 0; background: #FFFDF6; border: 1px solid #C9BFA6; border-radius: 12px; overflow: hidden; }
+.diary-open { display: block; width: 100%; padding: 16px; border: 0; background: transparent; color: var(--ink); text-align: left; overflow-wrap: anywhere; }
+.diary-open strong { display: block; font-size: 18px; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.diary-meta { color: var(--ink-soft); font-size: 12px; line-height: 1.7; }
+.diary-open small { display: block; margin-top: 6px; }
+.diary-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 12px 12px; }
+.diary-actions button, .diary-inserts button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--grape); border-radius: 8px; background: transparent; color: var(--grape); }
+.diary-add { margin-top: 14px; width: 100%; min-height: 46px; padding: 10px; border: 1px dashed var(--grape); border-radius: 10px; background: transparent; color: var(--grape); }
+.diary-status { font-size: 12px; color: var(--grape); line-height: 1.7; overflow-wrap: anywhere; }
+.diary-status:empty { display: none; }
+#diary label { display: block; margin-bottom: 7px; color: var(--ink-soft); font-size: 13px; }
+#diary input, #diary textarea { width: 100%; min-width: 0; border: 1px solid #C9BFA6; border-radius: 9px; background: #FFFDF6; color: var(--ink); font: inherit; font-size: 16px; padding: 12px; }
+#diary textarea { min-height: 340px; min-height: 45dvh; resize: vertical; line-height: 1.9; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.diary-inserts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+#diary button:disabled, #diary input:disabled, #diary textarea:disabled { cursor: not-allowed; opacity: .55; }
