@@ -466,7 +466,9 @@
       resultCard.appendChild(note);
     }
     appendLoopTotals(resultCard, calculator, expected.rawExperience, undefined, expected.rewards);
-    appendCustomLoopInput(resultCard, calculator, expected.rawExperience, undefined, expected.rewards);
+    appendCustomLoopInput(resultCard, calculator, expected.rawExperience, undefined, expected.rewards, count => {
+      return addCalculationToReport(calculator, calculationOptions, count, expected.rewards, selectedStage, "normal");
+    });
     if (isProvisional) appendRouteDetails(resultCard, calculator, routeOutcomes.outcomes);
     container.appendChild(resultCard);
   }
@@ -509,7 +511,10 @@
       card.appendChild(multiplierNote);
     }
     appendLoopTotals(card, calculator, result.rawExperience, undefined, result.rewards);
-    appendCustomLoopInput(card, calculator, result.rawExperience, undefined, result.rewards);
+    appendCustomLoopInput(card, calculator, result.rawExperience, undefined, result.rewards, count => {
+      const label = `${result.map.eventName}${result.map.year ? ` ${result.map.year}` : ""}${result.map.mapName ? `・${result.map.mapName}` : ""}`;
+      return addCalculationToReport(calculator, options, count, result.rewards, label, "event");
+    });
     // 更新中やキャッシュにより計算側が旧版でも、メイン表示を巻き込んで停止しない。
     if (!Array.isArray(result.battleCountReferences)) {
       const updateNote = document.createElement("div");
@@ -591,7 +596,63 @@
     card.appendChild(totals);
   }
 
-  function appendCustomLoopInput(card, calculator, minExperience, maxExperience, rewards) {
+  function addCalculationToReport(calculator, baseOptions, rounds, rewards, mapLabel, category) {
+    const report = window.SaniwaReportStore;
+    if (!report || !Number.isInteger(rounds) || rounds <= 0) return false;
+    const selectedCharacter = characters.find(member => member.id === selectedId);
+    const unitMembers = characters.filter(member => selectedCharacter?.unit && member.unit === selectedCharacter.unit);
+    const party = unitMembers.length ? unitMembers : characters.filter(member => member.id === selectedId);
+    const characterResults = party.map(member => {
+      const memberOptions = {
+        ...baseOptions,
+        isCaptain: !!member.isCaptain,
+        mvpMode: selectedMvp === "部隊内で均等" || member.id === selectedId ? selectedMvp : "誉を取らない",
+        isDoubleExperience: category === "event" ? (member.id === selectedId && isDoubleExperience) : isDoubleExperience
+      };
+      let result;
+      if (category === "event") {
+        result = calculator.calculateEventMapExperience(memberOptions);
+      } else {
+        const routes = calculator.calculateMapRouteOutcomes(memberOptions);
+        result = routes.valid
+          ? (routes.probabilitiesConfigured
+            ? calculator.calculateMapExpectedExperience(memberOptions)
+            : calculator.calculateMapProvisionalExpectedExperience(memberOptions))
+          : routes;
+      }
+      return {
+        id: member.id,
+        name: member.name,
+        experience: result && result.valid && result.rawExperience !== null ? result.rawExperience * rounds : null
+      };
+    }).filter(item => item.experience !== null);
+    if (!characterResults.length) return false;
+    const totalResources = Object.fromEntries(Object.entries(rewards || {}).map(([name, amount]) => [name, amount * rounds]));
+    const variant = selectedMapVariant
+      ? (calculator.getMapVariants(selectedStage).find(item => item.id === selectedMapVariant)?.label || selectedMapVariant)
+      : "";
+    const record = {
+      source: "experience_calculator",
+      category,
+      mapId: selectedStage,
+      mapLabel,
+      rounds,
+      characters: characterResults,
+      resources: totalResources,
+      conditions: {
+        rank: selectedBattleResult,
+        mvp: selectedMvp,
+        doubleExperience: isDoubleExperience,
+        kebiishi: category === "normal" && kebiishiEnabled,
+        variant
+      }
+    };
+    const saved = report.appendExpRecord(record);
+    if (saved) notify(`${mapLabel} ${rounds}周の計算結果を今日の日報に追加`);
+    return saved;
+  }
+
+  function appendCustomLoopInput(card, calculator, minExperience, maxExperience, rewards, onAddToReport) {
     const customRow = document.createElement("div");
     customRow.className = "custom-loop-row";
     const customLabel = document.createElement("label");
@@ -604,19 +665,38 @@
     customInput.placeholder = "周回数";
     const customResult = document.createElement("div");
     customResult.className = "custom-loop-result";
+    const reportButton = document.createElement("button");
+    reportButton.type = "button";
+    reportButton.className = "report-add-button";
+    reportButton.textContent = "日報に追加する";
+    reportButton.disabled = true;
+    const reportStatus = document.createElement("div");
+    reportStatus.className = "report-add-status";
+    reportStatus.role = "status";
+    reportStatus.textContent = "任意の周回数を入力すると追加できます";
     customInput.oninput = e => {
       const count = Number(e.target.value);
       if (!Number.isInteger(count) || count <= 0) {
         customResult.textContent = "";
+        reportButton.disabled = true;
+        reportStatus.textContent = "任意の周回数を入力すると追加できます";
         return;
       }
       const minimum = minExperience === null ? null : calculator.formatExperience(minExperience * count);
       const maximum = calculator.formatExperience((maxExperience === undefined ? minExperience : maxExperience) * count);
       const rewardText = formatRewardExpectations(rewards, count);
       customResult.textContent = `${count}周：${minimum === null ? "経験値：算出待ち" : `${minimum === maximum ? minimum : `最小 ${minimum}～最大 ${maximum}`} EXP`}${rewardText ? `\n${rewardText}` : ""}`;
+      reportButton.disabled = minimum === null;
+      reportStatus.textContent = "";
+    };
+    reportButton.onclick = () => {
+      const count = Number(customInput.value);
+      if (reportButton.disabled || typeof onAddToReport !== "function") return;
+      const saved = onAddToReport(count);
+      reportStatus.textContent = saved ? "今日の日報に追加しました" : "保存できませんでした";
     };
     customRow.append(customLabel, customInput);
-    card.append(customRow, customResult);
+    card.append(customRow, customResult, reportButton, reportStatus);
   }
 
   function makeRow(labelText, c, key) {
