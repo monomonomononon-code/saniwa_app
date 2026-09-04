@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#F2EBDD">
   <title>日報・日誌 | 審神者管理ツール</title>
   <link rel="stylesheet" href="../assets/journal.css?v=diary-2">
-  <link rel="stylesheet" href="../assets/diary.css?v=writing-4">
+  <link rel="stylesheet" href="../assets/diary.css?v=title-popup-5">
 </head>
 <body>
   <main id="app">
@@ -34,9 +34,8 @@
       </header>
       <p class="empty-note">記録機能は準備中です。</p>
     </section>
-    <section id="diary" aria-labelledby="diary-heading" hidden>
-      <a class="menu-back" href="#menu">← 日報メニュー</a>
-      <header class="header"><h1 id="diary-heading" tabindex="-1"><span class="seal" aria-hidden="true">誌</span>日誌</h1></header>
+    <section id="diary" aria-label="日誌" hidden>
+      <a id="diary-menu-back" class="menu-back" href="#menu">← 日報メニュー</a>
       <p id="diary-status" class="diary-status" role="status" aria-live="polite"></p>
       <div id="diary-works">
         <div class="diary-toolbar"><h2>作品一覧</h2><button id="diary-new-work" class="diary-primary" type="button">＋ 新規作品</button></div>
@@ -51,18 +50,21 @@
       </div>
       <div id="diary-editor" hidden>
         <button id="diary-back-chapters" class="menu-back" type="button"></button>
-        <div id="diary-chapter-title-display" class="diary-toolbar">
-          <h2 id="diary-chapter-heading"></h2>
-        </div>
-        <div id="diary-chapter-title-edit" hidden>
-          <label for="diary-chapter-title">章タイトル</label>
-          <input id="diary-chapter-title" type="text" placeholder="章タイトル">
-          <button id="diary-title-done" class="diary-primary" type="button">完了</button>
+        <div id="diary-chapter-title-display" class="diary-title-row">
+          <h2><button id="diary-chapter-heading" type="button" aria-expanded="false" aria-controls="diary-chapter-title-edit" title="タイトルを編集"></button></h2>
+          <div id="diary-chapter-title-edit" class="diary-title-popup" role="region" aria-label="タイトルを編集" hidden>
+            <label for="diary-chapter-title">タイトルを編集</label>
+            <input id="diary-chapter-title" type="text" placeholder="章タイトル">
+            <p id="diary-title-error" role="alert" class="diary-meta"></p>
+            <div class="diary-editor-actions">
+              <button id="diary-title-done" class="diary-primary" type="button">保存</button>
+              <button id="diary-title-close" class="diary-primary" type="button">閉じる</button>
+            </div>
+          </div>
         </div>
         <div class="diary-toolbar">
           <span id="diary-char-count" class="diary-meta">0文字</span>
           <div class="diary-editor-actions">
-            <button id="diary-edit-title" class="diary-primary" type="button">編集</button>
             <button id="diary-save" class="diary-primary" type="button">保存</button>
           </div>
         </div>
@@ -80,7 +82,7 @@
       <p class="diary-meta">入力内容はこの端末・ブラウザに保存されます。他の利用者には共有されません。</p>
     </section>
   </main>
-  <script src="../assets/diary.js?v=writing-3"></script>
+  <script src="../assets/diary.js?v=title-popup-5"></script>
   <script src="../assets/diary-keyboard.js?v=writing-4"></script>
   <script src="../assets/journal.js?v=writing-3"></script>
 </body>
