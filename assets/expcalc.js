@@ -19,6 +19,7 @@
   let selectedBattleResult = "";
   let selectedMvp = "部隊内で均等";
   let isDoubleExperience = false;
+  let kebiishiEnabled = false;
 
   const BATTLEFIELDS = {
     past: [
@@ -220,6 +221,7 @@
         button.textContent = mapCategory === category ? `⚔ ${label}` : label;
         button.onclick = () => {
           mapCategory = category;
+          kebiishiEnabled = false;
           selectedBattlefield = "";
           selectedStage = "";
           selectedMapVariant = "";
@@ -243,6 +245,7 @@
         battlefieldSelect.value = selectedBattlefield;
         battlefieldSelect.onchange = e => {
           selectedBattlefield = e.target.value;
+          kebiishiEnabled = false;
           selectedStage = mapCategory === "event" ? EVENT_STAGES[selectedBattlefield] || "" : "";
           selectedMapVariant = "";
           selectedBattleResult = "";
@@ -263,6 +266,7 @@
           stageSelect.value = selectedStage;
           stageSelect.onchange = e => {
             selectedStage = e.target.value;
+            kebiishiEnabled = false;
             selectedMapVariant = "";
             selectedBattleResult = "";
             selectedMvp = "部隊内で均等";
@@ -351,6 +355,22 @@
               doubleExperienceRow.appendChild(doubleExperienceCheck);
               doubleExperienceRow.append("経験値2倍CP");
               mapSelector.appendChild(doubleExperienceRow);
+              if (mapCategory === "past" && selectedStage !== "1-1 函館") {
+                const kebiishiRow = document.createElement("label");
+                kebiishiRow.className = "double-experience-row";
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = kebiishiEnabled;
+                checkbox.onchange = e => { kebiishiEnabled = e.target.checked; render(); };
+                kebiishiRow.append(checkbox, "検非違使出現済み");
+                mapSelector.appendChild(kebiishiRow);
+                if (kebiishiEnabled) {
+                  const note = document.createElement("div");
+                  note.className = "provisional-note";
+                  note.textContent = "※検非違使の出現率はマップによって差があるため、全通常マップで一律15%として算出した暫定値です";
+                  mapSelector.appendChild(note);
+                }
+              }
 
               renderCalculatedExperience(mapSelector, c);
             }
@@ -392,6 +412,7 @@
       unitSize,
       unitMembers,
       rank: selectedBattleResult,
+      kebiishiEnabled: mapCategory === "past" && selectedStage !== "1-1 函館" && kebiishiEnabled,
       isDoubleExperience
     };
     if (mapCategory === "event") {
@@ -401,6 +422,17 @@
     }
     const routeOutcomes = calculator.calculateMapRouteOutcomes(calculationOptions);
     if (!routeOutcomes.valid) {
+      if (routeOutcomes.reason === "kebiishi_levels_missing") {
+        const message = document.createElement("div");
+        message.textContent = "検非違使の計算には部隊全員のレベル登録が必要です";
+        const button = document.createElement("button");
+        button.className = "tool-menu-back";
+        button.textContent = "刀剣男士一覧でレベルを登録する";
+        button.onclick = () => window.parent.postMessage({ source: "expcalc", type: "open_character_list" }, "*");
+        resultCard.append(message, button);
+        container.appendChild(resultCard);
+        return;
+      }
       resultCard.classList.add("pending");
       resultCard.textContent = routeOutcomes.reason === "route_structure_data_missing"
         ? "ルート構造データ未登録"
