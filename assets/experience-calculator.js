@@ -1392,6 +1392,44 @@
     };
   }
 
+  // Lv10〜99の基礎経験値。Lv1〜9は0、Lv100以上は末尾544を使用。
+  const KEBIISHI_BASE_EXPERIENCE = [
+    55,60,66,71,77,82,88,93,99,104,
+    110,115,121,126,132,137,143,148,154,159,
+    165,170,176,181,187,192,198,203,209,214,
+    220,225,231,236,242,247,253,258,264,269,
+    275,280,286,291,297,302,308,313,319,324,
+    330,335,341,346,352,357,363,368,374,379,
+    385,390,396,401,407,412,418,423,429,434,
+    440,445,451,456,462,467,473,478,484,489,
+    495,500,506,511,517,522,528,533,539,544
+  ];
+
+  function getKebiishiContext(input) {
+    if (!input.kebiishiEnabled || !MAP_EXPERIENCE[input.stageName] || input.stageName === "1-1 函館") {
+      return { valid: true, enabled: false };
+    }
+    const members = input.unitMembers;
+    if (!Array.isArray(members) || members.length === 0 || members.some(member => (
+      !["number", "string"].includes(typeof member.level) || !Number.isInteger(Number(member.level)) || Number(member.level) < 1
+    ))) return { valid: false, reason: "kebiishi_levels_missing" };
+    const highestLevel = Math.max(...members.map(member => Number(member.level)));
+    return { valid: true, enabled: true, highestLevel,
+      baseExperience: highestLevel < 10 ? 0 : KEBIISHI_BASE_EXPERIENCE[Math.min(highestLevel, 99) - 10], probability: 0.15 };
+  }
+
+  function calculateMapBattleExperience(input) {
+    const context = getKebiishiContext(input);
+    if (!context.valid) return context;
+    const normal = calculateExperience(input);
+    if (!context.enabled || input.node.type !== "normal") return normal;
+    const kebiishi = calculateExperience({ ...input, baseExperience: context.baseExperience,
+      isDoubleExperience: false,
+      extraMultipliers: [...(Array.isArray(input.extraMultipliers) ? input.extraMultipliers : []), input.isDoubleExperience ? 5 : 1] });
+    return { valid: normal.valid && kebiishi.valid,
+      rawExperience: normal.rawExperience * 0.85 + kebiishi.rawExperience * 0.15 };
+  }
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -1543,6 +1581,8 @@
   // 接続確率が一つでも未設定なら、推測せず invalid を返します。
   function calculateMapExpectedExperience(options) {
     const input = options || {};
+    const kebiishiContext = getKebiishiContext(input);
+    if (!kebiishiContext.valid) return kebiishiContext;
     const map = getMapForCalculation(input.stageName, input.variantId);
     if (map && map.dataStatus === "unregistered") return { valid: false, reason: "base_experience_missing" };
     const graph = map && map.graph;
@@ -1590,8 +1630,8 @@
       .filter(result => result.node.type === "normal" || result.node.type === "boss")
       .map(result => ({
         ...result,
-        calculation: calculateExperience({
-          baseExperience: result.node.baseExperience,
+        calculation: calculateMapBattleExperience({
+          ...input, node: result.node, baseExperience: result.node.baseExperience,
           isCaptain: input.isCaptain,
           mvpMode: input.mvpMode,
           unitSize: input.unitSize,
@@ -1620,6 +1660,8 @@
   // 公式確率が全て登録されたマップでは、この関数ではなく calculateMapExpectedExperience を使います。
   function calculateMapProvisionalExpectedExperience(options) {
     const input = options || {};
+    const kebiishiContext = getKebiishiContext(input);
+    if (!kebiishiContext.valid) return kebiishiContext;
     const map = getMapForCalculation(input.stageName, input.variantId);
     if (map && map.dataStatus === "unregistered") return { valid: false, reason: "base_experience_missing" };
     const graph = map && map.graph;
@@ -1676,8 +1718,8 @@
       .filter(result => result.node.type === "normal" || result.node.type === "boss")
       .map(result => ({
         ...result,
-        calculation: calculateExperience({
-          baseExperience: result.node.baseExperience,
+        calculation: calculateMapBattleExperience({
+          ...input, node: result.node, baseExperience: result.node.baseExperience,
           isCaptain: input.isCaptain,
           mvpMode: input.mvpMode,
           unitSize: input.unitSize,
@@ -1704,6 +1746,8 @@
   // 確率未設定でも、ルート別の獲得経験値・最小値・最大値を算出できます。
   function calculateMapRouteOutcomes(options) {
     const input = options || {};
+    const kebiishiContext = getKebiishiContext(input);
+    if (!kebiishiContext.valid) return kebiishiContext;
     const map = getMapForCalculation(input.stageName, input.variantId);
     if (map && map.dataStatus === "unregistered") return { valid: false, reason: "base_experience_missing" };
     const graph = map && map.graph;
@@ -1750,8 +1794,8 @@
         .filter(node => node.type === "normal" || node.type === "boss")
         .map(node => ({
           node,
-          calculation: calculateExperience({
-            baseExperience: node.baseExperience,
+          calculation: calculateMapBattleExperience({
+            ...input, node, baseExperience: node.baseExperience,
             isCaptain: input.isCaptain,
             mvpMode: input.mvpMode,
             unitSize: input.unitSize,
@@ -1806,6 +1850,7 @@
   }
 
   const api = {
+    getKebiishiContext,
     EVENT_MAPS,
     calculateEventMapExperience,
     MAP_EXPERIENCE,
