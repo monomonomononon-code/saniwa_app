@@ -70,11 +70,39 @@
     field("レベル", c.level); field("顕現した年月日", c.activationDate); field("配属部隊", c.unit);
     const captain = c.unit && records.characters.find(x => x.unit === c.unit && x.isCaptain);
     if (c.isCaptain || captain) text("p", c.isCaptain ? "部隊長" : captain.name + "が隊長です", profileScroll).className = "reference-profile-captain";
-    [["身長", c.height], ["趣味", c.hobby], ["元主", c.formerOwner], ["性格", c.personality], ["メモ", c.memo]].forEach(([label,value]) => field(label,value));
+    [["身長", c.height], ["趣味", c.hobby], ["元主", c.formerOwner]].forEach(([label,value]) => field(label,value));
+    const quotes = text("section", "", profileScroll); quotes.className = "reference-quotes";
+    text("h3", "セリフ", quotes);
+    const quoteStatus = text("p", "", quotes); quoteStatus.className = "reference-quote-status";
+    quoteStatus.setAttribute("role", "status");
+    const registeredQuotes = list(c.quotes).filter(q => typeof q.text === "string");
+    registeredQuotes.forEach(quote => {
+      const row = text("div", "", quotes); row.className = "reference-quote-row";
+      text("span", quote.text, row).className = "reference-quote-text";
+      const copy = button("", () => copyQuote(quote.text, copy, quoteStatus, quotes), row, "reference-quote-copy");
+      copy.setAttribute("aria-label", "セリフをコピー"); copy.title = "セリフをコピー";
+      copy.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></svg>';
+    });
+    if (!registeredQuotes.length) text("p", "セリフはまだ登録されていません。", quotes).className = "reference-quote-status";
+    field("メモ", c.memo);
     const footer = text("div", "", card); footer.className = "reference-profile-footer";
     const dismiss = button("閉じる", () => closeProfile(), footer, "reference-profile-close");
     profileLayer.addEventListener("click", e => { if (e.target === profileLayer) closeProfile(); });
     dismiss.focus({ preventScroll: true });
+  }
+  async function copyQuote(value, source, status, container) {
+    try {
+      if (window.navigator?.clipboard?.writeText) await window.navigator.clipboard.writeText(value);
+      else {
+        // A readonly temporary field supports older browsers without editing data
+        // or requesting focus on the manuscript (and reopening its keyboard).
+        const temp = text("textarea", "", container); temp.className = "reference-copy-buffer";
+        temp.value = value; temp.readOnly = true;
+        try { temp.select(); if (!document.execCommand("copy")) throw Error("copy"); }
+        finally { temp.remove(); source.focus({ preventScroll: true }); }
+      }
+      status.textContent = "コピーしました。";
+    } catch (_) { status.textContent = "コピーできませんでした。セリフの文字を選択してコピーしてください。"; }
   }
   function closeProfile(restoreFocus = true) {
     if (!profileLayer) return;
