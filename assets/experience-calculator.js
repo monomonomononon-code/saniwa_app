@@ -1264,6 +1264,123 @@
     ]
   };
 
+  const EVENT_MAPS = {
+    "yoka-2026-edo-shitamachi": {
+      id: "yoka-2026-edo-shitamachi", eventName: "夜花奪還作戦", year: 2026, mapName: "江戸下町",
+      metadata: { allRoutesReachBoss: true, compositionAffectsBranches: false },
+      encounters: { normalBaseExperience: 800, kunaiBaseExperience: 2000, kunaiProbability: null },
+      // 実測確率は0〜1。平均経験値は1振りあたり・全倍率適用前の1周平均。
+      // 平均経験値がある場合は出現率より優先し、補正は計算時に一度だけ適用する。
+      measurements: { kunaiProbability: null, averageBaseExperiencePerRun: null },
+      resourceDistribution: {
+        typeProbabilitiesApproximate: true,
+        types: { "木炭": 0.25, "玉鋼": 0.25, "冷却材": 0.25, "砥石": 0.25 },
+        amounts: [{ amount: 50, probability: 0.4 }, { amount: 100, probability: 0.4 }, { amount: 150, probability: 0.2 }]
+      },
+      graph: {
+        startNodeId: "sortie",
+        nodes: {
+          sortie: { id: "sortie", type: "start" },
+          A: { id: "A", type: "normal" }, B: { id: "B", type: "normal" },
+          C: { id: "C", type: "normal" }, D: { id: "D", type: "normal" },
+          E: { id: "E", type: "normal" }, F: { id: "F", type: "normal" },
+          G: { id: "G", type: "boss", baseExperience: 2000, terminal: "boss" },
+          H: { id: "H", type: "normal" }, I: { id: "I", type: "resource" },
+          J: { id: "J", type: "normal" }, K: { id: "K", type: "normal" },
+          L: { id: "L", type: "normal" }, M: { id: "M", type: "resource" },
+          N: { id: "N", type: "normal" }, O: { id: "O", type: "normal" },
+          P: { id: "P", type: "normal" }, Q: { id: "Q", type: "normal" },
+          R: { id: "R", type: "resource" }, S: { id: "S", type: "normal" },
+          T: { id: "T", type: "normal" }, U: { id: "U", type: "resource" },
+          V: { id: "V", type: "normal" }
+        },
+        connections: [
+          { from: "sortie", to: "A", probability: 1 },
+          { from: "A", to: "B", probability: null }, { from: "A", to: "L", probability: null },
+          { from: "B", to: "C", probability: null }, { from: "B", to: "H", probability: null },
+          { from: "C", to: "D", probability: 1 }, { from: "D", to: "E", probability: 1 },
+          { from: "E", to: "F", probability: 1 }, { from: "F", to: "G", probability: 1 },
+          { from: "H", to: "I", probability: 1 }, { from: "I", to: "J", probability: 1 },
+          { from: "J", to: "K", probability: 1 }, { from: "K", to: "F", probability: 1 },
+          { from: "L", to: "M", probability: null }, { from: "L", to: "P", probability: null },
+          { from: "M", to: "N", probability: 1 },
+          { from: "P", to: "Q", probability: 1 },
+          { from: "N", to: "O", probability: null }, { from: "N", to: "Q", probability: null },
+          { from: "O", to: "S", probability: 1 }, { from: "Q", to: "R", probability: 1 },
+          { from: "R", to: "S", probability: 1 },
+          { from: "S", to: "T", probability: null }, { from: "S", to: "J", probability: null },
+          { from: "T", to: "U", probability: 1 }, { from: "U", to: "V", probability: 1 },
+          { from: "V", to: "G", probability: 1 }
+        ]
+      }
+    }
+  };
+
+  function calculateEventMapExperience(options) {
+    const input = options || {};
+    const map = EVENT_MAPS[input.stageName];
+    if (!map) return { valid: false, reason: "event_map_missing" };
+    const graph = map.graph;
+    const outgoing = {};
+    for (const edge of graph.connections) (outgoing[edge.from] ||= []).push(edge);
+    const arrivals = {};
+    const outcomes = [];
+    let invalidGraph = false;
+    let usedProvisionalProbabilities = false;
+    function visit(id, probability, path) {
+      const node = graph.nodes[id];
+      if (!node || path.includes(id)) { invalidGraph = true; return; }
+      const nextPath = [...path, id];
+      arrivals[id] = (arrivals[id] || 0) + probability;
+      if (node.terminal) {
+        outcomes.push({ nodeIds: nextPath, terminal: id, probability,
+          battleCount: nextPath.filter(key => ["normal", "boss"].includes(graph.nodes[key].type)).length });
+        return;
+      }
+      const edges = outgoing[id] || [];
+      const allUnknown = edges.length > 0 && edges.every(edge => edge.probability === null);
+      const allKnown = edges.length > 0 && edges.every(edge => Number.isFinite(edge.probability) && edge.probability >= 0 && edge.probability <= 1);
+      if ((!allUnknown && !allKnown) || (allKnown && Math.abs(edges.reduce((sum, edge) => sum + edge.probability, 0) - 1) > 1e-9)) {
+        invalidGraph = true; return;
+      }
+      if (allUnknown) usedProvisionalProbabilities = true;
+      for (const edge of edges) visit(edge.to, probability * (allUnknown ? 1 / edges.length : edge.probability), nextPath);
+    }
+    visit(graph.startNodeId, 1, []);
+    if (invalidGraph) return { valid: false, reason: "route_structure_data_missing" };
+    const distribution = map.resourceDistribution;
+    const averageAmount = distribution.amounts.reduce((sum, item) => sum + item.amount * item.probability, 0);
+    const resourceVisits = Object.entries(arrivals).reduce((sum, [id, p]) => sum + (graph.nodes[id].type === "resource" ? p : 0), 0);
+    const rewards = Object.fromEntries(Object.entries(distribution.types).map(([name, p]) => [name, resourceVisits * averageAmount * p]));
+    const normalBattleCount = Object.entries(arrivals).reduce((sum, [id, p]) => sum + (graph.nodes[id].type === "normal" ? p : 0), 0);
+    const bossBaseExperience = Object.entries(arrivals).reduce((sum, [id, p]) => sum + (graph.nodes[id].type === "boss" ? p * graph.nodes[id].baseExperience : 0), 0);
+    const measurements = input.measurements === undefined ? map.measurements : input.measurements;
+    const measuredAverage = measurements && measurements.averageBaseExperiencePerRun;
+    const measuredRate = measurements && measurements.kunaiProbability;
+    const rate = measuredRate == null ? map.encounters.kunaiProbability : measuredRate;
+    let reason = "kunai_probability_missing";
+    let experienceSource = null;
+    let baseExperience = null;
+    if (measuredAverage != null) {
+      if (Number.isFinite(measuredAverage) && measuredAverage >= 0) {
+        baseExperience = measuredAverage; experienceSource = "measured_average";
+      } else reason = "invalid_measurement";
+    } else if (rate != null) {
+      if (Number.isFinite(rate) && rate >= 0 && rate <= 1) {
+        baseExperience = normalBattleCount * (map.encounters.normalBaseExperience * (1 - rate) + map.encounters.kunaiBaseExperience * rate) + bossBaseExperience;
+        experienceSource = measuredRate == null ? "registered_probability" : "measured_probability";
+      } else reason = "invalid_measurement";
+    }
+    const experienceAvailable = baseExperience !== null;
+    return {
+      valid: true, map, usedProvisionalProbabilities, outcomes, rewards, resourceVisits,
+      bossArrivalProbability: outcomes.filter(outcome => graph.nodes[outcome.terminal].terminal === "boss").reduce((sum, outcome) => sum + outcome.probability, 0),
+      expectedBattleCount: outcomes.reduce((sum, outcome) => sum + outcome.probability * outcome.battleCount, 0),
+      experienceAvailable, experienceSource, reason: experienceAvailable ? null : reason,
+      rawExperience: experienceAvailable ? calculateExperience({ ...input, baseExperience }).rawExperience : null
+    };
+  }
+
   const RANK_MULTIPLIERS = {
     "完全勝利S": 1.2,
     "勝利A": 1.2,
@@ -1678,6 +1795,8 @@
   }
 
   const api = {
+    EVENT_MAPS,
+    calculateEventMapExperience,
     MAP_EXPERIENCE,
     getMapVariants,
     RANK_MULTIPLIERS,
