@@ -53,6 +53,8 @@
 .report-calculated-result { margin-top: 6px; padding: 8px 9px; border-radius: 8px; background: #F1E9DB; }
 .report-calculated-result .report-exp-conditions { margin-top: 3px; }
 .report-exp-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; margin-top: 8px; color: #5C544A; font-size: 13px; }
+.report-approx { margin-right: 2px; color: #81776D; font-size: 10px; font-weight: 400; }
+.report-approx-value { display: inline-flex; align-items: baseline; justify-content: flex-end; }
 .report-exp-conditions { margin: 8px 0 0; color: #776E64; font-size: 12px; line-height: 1.5; }
 .report-modal-open { overflow: hidden; }
 .report-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; align-items: end; background: rgb(39 31 34 / .48); }
@@ -84,6 +86,11 @@
 .report-resource-head span:first-child { text-align: left; }
 .report-resource-value { text-align: right; font-size: 13px; overflow-wrap: anywhere; }
 .report-single-input { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.report-koban-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.report-koban-buttons { display: flex; gap: 6px; min-width: 0; }
+.report-koban-buttons button { min-height: 38px; padding: 7px 10px; border: 1px solid #BFAFC0; border-radius: 8px; background: #FFFDF6; color: var(--report-purple); font: inherit; font-size: 13px; }
+.report-koban-campaign { display: flex; align-items: center; gap: 6px; min-height: 38px; padding: 6px 9px; border-radius: 8px; background: var(--report-purple-soft); color: var(--report-purple-dark); font-size: 13px; white-space: nowrap; }
+.report-koban-campaign input { width: 18px; height: 18px; accent-color: var(--report-purple); }
 .report-auto-total { margin-top: 8px; color: #5C544A; font-size: 13px; text-align: right; }
 .report-modal-actions { padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--report-line); background: #F5EDDE; }
 .report-modal-actions .report-primary { width: 100%; }
@@ -99,4 +106,7 @@
   .report-add-row { grid-template-columns: 1fr 74px; }
   .report-add-row select, .report-obtained-row input:first-child { grid-column: 1 / -1; }
   .report-resource-row { grid-template-columns: 58px minmax(64px, 1fr) minmax(54px, .75fr) minmax(54px, .75fr); gap: 4px; padding-inline: 5px; }
+  .report-koban-tools { align-items: stretch; flex-direction: column; }
+  .report-koban-buttons button { flex: 1; }
+  .report-koban-campaign { align-self: flex-start; }
 }
