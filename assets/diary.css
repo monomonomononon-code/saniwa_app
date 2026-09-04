@@ -33,6 +33,7 @@
   box-shadow: 0 -3px 12px rgb(43 38 33 / .08);
 }
 #diary-body.has-keyboard-toolbar { padding-bottom: 80px; scroll-padding-bottom: 80px; }
+.diary-inserts.is-keyboard-docked:not(.is-keyboard-open) { padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
 #diary #diary-body {
   display: block;
   width: calc(100% + 28px);
