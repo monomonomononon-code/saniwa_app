@@ -49,7 +49,7 @@
       resources: { manual: emptyResources() },
       eventRuns: [],
       normalMapRuns: [],
-      koban: { manual: 0 },
+      koban: { manual: 0, tripleCampaign: false },
       expRecords: []
     };
   }
@@ -94,6 +94,7 @@
     base.eventRuns = Array.isArray(source.eventRuns) ? clone(source.eventRuns) : [];
     base.normalMapRuns = Array.isArray(source.normalMapRuns) ? clone(source.normalMapRuns) : [];
     base.koban.manual = number(source.koban && source.koban.manual);
+    base.koban.tripleCampaign = !!(source.koban && source.koban.tripleCampaign);
     base.expRecords = Array.isArray(source.expRecords) ? source.expRecords.map(normalizeExpRecord) : [];
     return base;
   }
