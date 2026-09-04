@@ -68,7 +68,7 @@
     const originTop = frame ? frame.getBoundingClientRect().top + frame.clientTop : 0;
     const upper = Math.max(0, viewport.offsetTop - originTop) + 12;
     let lower = Math.min(frame ? window.innerHeight : Infinity, viewport.offsetTop + viewport.height - originTop) - 12;
-    if (bar.classList.contains("is-keyboard-docked")) lower = Math.min(lower, parseFloat(bar.style.top) - 12);
+    if (bar.classList.contains("is-keyboard-docked")) lower = Math.min(lower, parseFloat(bar.style.top) - (window.scrollY || 0) - 12);
     if (lower - upper < lineHeight) return;
     const delta = caretY + lineHeight > lower ? caretY + lineHeight - lower : caretY < upper ? caretY - upper : 0;
     if (Math.abs(delta) < 1) return;
@@ -88,9 +88,14 @@
   }
   function update() {
     pending = false;
-    growBody();
+    // Docking must still run if measuring a long textarea fails on a browser.
+    try { growBody(); }
+    finally { updateDock(); }
+    if (followCaret) { followCaret = false; revealCaret(); }
+  }
+  function updateDock() {
     const focused = document.activeElement === body;
-    const touchDevice = host.matchMedia("(any-pointer: coarse)").matches;
+    const touchDevice = isIOS || nav.maxTouchPoints > 0 || host.matchMedia("(any-pointer: coarse)").matches;
     const layoutHeight = host.document.documentElement.clientHeight;
     if (host.innerWidth !== baselineWidth) {
       baselineWidth = host.innerWidth;
@@ -99,11 +104,10 @@
     if (!focused) baselineHeight = Math.max(baselineHeight, viewport.height);
     // Keyboard visibility has no universal API. Ignore browser chrome changes
     // and pinch zoom; require a substantial height loss while editing on touch.
-    const keyboardOpen = Math.max(baselineHeight, layoutHeight) - viewport.height > 100;
-    if (!focused || !touchDevice || !keyboardOpen || Math.abs(viewport.scale - 1) > .05 ||
+    const keyboardOpen = Math.max(baselineHeight, layoutHeight) - viewport.height * (viewport.scale || 1) > 100;
+    if (!focused || !touchDevice || !keyboardOpen ||
         diary.hidden || editor.hidden || (frame && !frame.getClientRects().length)) {
       reset();
-      if (followCaret) { followCaret = false; revealCaret(); }
       return;
     }
     const rect = frame ? frame.getBoundingClientRect() : { top: 0, left: 0 };
@@ -117,11 +121,12 @@
     const height = bar.getBoundingClientRect().height;
     const top = bottom - height - accessoryClearance;
     if (right <= left || top < Math.max(0, viewport.offsetTop - originTop)) { reset(); return; }
-    bar.style.left = left + "px";
-    bar.style.top = top + "px";
+    // Document coordinates avoid relying on an iframe's fixed-position layer
+    // while Safari pans the page for the keyboard. No positioned ancestors.
+    bar.style.left = (left + (window.scrollX || 0)) + "px";
+    bar.style.top = (top + (window.scrollY || 0)) + "px";
     slot.style.height = height + "px";
     body.classList.add("has-keyboard-toolbar");
-    if (followCaret) { followCaret = false; revealCaret(); }
   }
   function schedule() {
     if (!pending) { pending = true; window.requestAnimationFrame(update); }
@@ -134,7 +139,13 @@
       event.preventDefault();
     }
   });
-  body.addEventListener("focus", scheduleCaret);
+  body.addEventListener("focus", () => {
+    scheduleCaret();
+    // Viewport events can precede the end of the iOS keyboard animation.
+    for (const delay of [80, 240, 500]) window.setTimeout(() => {
+      if (document.activeElement === body) schedule();
+    }, delay);
+  });
   body.addEventListener("blur", schedule);
   body.addEventListener("diary-editor-open", schedule);
   body.addEventListener("diary-content-changed", scheduleCaret);
