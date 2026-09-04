@@ -44,6 +44,14 @@
 .report-exp-list { display: grid; gap: 10px; }
 .report-exp-record { position: relative; padding: 12px; border: 1px solid #D5CAB5; border-radius: 10px; background: #FFFDF6; }
 .report-exp-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; color: var(--report-purple-dark); }
+.report-run-members,
+.report-calculated-members,
+.report-uncalculated-members { margin-top: 10px; }
+.report-run-members p,
+.report-uncalculated-members p { margin: 3px 0 0; line-height: 1.65; }
+.report-exp-subtitle { display: block; color: var(--report-purple); font-size: 12px; font-weight: 700; }
+.report-calculated-result { margin-top: 6px; padding: 8px 9px; border-radius: 8px; background: #F1E9DB; }
+.report-calculated-result .report-exp-conditions { margin-top: 3px; }
 .report-exp-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; margin-top: 8px; color: #5C544A; font-size: 13px; }
 .report-exp-conditions { margin: 8px 0 0; color: #776E64; font-size: 12px; line-height: 1.5; }
 .report-modal-open { overflow: hidden; }
