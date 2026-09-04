@@ -273,7 +273,7 @@
         }
 
         if (selectedStage) {
-          const mapVariants = window.ExperienceCalculator.getMapVariants(selectedStage);
+          const mapVariants = window.ExperienceCalculator?.getMapVariants?.(selectedStage) || [];
           if (mapVariants.length > 0) {
             const routeLabel = document.createElement("label");
             routeLabel.className = "select-label battlefield-label";
@@ -436,6 +436,10 @@
   }
 
   function renderEventCalculation(card, calculator, options) {
+    if (typeof calculator.calculateEventMapExperience !== "function") {
+      card.textContent = "計算ファイルが古いか読み込めていません。ページを再読み込みしてください。";
+      return;
+    }
     const result = calculator.calculateEventMapExperience(options);
     if (!result.valid) { card.textContent = "ルート構造データ未登録"; return; }
     const title = document.createElement("div");
@@ -464,20 +468,33 @@
     card.appendChild(experienceNote);
     appendLoopTotals(card, calculator, result.rawExperience, undefined, result.rewards);
     appendCustomLoopInput(card, calculator, result.rawExperience, undefined, result.rewards);
+    // 更新中やキャッシュにより計算側が旧版でも、メイン表示を巻き込んで停止しない。
+    if (!Array.isArray(result.battleCountReferences)) {
+      const updateNote = document.createElement("div");
+      updateNote.className = "mvp-note";
+      updateNote.textContent = "参考EXPの計算ファイルが旧版のため、参考欄は表示できません。ページを再読み込みしてください。";
+      card.appendChild(updateNote);
+      return;
+    }
     const details = document.createElement("details");
     details.className = "route-details";
     const summary = document.createElement("summary");
-    summary.textContent = "ルート別戦闘回数（ボス戦を含む・全ルートGボス到達）";
+    summary.textContent = "戦闘回数別の参考EXP（1周・ボス戦を含む）";
     details.appendChild(summary);
-    result.outcomes.forEach(outcome => {
+    const referenceNote = document.createElement("div");
+    referenceNote.className = "mvp-note";
+    referenceNote.textContent = result.experienceSource === "measured_average"
+      ? `※${result.measurementSampleSize || "登録済み"}周実測を基にした参考値。平均${new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 4 }).format(result.expectedBattleCount)}戦（均等分岐）を基準に実測平均EXPを戦闘回数で比例配分し、選択中の補正を適用しています。回数別の実測平均や正式な苦無出現率に基づく値ではありません。`
+      : "※実測1周平均経験値が未登録のため、回数別の参考EXPは算出できません。";
+    details.appendChild(referenceNote);
+    result.battleCountReferences.forEach(reference => {
       const row = document.createElement("div");
       row.className = "route-outcome";
-      const path = document.createElement("span");
-      path.textContent = outcome.nodeIds.filter(id => id !== "sortie").join(" → ");
-      path.style.overflowWrap = "anywhere";
-      const count = document.createElement("strong");
-      count.textContent = `${outcome.battleCount}戦`;
-      row.append(path, count);
+      const count = document.createElement("span");
+      count.textContent = `${reference.battleCount}戦`;
+      const experience = document.createElement("strong");
+      experience.textContent = reference.rawExperience === null ? "算出待ち" : `約${calculator.formatExperience(reference.rawExperience)} EXP`;
+      row.append(count, experience);
       details.appendChild(row);
     });
     card.appendChild(details);
