@@ -1,0 +1,26 @@
+:root {
+  color-scheme: light;
+  --paper: #F2EBDD;
+  --ink: #2B2621;
+  --ink-soft: #5C544A;
+  --grape: #70536B;
+  --grape-dark: #594253;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; }
+#app { min-height: 100vh; padding: 20px 14px 60px; }
+[hidden] { display: none !important; }
+.header { margin-bottom: 16px; }
+.header h1 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; font-size: 24px; font-weight: 600; letter-spacing: .06em; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.header p { margin: 0; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+.seal { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 3px; background: var(--grape); color: #FBF6EA; font-size: 12px; }
+.record-menu { display: grid; gap: 12px; }
+.record-button { width: 100%; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 15px 16px; text-decoration: none; color: var(--ink); background: #FFFDF6; border: 1px solid #C9BFA6; border-radius: 12px; }
+.record-icon { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: linear-gradient(160deg, #8A7084, var(--grape-dark)); color: #FBF6EA; border-radius: 11px; box-shadow: 0 3px 7px rgb(0 0 0 / .18); font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: 23px; }
+.record-copy { min-width: 0; overflow-wrap: anywhere; }
+.record-copy strong { display: block; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: 18px; font-weight: 600; }
+.record-copy small { display: block; margin-top: 3px; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+.record-button:hover, .record-button:active { background: #E8DFC9; }
+.menu-back { display: inline-block; margin-bottom: 18px; padding: 9px 15px; min-height: 40px; border-radius: 999px; background: var(--grape); color: #FBF6EA; text-decoration: none; font-size: 14px; }
+a:focus-visible { outline: 3px solid var(--grape); outline-offset: 3px; }
+.empty-note { color: var(--ink-soft); font-size: 14px; line-height: 1.7; }
