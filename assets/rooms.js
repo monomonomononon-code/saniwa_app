@@ -32,6 +32,7 @@
   function saveState() {
     try { localStorage.setItem(ROOM_STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   }
+  window.readSaniwaReference = () => JSON.parse(JSON.stringify(state));
   window.addEventListener("pagehide", saveState);
   function findChar(id) {
     if (state.unplaced.find(c => c.id === id)) return state.unplaced.find(c => c.id === id);
