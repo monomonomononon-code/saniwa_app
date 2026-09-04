@@ -47,6 +47,10 @@
         <div class="app-icon-glyph expcalc">戦</div>
         <div class="app-icon-label">戦績</div>
       </button>
+      <button class="app-icon-btn" id="open-journal">
+        <div class="app-icon-glyph journal">記</div>
+        <div class="app-icon-label">日報</div>
+      </button>
       <button class="app-icon-btn soon" id="open-honmaru">
         <div class="app-icon-glyph soon">本</div>
         <div class="app-icon-label">本丸設定</div>
@@ -110,6 +114,7 @@
     { label: "相関図",   glyph: "縁", color: "var(--hanko)", action: () => showView("network-view") },
     { label: "刀剣男士", glyph: "刀", color: "var(--moss)", action: () => showView("master-view") },
     { label: "経験値計算", glyph: "戦", color: "var(--gold)", action: () => showView("expcalc-view") },
+    { label: "日報", glyph: "記", color: "#70536B", action: () => showView("journal-view") },
     { label: "本丸設定",       glyph: "本", color: "var(--tag-border)", disabled: true },
     { label: "設定",           glyph: "設", color: "var(--tag-border)", disabled: true }
   ];
@@ -211,6 +216,9 @@
   const networkSub = makeSubView("network-view", "相関図");
   const masterSub = makeSubView("master-view", "刀剣男士");
   const expcalcSub = makeSubView("expcalc-view", "経験値計算");
+  const journalSub = makeSubView("journal-view", "日報");
+  journalSub.iframe.title = "日報・日誌";
+  let journalLoaded = false;
 
   let roomsLoaded = false, networkLoaded = false, masterLoaded = false, expcalcLoaded = false;
   let activityLog = [];
@@ -341,6 +349,10 @@
   function showView(id) {
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(id).classList.add("active");
+    if (id === "journal-view" && !journalLoaded) {
+      journalSub.iframe.src = "pages/journal.html";
+      journalLoaded = true;
+    }
     if (id === "rooms-view" && !roomsLoaded) {
       roomsSub.iframe.src = "pages/rooms.html";
       roomsLoaded = true;
@@ -363,5 +375,6 @@
   document.getElementById("open-network").onclick = () => showView("network-view");
   document.getElementById("open-master").onclick = () => showView("master-view");
   document.getElementById("open-expcalc").onclick = () => showView("expcalc-view");
+  document.getElementById("open-journal").onclick = () => showView("journal-view");
 })();
 
