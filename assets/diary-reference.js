@@ -83,7 +83,7 @@
         text("span", { a: "六畳", b: "広間", c: "洋間" }[template], head);
         text("p", room.note || "備考なし", card).className = "reference-room-note";
         const surface = text("div", "", card); surface.className = "reference-room-surface";
-        surface.style.backgroundImage = 'url("../assets/reference-room-' + template + '.svg")';
+        surface.style.backgroundImage = 'url("../assets/reference-room-' + template + '.svg?v=svg-2")';
         list(room.occupants).forEach(o => {
           const chip = button(name(o.charId), () => showCharacter(o.charId), surface, "reference-room-chip");
           place(chip, o);
