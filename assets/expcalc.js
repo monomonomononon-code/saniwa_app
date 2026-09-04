@@ -466,8 +466,8 @@
       resultCard.appendChild(note);
     }
     appendLoopTotals(resultCard, calculator, expected.rawExperience, undefined, expected.rewards);
-    appendCustomLoopInput(resultCard, calculator, expected.rawExperience, undefined, expected.rewards, count => {
-      return addCalculationToReport(calculator, calculationOptions, count, expected.rewards, selectedStage, "normal");
+    appendCustomLoopInput(resultCard, calculator, expected.rawExperience, undefined, expected.rewards, (count, status) => {
+      return addCalculationToReport(calculator, calculationOptions, count, expected.rewards, selectedStage, "normal", status);
     });
     if (isProvisional) appendRouteDetails(resultCard, calculator, routeOutcomes.outcomes);
     container.appendChild(resultCard);
@@ -511,9 +511,9 @@
       card.appendChild(multiplierNote);
     }
     appendLoopTotals(card, calculator, result.rawExperience, undefined, result.rewards);
-    appendCustomLoopInput(card, calculator, result.rawExperience, undefined, result.rewards, count => {
+    appendCustomLoopInput(card, calculator, result.rawExperience, undefined, result.rewards, (count, status) => {
       const label = `${result.map.eventName}${result.map.year ? ` ${result.map.year}` : ""}${result.map.mapName ? `・${result.map.mapName}` : ""}`;
-      return addCalculationToReport(calculator, options, count, result.rewards, label, "event");
+      return addCalculationToReport(calculator, options, count, result.rewards, label, "event", status);
     });
     // 更新中やキャッシュにより計算側が旧版でも、メイン表示を巻き込んで停止しない。
     if (!Array.isArray(result.battleCountReferences)) {
@@ -596,37 +596,94 @@
     card.appendChild(totals);
   }
 
-  function addCalculationToReport(calculator, baseOptions, rounds, rewards, mapLabel, category) {
+  function openReportDestinationPicker(report, record, status) {
+    const candidates = report.getCompatibleExpRecords(record);
+    const overlay = document.createElement("div");
+    overlay.className = "report-destination-overlay";
+    const dialog = document.createElement("section");
+    dialog.className = "report-destination-dialog";
+    dialog.role = "dialog";
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-label", "日報の追加先を選択");
+    const title = document.createElement("h2");
+    title.textContent = "追加先を選択";
+    const help = document.createElement("p");
+    help.textContent = "同じ周回へ追加する場合だけ、既存の記録を選んでください。";
+    const choices = document.createElement("div");
+    choices.className = "report-destination-choices";
+    const newChoice = document.createElement("label");
+    const newRadio = document.createElement("input");
+    newRadio.type = "radio";
+    newRadio.name = "report-destination";
+    newRadio.value = "";
+    newRadio.checked = true;
+    newChoice.append(newRadio, document.createTextNode("新しい周回記録として追加"));
+    choices.appendChild(newChoice);
+    candidates.forEach(candidate => {
+      const label = document.createElement("label");
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "report-destination";
+      radio.value = candidate.id;
+      const copy = document.createElement("span");
+      const names = (candidate.members || []).map(member => member.name).filter(Boolean).join(" / ");
+      const calculated = (candidate.expResults || []).map(result => result.name).filter(Boolean).join(" / ") || "なし";
+      copy.textContent = `${candidate.mapLabel} ${candidate.rounds}周\n周回メンバー：${names || "記録なし"}\n計算済み：${calculated}`;
+      label.append(radio, copy);
+      choices.appendChild(label);
+    });
+    const actions = document.createElement("div");
+    actions.className = "report-destination-actions";
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = "閉じる";
+    const save = document.createElement("button");
+    save.type = "button";
+    save.textContent = "追加する";
+    save.className = "primary";
+    actions.append(close, save);
+    dialog.append(title, help, choices, actions);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    const finish = () => {
+      document.removeEventListener("keydown", onKeydown);
+      overlay.remove();
+    };
+    const onKeydown = event => { if (event.key === "Escape") finish(); };
+    document.addEventListener("keydown", onKeydown);
+    overlay.onclick = event => { if (event.target === overlay) finish(); };
+    close.onclick = finish;
+    save.onclick = () => {
+      const selected = choices.querySelector('input[name="report-destination"]:checked');
+      const saved = report.saveExpResult(record, selected ? selected.value : "");
+      if (saved) {
+        status.textContent = selected && selected.value ? "既存の周回記録へ追加しました" : "新しい周回記録を今日の日報へ追加しました";
+        notify(`${record.mapLabel} ${record.rounds}周の計算結果を今日の日報に追加`);
+        finish();
+      } else {
+        status.textContent = "保存できませんでした";
+      }
+    };
+    requestAnimationFrame(() => newRadio.focus());
+  }
+
+  function addCalculationToReport(calculator, baseOptions, rounds, rewards, mapLabel, category, status) {
     const report = window.SaniwaReportStore;
     if (!report || !Number.isInteger(rounds) || rounds <= 0) return false;
     const selectedCharacter = characters.find(member => member.id === selectedId);
     const unitMembers = characters.filter(member => selectedCharacter?.unit && member.unit === selectedCharacter.unit);
     const party = unitMembers.length ? unitMembers : characters.filter(member => member.id === selectedId);
-    const characterResults = party.map(member => {
-      const memberOptions = {
-        ...baseOptions,
-        isCaptain: !!member.isCaptain,
-        mvpMode: selectedMvp === "部隊内で均等" || member.id === selectedId ? selectedMvp : "誉を取らない",
-        isDoubleExperience: category === "event" ? (member.id === selectedId && isDoubleExperience) : isDoubleExperience
-      };
-      let result;
-      if (category === "event") {
-        result = calculator.calculateEventMapExperience(memberOptions);
-      } else {
-        const routes = calculator.calculateMapRouteOutcomes(memberOptions);
-        result = routes.valid
-          ? (routes.probabilitiesConfigured
-            ? calculator.calculateMapExpectedExperience(memberOptions)
-            : calculator.calculateMapProvisionalExpectedExperience(memberOptions))
-          : routes;
-      }
-      return {
-        id: member.id,
-        name: member.name,
-        experience: result && result.valid && result.rawExperience !== null ? result.rawExperience * rounds : null
-      };
-    }).filter(item => item.experience !== null);
-    if (!characterResults.length) return false;
+    let calculation;
+    if (category === "event") calculation = calculator.calculateEventMapExperience(baseOptions);
+    else {
+      const routes = calculator.calculateMapRouteOutcomes(baseOptions);
+      calculation = routes.valid
+        ? (routes.probabilitiesConfigured
+          ? calculator.calculateMapExpectedExperience(baseOptions)
+          : calculator.calculateMapProvisionalExpectedExperience(baseOptions))
+        : routes;
+    }
+    if (!calculation || !calculation.valid || calculation.rawExperience === null) return false;
     const totalResources = Object.fromEntries(Object.entries(rewards || {}).map(([name, amount]) => [name, amount * rounds]));
     const variant = selectedMapVariant
       ? (calculator.getMapVariants(selectedStage).find(item => item.id === selectedMapVariant)?.label || selectedMapVariant)
@@ -637,19 +694,25 @@
       mapId: selectedStage,
       mapLabel,
       rounds,
-      characters: characterResults,
+      members: party.map(member => ({ id: member.id, name: member.name })),
+      expResults: [{
+        characterId: selectedCharacter.id,
+        name: selectedCharacter.name,
+        exp: calculation.rawExperience * rounds,
+        expMultiplier: isDoubleExperience ? 2 : 1,
+        conditions: {
+          rank: selectedBattleResult,
+          mvp: selectedMvp,
+          doubleExperience: isDoubleExperience,
+          kebiishi: category === "normal" && kebiishiEnabled,
+          variant
+        }
+      }],
       resources: totalResources,
-      conditions: {
-        rank: selectedBattleResult,
-        mvp: selectedMvp,
-        doubleExperience: isDoubleExperience,
-        kebiishi: category === "normal" && kebiishiEnabled,
-        variant
-      }
     };
-    const saved = report.appendExpRecord(record);
-    if (saved) notify(`${mapLabel} ${rounds}周の計算結果を今日の日報に追加`);
-    return saved;
+    status.textContent = "追加先を選んでください";
+    openReportDestinationPicker(report, record, status);
+    return "pending";
   }
 
   function appendCustomLoopInput(card, calculator, minExperience, maxExperience, rewards, onAddToReport) {
@@ -692,8 +755,8 @@
     reportButton.onclick = () => {
       const count = Number(customInput.value);
       if (reportButton.disabled || typeof onAddToReport !== "function") return;
-      const saved = onAddToReport(count);
-      reportStatus.textContent = saved ? "今日の日報に追加しました" : "保存できませんでした";
+      const saved = onAddToReport(count, reportStatus);
+      if (saved !== "pending") reportStatus.textContent = saved ? "今日の日報に追加しました" : "保存できませんでした";
     };
     customRow.append(customLabel, customInput);
     card.append(customRow, customResult, reportButton, reportStatus);
