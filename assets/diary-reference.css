@@ -30,7 +30,7 @@
 #diary-reference-content .reference-room-note { background: #ffffff1f; border-radius: 5px; padding: 6px; margin: 6px 0; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .reference-room-surface { position: relative; aspect-ratio: 4 / 3; background-size: 100% 100%; border-radius: 5px; overflow: hidden; }
 .reference-room-card.wide .reference-room-surface { aspect-ratio: 8 / 3; }
-#diary-reference-content .reference-room-chip { position: absolute; transform: translate(-50%,-50%); background: #FFFDF6; border: 1px solid #C9BFA6; border-radius: 999px; color: #2B2621; padding: 5px 8px; min-height: 30px; font-size: 14px; max-width: 95%; overflow-wrap: anywhere; box-shadow: 0 2px 4px #0002; }
+#diary-reference-content .reference-room-chip { position: absolute; transform: translate(-50%,-50%); background: #FFFDF6; border: 1px solid #C9BFA6; border-radius: 999px; color: #2B2621; padding: 5px 8px; min-height: 30px; font-size: 14px; width: max-content; max-width: 95%; white-space: nowrap; overflow-wrap: normal; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px #0002; }
 .reference-room-empty { position: absolute; left: 8px; bottom: 6px; font-size: 14px; color: #FBF6EA; }
 .reference-network-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 #diary-reference-content .reference-network-tab { border-radius: 999px; background: #E8DFC9; color: #2B2621; }
