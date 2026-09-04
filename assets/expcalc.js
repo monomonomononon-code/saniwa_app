@@ -445,7 +445,9 @@
     if (result.usedProvisionalProbabilities) {
       const note = document.createElement("div");
       note.className = "provisional-note";
-      note.textContent = "※分岐確率が未登録のため、各分岐を均等確率として算出した暫定値です";
+      note.textContent = result.experienceSource === "measured_average"
+        ? "※資材期待値は、未登録の分岐を均等確率と仮定した暫定値です。経験値にはこの仮定を使用していません。"
+        : "※分岐確率が未登録のため、各分岐を均等確率として算出した暫定値です";
       card.appendChild(note);
     }
     const resourceNote = document.createElement("div");
@@ -455,7 +457,9 @@
     const experienceNote = document.createElement("div");
     experienceNote.className = "mvp-note";
     experienceNote.textContent = result.experienceAvailable
-      ? (result.experienceSource === "measured_average" ? "実測1周平均経験値（倍率適用前）に既存の補正を適用しています。" : "登録された苦無出現率に基づく経験値です。")
+      ? (result.experienceSource === "measured_average"
+        ? `※実測基礎期待値 約${calculator.formatExperience(result.baseExperience)} EXP/周${result.measurementSampleSize ? `（サンプル数 n=${result.measurementSampleSize}周）` : ""}。ランダムルート・苦無出現の影響を含む倍率適用前の実測値に、既存の補正を適用しています。`
+        : "登録された苦無出現率に基づく経験値です。")
       : (result.reason === "invalid_measurement" ? "実測値が不正なため経験値を算出できません。" : "苦無出現率が未登録のため経験値は算出待ちです。資材期待値と戦闘回数は下記で確認できます。");
     card.appendChild(experienceNote);
     appendLoopTotals(card, calculator, result.rawExperience, undefined, result.rewards);
