@@ -161,7 +161,11 @@
       if (c.id === selectedId) o.selected = true;
       select.appendChild(o);
     });
-    select.onchange = e => { selectedId = e.target.value; render(); };
+    select.onchange = e => {
+      selectedId = e.target.value;
+      if (mapCategory === "event") isDoubleExperience = false;
+      render();
+    };
     selectWrap.appendChild(select);
     el.appendChild(selectWrap);
 
@@ -353,7 +357,7 @@
                 render();
               };
               doubleExperienceRow.appendChild(doubleExperienceCheck);
-              doubleExperienceRow.append("経験値2倍CP");
+              doubleExperienceRow.append(mapCategory === "event" ? "経験値2倍（選択中の刀剣男士が対象）" : "経験値2倍CP");
               mapSelector.appendChild(doubleExperienceRow);
               if (mapCategory === "past" && selectedStage !== "1-1 函館") {
                 const kebiishiRow = document.createElement("label");
@@ -494,10 +498,16 @@
     experienceNote.className = "mvp-note";
     experienceNote.textContent = result.experienceAvailable
       ? (result.experienceSource === "measured_average"
-        ? `※実測基礎期待値 約${calculator.formatExperience(result.baseExperience)} EXP/周${result.measurementSampleSize ? `（サンプル数 n=${result.measurementSampleSize}周）` : ""}。ランダムルート・苦無出現の影響を含む倍率適用前の実測値に、既存の補正を適用しています。`
+        ? `※実測基礎期待値 約${new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 4 }).format(result.baseExperience)} EXP/周${result.measurementSampleSize ? `（サンプル数 n=${result.measurementSampleSize}周）` : ""}。132周実測データは全員が経験値2倍対象だったため、半分を基礎値として保持しています。ランダムルート・苦無出現の影響を含みます。`
         : "登録された苦無出現率に基づく経験値です。")
       : (result.reason === "invalid_measurement" ? "実測値が不正なため経験値を算出できません。" : "苦無出現率が未登録のため経験値は算出待ちです。資材期待値と戦闘回数は下記で確認できます。");
     card.appendChild(experienceNote);
+    if (result.map.doubleExperienceSelection === "manual") {
+      const multiplierNote = document.createElement("div");
+      multiplierNote.className = "mvp-note";
+      multiplierNote.textContent = `選択中の刀剣男士：経験値×${result.eventMultiplier}。今年の2倍対象の場合のみチェックしてください。対象者の自動判定は行いません。刀剣男士を切り替えるとチェックはOFFになります。`;
+      card.appendChild(multiplierNote);
+    }
     appendLoopTotals(card, calculator, result.rawExperience, undefined, result.rewards);
     appendCustomLoopInput(card, calculator, result.rawExperience, undefined, result.rewards);
     // 更新中やキャッシュにより計算側が旧版でも、メイン表示を巻き込んで停止しない。
