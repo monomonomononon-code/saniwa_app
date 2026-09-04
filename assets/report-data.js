@@ -150,6 +150,9 @@
       entry.expRecords.length > 0 || RESOURCE_KEYS.some(item => totals.resources[item.id].manual !== 0) ||
       totals.koban.manual !== 0;
   }
+  function isDailyComplete(entry) {
+    return !!entry && DAILY_TASKS.every(task => entry.dailyTasks && entry.dailyTasks[task.id]);
+  }
   function appendExpRecord(record, date) {
     const state = load();
     const key = date || localDate();
@@ -204,7 +207,7 @@
 
   global.SaniwaReportStore = {
     STORAGE_KEY, RESOURCE_KEYS, DAILY_TASKS, localDate, uid, createEntry, normalizeEntry,
-    load, save, getDailyRewards, getTotals, hasContent, normalizeExpRecord,
+    load, save, getDailyRewards, getTotals, hasContent, isDailyComplete, normalizeExpRecord,
     appendExpRecord, getCompatibleExpRecords, saveExpResult, getCatalogs, clone
   };
   if (typeof module !== "undefined" && module.exports) module.exports = global.SaniwaReportStore;
