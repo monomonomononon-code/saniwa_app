@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F2EBDD">
+  <title>日報・日誌 | 審神者管理ツール</title>
+  <link rel="stylesheet" href="../assets/journal.css?v=1">
+</head>
+<body>
+  <main id="app">
+    <section id="journal-menu" aria-labelledby="menu-title">
+      <header class="header">
+        <h1 id="menu-title"><span class="seal" aria-hidden="true">記</span>日報</h1>
+        <p>記録する内容を選択してください。</p>
+      </header>
+      <nav class="record-menu" aria-label="記録メニュー">
+        <a class="record-button" href="#report">
+          <span class="record-icon" aria-hidden="true">報</span>
+          <span class="record-copy"><strong>日報</strong><small>経験値、資材、周回数、成果</small></span>
+        </a>
+        <a class="record-button" href="#diary">
+          <span class="record-icon" aria-hidden="true">誌</span>
+          <span class="record-copy"><strong>日誌</strong><small>本日の出来事、短文メモ、創作寄りの記録</small></span>
+        </a>
+      </nav>
+    </section>
+    <section id="journal-detail" aria-labelledby="detail-title" hidden>
+      <a class="menu-back" href="#menu">← 日報メニュー</a>
+      <header class="header">
+        <h1 id="detail-title" tabindex="-1"><span class="seal" id="detail-glyph" aria-hidden="true">報</span><span id="detail-name">日報</span></h1>
+        <p id="detail-description">経験値、資材、周回数、成果</p>
+      </header>
+      <p class="empty-note">記録機能は準備中です。</p>
+    </section>
+  </main>
+  <script src="../assets/journal.js?v=1"></script>
+</body>
+</html>
