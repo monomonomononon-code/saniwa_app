@@ -9,6 +9,7 @@
   const viewport = host.visualViewport;
   let opened = false, saved, trigger, records, kind, unlock = [], generation = 0;
   let selectedTab = null;
+  let profileLayer = null, profileScroll = null, profileReturnFocus = null, sheetInert = false;
   const labels = { rooms: "部屋割り", network: "関係図", master: "刀剣男士" };
   const list = value => Array.isArray(value) ? value.filter(x => x && typeof x === "object") : [];
   function read(key) {
@@ -43,11 +44,44 @@
     values.forEach(([label, value]) => { text("dt", label, dl); text("dd", value === "" || value == null ? "未登録" : String(value), dl); });
   }
   function profile(c) {
-    start(c.name, true);
-    fields([["刀種", c.swordType], ["姿", c.isKiwame ? "極 🌸" : "初"], ["レベル", c.level],
-      ["配属部隊", c.unit], ["部隊長", c.isCaptain ? "部隊長" : "―"], ["顕現日", c.activationDate],
-      ["身長", c.height], ["趣味", c.hobby], ["元主", c.formerOwner], ["性格", c.personality], ["メモ", c.memo]]);
-    content.focus({ preventScroll: true });
+    if (profileLayer) return;
+    profileReturnFocus = document.activeElement;
+    sheetInert = sheet.inert; sheet.inert = true;
+    profileLayer = text("div", "", overlay); profileLayer.className = "reference-profile-overlay";
+    const card = text("section", "", profileLayer); card.className = "reference-profile-card";
+    card.setAttribute("role", "dialog"); card.setAttribute("aria-modal", "true");
+    card.setAttribute("aria-labelledby", "reference-profile-name");
+    profileScroll = text("div", "", card); profileScroll.className = "reference-profile-scroll";
+    profileScroll.tabIndex = 0;
+    text("p", "刀剣男士 プロフィール（閲覧専用）", profileScroll).className = "reference-profile-eyebrow";
+    const heading = text("h2", c.name, profileScroll); heading.id = "reference-profile-name";
+    const field = (label, value) => {
+      const dl = text("dl", "", profileScroll);
+      text("dt", label, dl);
+      text("dd", value === "" || value == null ? "未登録" : String(value), dl);
+    };
+    field("刀種", c.swordType);
+    const kiwame = text("div", "", profileScroll); kiwame.className = "reference-profile-kiwame";
+    text("span", "極", kiwame);
+    text("span", c.isKiwame ? "極 🌸" : "初", kiwame).className = "reference-profile-state";
+    const switchMark = text("span", "", kiwame);
+    switchMark.className = "reference-profile-switch" + (c.isKiwame ? " on" : "");
+    switchMark.setAttribute("aria-hidden", "true");
+    field("レベル", c.level); field("顕現した年月日", c.activationDate); field("配属部隊", c.unit);
+    const captain = c.unit && records.characters.find(x => x.unit === c.unit && x.isCaptain);
+    if (c.isCaptain || captain) text("p", c.isCaptain ? "部隊長" : captain.name + "が隊長です", profileScroll).className = "reference-profile-captain";
+    [["身長", c.height], ["趣味", c.hobby], ["元主", c.formerOwner], ["性格", c.personality], ["メモ", c.memo]].forEach(([label,value]) => field(label,value));
+    const footer = text("div", "", card); footer.className = "reference-profile-footer";
+    const dismiss = button("閉じる", () => closeProfile(), footer, "reference-profile-close");
+    profileLayer.addEventListener("click", e => { if (e.target === profileLayer) closeProfile(); });
+    dismiss.focus({ preventScroll: true });
+  }
+  function closeProfile(restoreFocus = true) {
+    if (!profileLayer) return;
+    profileLayer.remove(); profileLayer = null; profileScroll = null;
+    sheet.inert = sheetInert;
+    if (restoreFocus) profileReturnFocus?.focus({ preventScroll: true });
+    profileReturnFocus = null;
   }
   function renderList() {
     start(labels[kind]);
@@ -168,9 +202,10 @@
     const track = e => { lastY = e.touches[0]?.clientY || 0; };
     const prevent = e => {
       const y = e.touches[0]?.clientY || 0, delta = y - lastY; lastY = y;
-      const inside = doc === document && content.contains(e.target);
-      if (!inside || (delta > 0 && content.scrollTop <= 0) ||
-          (delta < 0 && content.scrollTop + content.clientHeight >= content.scrollHeight)) e.preventDefault();
+      const scroller = profileScroll || content;
+      const inside = doc === document && scroller.contains(e.target);
+      if (!inside || (delta > 0 && scroller.scrollTop <= 0) ||
+          (delta < 0 && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight)) e.preventDefault();
     };
     doc.addEventListener("touchstart", track, { passive: true });
     doc.addEventListener("touchmove", prevent, { passive: false });
@@ -210,6 +245,7 @@
   }
   function close() {
     if (!opened) return;
+    closeProfile(false);
     opened = false; generation++; overlay.hidden = true; sheet.style.transform = "";
     app.inert = saved.inert; unlock.reverse().forEach(fn => fn()); unlock = [];
     delete body.dataset.referenceOpen;
@@ -221,12 +257,12 @@
   document.querySelectorAll("[data-reference]").forEach(el => el.addEventListener("click", () => open(el.dataset.reference, el)));
   closeButton.addEventListener("click", close);
   overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
-  overlay.addEventListener("touchmove", e => { if (!content.contains(e.target)) e.preventDefault(); }, { passive: false });
+  overlay.addEventListener("touchmove", e => { if (!(profileScroll || content).contains(e.target)) e.preventDefault(); }, { passive: false });
   document.addEventListener("keydown", e => {
     if (!opened) return;
-    if (e.key === "Escape") { e.preventDefault(); close(); }
+    if (e.key === "Escape") { e.preventDefault(); if (profileLayer) closeProfile(); else close(); }
     if (e.key === "Tab" && !overlay.hidden) {
-      const items = [...sheet.querySelectorAll('button, [tabindex="0"]')];
+      const items = [...(profileLayer || sheet).querySelectorAll('button, [tabindex="0"]')];
       const first = items[0], last = items[items.length - 1];
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
