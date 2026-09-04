@@ -53,6 +53,37 @@
       expRecords: []
     };
   }
+  function normalizeMember(member) {
+    if (typeof member === "string") return { id: "", name: member };
+    return { id: member && member.id ? String(member.id) : "", name: member && member.name ? String(member.name) : "" };
+  }
+  function normalizeExpResult(result) {
+    return {
+      characterId: result && (result.characterId || result.id) ? String(result.characterId || result.id) : "",
+      name: result && result.name ? String(result.name) : "",
+      exp: result && Number.isFinite(Number(result.exp != null ? result.exp : result.experience)) ? Number(result.exp != null ? result.exp : result.experience) : null,
+      expMultiplier: result && Number.isFinite(Number(result.expMultiplier)) ? Number(result.expMultiplier) : 1,
+      conditions: result && result.conditions && typeof result.conditions === "object" ? clone(result.conditions) : {}
+    };
+  }
+  function normalizeExpRecord(record) {
+    const source = record && typeof record === "object" ? record : {};
+    const normalized = { ...clone(source) };
+    if (Array.isArray(source.members)) {
+      normalized.members = source.members.map(normalizeMember).filter(member => member.name);
+      normalized.expResults = Array.isArray(source.expResults) ? source.expResults.map(normalizeExpResult).filter(result => result.name) : [];
+      delete normalized.characters;
+      return normalized;
+    }
+    // v1では計算対象が保存されていなかった。誤ったEXP表示を避け、元データは退避して保持する。
+    const legacyCharacters = Array.isArray(source.characters) ? clone(source.characters) : [];
+    normalized.members = legacyCharacters.map(normalizeMember).filter(member => member.name);
+    normalized.expResults = [];
+    normalized.legacyExpResults = legacyCharacters;
+    normalized.legacyTargetUnknown = legacyCharacters.length > 0;
+    delete normalized.characters;
+    return normalized;
+  }
   function normalizeEntry(input, date) {
     const base = createEntry(date);
     const source = input && typeof input === "object" ? input : {};
@@ -63,23 +94,23 @@
     base.eventRuns = Array.isArray(source.eventRuns) ? clone(source.eventRuns) : [];
     base.normalMapRuns = Array.isArray(source.normalMapRuns) ? clone(source.normalMapRuns) : [];
     base.koban.manual = number(source.koban && source.koban.manual);
-    base.expRecords = Array.isArray(source.expRecords) ? clone(source.expRecords) : [];
+    base.expRecords = Array.isArray(source.expRecords) ? source.expRecords.map(normalizeExpRecord) : [];
     return base;
   }
   function load() {
     try {
       const parsed = JSON.parse(global.localStorage.getItem(STORAGE_KEY));
-      if (!parsed || typeof parsed !== "object") return { version: 1, entries: {} };
+      if (!parsed || typeof parsed !== "object") return { version: 2, entries: {} };
       const entries = {};
       Object.entries(parsed.entries || {}).forEach(([date, entry]) => { entries[date] = normalizeEntry(entry, date); });
-      return { version: 1, entries };
+      return { version: 2, entries };
     } catch (error) {
-      return { version: 1, entries: {} };
+      return { version: 2, entries: {} };
     }
   }
   function save(state) {
     try {
-      global.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, entries: state.entries || {} }));
+      global.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, entries: state.entries || {} }));
       return true;
     } catch (error) {
       return false;
@@ -115,7 +146,41 @@
     const state = load();
     const key = date || localDate();
     const entry = normalizeEntry(state.entries[key], key);
-    entry.expRecords.push({ id: uid("exp"), createdAt: new Date().toISOString(), ...clone(record) });
+    entry.expRecords.push(normalizeExpRecord({ id: uid("exp"), createdAt: new Date().toISOString(), ...clone(record) }));
+    state.entries[key] = entry;
+    return save(state);
+  }
+  function getCompatibleExpRecords(record, date) {
+    const key = date || localDate();
+    const entry = normalizeEntry(load().entries[key], key);
+    return entry.expRecords.filter(existing => {
+      const sameMap = record.mapId && existing.mapId ? record.mapId === existing.mapId : record.mapLabel === existing.mapLabel;
+      return sameMap && Number(record.rounds) === Number(existing.rounds);
+    }).map(clone);
+  }
+  function saveExpResult(record, targetRecordId, date) {
+    const state = load();
+    const key = date || localDate();
+    const entry = normalizeEntry(state.entries[key], key);
+    const incoming = normalizeExpRecord(record);
+    if (!targetRecordId) {
+      incoming.id = incoming.id || uid("exp");
+      incoming.createdAt = incoming.createdAt || new Date().toISOString();
+      entry.expRecords.push(incoming);
+    } else {
+      const target = entry.expRecords.find(item => item.id === targetRecordId);
+      const result = incoming.expResults[0];
+      if (!target || !result) return false;
+      const resultIndex = target.expResults.findIndex(item => (
+        result.characterId && item.characterId ? item.characterId === result.characterId : item.name === result.name
+      ));
+      if (resultIndex === -1) target.expResults.push(result);
+      else target.expResults[resultIndex] = result;
+      if (!target.members.some(member => (
+        result.characterId && member.id ? member.id === result.characterId : member.name === result.name
+      ))) target.members.push({ id: result.characterId, name: result.name });
+      target.updatedAt = new Date().toISOString();
+    }
     state.entries[key] = entry;
     return save(state);
   }
@@ -131,7 +196,8 @@
 
   global.SaniwaReportStore = {
     STORAGE_KEY, RESOURCE_KEYS, DAILY_TASKS, localDate, uid, createEntry, normalizeEntry,
-    load, save, getDailyRewards, getTotals, hasContent, appendExpRecord, getCatalogs, clone
+    load, save, getDailyRewards, getTotals, hasContent, normalizeExpRecord,
+    appendExpRecord, getCompatibleExpRecords, saveExpResult, getCatalogs, clone
   };
   if (typeof module !== "undefined" && module.exports) module.exports = global.SaniwaReportStore;
 })(typeof globalThis !== "undefined" ? globalThis : window);
