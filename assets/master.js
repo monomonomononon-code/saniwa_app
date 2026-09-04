@@ -22,6 +22,7 @@
   function saveState() {
     try { localStorage.setItem(MASTER_STORAGE_KEY, JSON.stringify(characters)); } catch (e) {}
   }
+  window.readSaniwaReference = () => JSON.parse(JSON.stringify(characters));
   window.addEventListener("pagehide", saveState);
   let editingId = null;
 
