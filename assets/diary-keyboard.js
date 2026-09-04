@@ -23,6 +23,7 @@
   let baselineWidth = host.innerWidth;
   let pending = false;
   let followCaret = false;
+  let focusGeneration = 0;
   const nav = host.navigator || {};
   const isIOS = /iPad|iPhone|iPod/.test(nav.userAgent || "") ||
     (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
@@ -73,15 +74,13 @@
     if (lower - upper < lineHeight) return;
     const delta = caretY + lineHeight > lower ? caretY + lineHeight - lower : caretY < upper ? caretY - upper : 0;
     if (Math.abs(delta) < 1) return;
-    const before = body.getBoundingClientRect().top;
+    // Scroll only the editor document. Safari owns parent-page keyboard panning;
+    // applying the remaining delta there can create a resize/scroll feedback loop.
     window.scrollBy({ top: delta, behavior: "instant" });
-    if (frame) {
-      const remaining = delta - (before - body.getBoundingClientRect().top);
-      if (Math.abs(remaining) > 1) host.scrollBy({ top: remaining, behavior: "instant" });
-    }
   }
 
   function reset() {
+    followCaret = false;
     bar.classList.remove("is-keyboard-docked");
     bar.classList.remove("is-keyboard-open");
     body.classList.remove("has-keyboard-toolbar");
@@ -95,7 +94,12 @@
     // Docking must still run if measuring a long textarea fails on a browser.
     try { growBody(); }
     finally { updateDock(); }
-    if (followCaret) { followCaret = false; revealCaret(); }
+    if (followCaret) {
+      followCaret = false;
+      revealCaret();
+      // Absolute coordinates and clipping must use the post-scroll geometry.
+      updateDock();
+    }
   }
   function updateDock() {
     const focused = document.activeElement === body;
@@ -153,23 +157,31 @@
     }
   });
   body.addEventListener("focus", () => {
-    scheduleCaret();
+    followCaret = false;
+    const generation = ++focusGeneration;
+    schedule();
     // Viewport events can precede the end of the iOS keyboard animation.
     for (const delay of [80, 240, 500]) window.setTimeout(() => {
-      if (document.activeElement === body) schedule();
+      if (generation === focusGeneration && document.activeElement === body) schedule();
     }, delay);
   });
-  body.addEventListener("blur", schedule);
-  body.addEventListener("diary-editor-open", schedule);
+  function cancelCaretFollow() {
+    followCaret = false;
+    focusGeneration++;
+    schedule();
+  }
+  body.addEventListener("blur", cancelCaretFollow);
+  body.addEventListener("diary-editor-open", cancelCaretFollow);
   body.addEventListener("diary-content-changed", scheduleCaret);
   body.addEventListener("input", event => { if (!event.isComposing) scheduleCaret(); });
   body.addEventListener("compositionend", scheduleCaret);
-  viewport.addEventListener("resize", scheduleCaret);
+  // Keyboard animation changes geometry, not the user's editing position.
+  viewport.addEventListener("resize", schedule);
   viewport.addEventListener("scroll", schedule);
   host.addEventListener("resize", schedule);
   host.addEventListener("scroll", schedule, { passive: true });
   window.addEventListener("scroll", schedule, { passive: true });
-  window.addEventListener("hashchange", schedule);
+  window.addEventListener("hashchange", cancelCaretFollow);
   window.addEventListener("pagehide", reset);
   schedule();
 })();
