@@ -1271,7 +1271,7 @@
       encounters: { normalBaseExperience: 800, kunaiBaseExperience: 2000, kunaiProbability: null },
       // 実測確率は0〜1。平均経験値は1振りあたり・全倍率適用前の1周平均。
       // 平均経験値がある場合は出現率より優先し、補正は計算時に一度だけ適用する。
-      measurements: { kunaiProbability: null, averageBaseExperiencePerRun: null },
+      measurements: { kunaiProbability: null, averageBaseExperiencePerRun: 17127, sampleSize: 132 },
       resourceDistribution: {
         typeProbabilitiesApproximate: true,
         types: { "木炭": 0.25, "玉鋼": 0.25, "冷却材": 0.25, "砥石": 0.25 },
@@ -1376,7 +1376,9 @@
       valid: true, map, usedProvisionalProbabilities, outcomes, rewards, resourceVisits,
       bossArrivalProbability: outcomes.filter(outcome => graph.nodes[outcome.terminal].terminal === "boss").reduce((sum, outcome) => sum + outcome.probability, 0),
       expectedBattleCount: outcomes.reduce((sum, outcome) => sum + outcome.probability * outcome.battleCount, 0),
-      experienceAvailable, experienceSource, reason: experienceAvailable ? null : reason,
+      experienceAvailable, experienceSource, baseExperience,
+      measurementSampleSize: experienceSource === "measured_average" ? measurements.sampleSize || null : null,
+      reason: experienceAvailable ? null : reason,
       rawExperience: experienceAvailable ? calculateExperience({ ...input, baseExperience }).rawExperience : null
     };
   }
