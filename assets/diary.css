@@ -24,7 +24,7 @@
 .diary-inserts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 #diary button:disabled, #diary input:disabled, #diary textarea:disabled { cursor: not-allowed; opacity: .55; }
 .diary-inserts.is-keyboard-docked {
-  position: fixed;
+  position: absolute;
   z-index: 100;
   margin: 0;
   padding: 8px 14px;
@@ -47,6 +47,7 @@
   overflow-y: auto;
   caret-color: var(--grape);
 }
-#diary .diary-body-label:has(+ textarea:focus) { color: var(--grape); font-weight: 600; }
+.diary-editor-actions { display: flex; flex-wrap: nowrap; gap: 8px; margin-left: auto; }
+.diary-body-divider { width: calc(100% + 28px); margin: 12px -14px 0; border: 0; border-top: 1px solid rgb(112 83 107 / .22); }
 #diary-chapter-title-display h2 { flex: 1; min-width: 0; }
 #diary-title-done { margin-top: 8px; }
