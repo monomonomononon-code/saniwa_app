@@ -133,7 +133,9 @@
     expResults.forEach(result => {
       const resultBox = element("div", "report-calculated-result");
       const row = element("div", "report-exp-row");
-      row.append(element("span", "", result.name || "刀剣男士"), element("strong", "", `${formatNumber(result.exp)} EXP`));
+      const value = element("strong", "report-approx-value");
+      value.append(element("small", "report-approx", "約"), document.createTextNode(`${formatNumber(result.exp)} EXP`));
+      row.append(element("span", "", result.name || "刀剣男士"), value);
       resultBox.appendChild(row);
       const labels = conditionLabels(result.conditions);
       if (Number(result.expMultiplier) > 1 && !labels.includes("経験値2倍")) labels.push(`経験値×${formatNumber(result.expMultiplier)}`);
@@ -151,7 +153,11 @@
     const resources = Object.entries(record.resources || {}).filter(([, amount]) => Number(amount));
     if (resources.length) {
       const resourceBox = element("div", "report-exp-resources");
-      resources.forEach(([name, amount]) => resourceBox.appendChild(element("span", "", `${name} ${formatNumber(amount)}${name === "依頼札" ? "枚" : ""}`)));
+      resources.forEach(([name, amount]) => {
+        const line = element("span", "");
+        line.append(document.createTextNode(`${name} `), element("small", "report-approx", "約"), document.createTextNode(`${formatNumber(amount)}${name === "依頼札" ? "枚" : ""}`));
+        resourceBox.appendChild(line);
+      });
       card.appendChild(resourceBox);
     }
     if (editable) {
@@ -235,6 +241,13 @@
     });
     $("report-koban-total").textContent = `日課分 ${signed(totals.koban.daily)} ／ 合計 ${signed(totals.koban.total)}`;
   }
+  function updateKobanTools() {
+    const multiplier = draft.koban.tripleCampaign ? 3 : 1;
+    document.querySelectorAll("[data-koban-add]").forEach(button => {
+      button.textContent = `＋${formatNumber(Number(button.dataset.kobanAdd) * multiplier, 0)}`;
+    });
+    $("report-koban-triple").checked = draft.koban.tripleCampaign;
+  }
   function buildResourceEditor() {
     const wrap = $("report-resource-editor");
     wrap.innerHTML = "";
@@ -294,6 +307,7 @@
     populateCatalogs();
     renderRunEditors();
     $("report-koban").value = draft.koban.manual || "";
+    updateKobanTools();
     renderExpEditor();
     overlay.hidden = false;
     document.body.classList.add("report-modal-open");
@@ -336,6 +350,18 @@
   $("report-add-event").onclick = () => addRun("event");
   $("report-add-map").onclick = () => addRun("map");
   $("report-koban").oninput = event => { draft.koban.manual = Number(event.target.value) || 0; updateResourceTotals(); };
+  $("report-koban-triple").onchange = event => {
+    draft.koban.tripleCampaign = event.target.checked;
+    updateKobanTools();
+  };
+  document.querySelectorAll("[data-koban-add]").forEach(button => {
+    button.onclick = () => {
+      const multiplier = draft.koban.tripleCampaign ? 3 : 1;
+      draft.koban.manual += Number(button.dataset.kobanAdd) * multiplier;
+      $("report-koban").value = draft.koban.manual;
+      updateResourceTotals();
+    };
+  });
   $("report-save").onclick = () => {
     state.entries[selectedDate] = store.normalizeEntry(draft, selectedDate);
     if (!store.save(state)) return;
