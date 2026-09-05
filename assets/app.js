@@ -481,7 +481,7 @@
         roomsLoaded = true;
       }
       if (!honmaru3dLoaded) {
-        honmaru3dSub.iframe.src = "pages/honmaru3d.html?v=ground-1";
+        honmaru3dSub.iframe.src = "pages/honmaru3d.html?v=labels-1";
         honmaru3dLoaded = true;
       } else {
         sendRoomsToHonmaru3d();
