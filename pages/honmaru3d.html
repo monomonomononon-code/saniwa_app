@@ -559,10 +559,11 @@
       environment: { tint: 0xFFD9E2, amount: 0.12, nightAmount: 0.04 },
       palette: {
         lawn: 0x8DB26A, lawnEdge: 0x5E7E45,
-        canopy: 0x6CA457, canopyDeep: 0x548A44, trunk: 0x8A6242, trunkDark: 0x6B4A2E,
+        canopy: 0x6FAB4E, canopyDeep: 0x4C8A3E, canopyLight: 0x9BCE5E,
+        trunk: 0x9A6E48, trunkDark: 0x7A5334,
         pine: 0x40704A, pineDark: 0x2C5537, pineLight: 0x5D8E52,
         bamboo: 0x9CC95B, bambooNode: 0x6D993A, bambooLeaf: 0x7FB34E,
-        shrub: 0x7FB264, shrubDeep: 0x639A4E, shrubBloom: 0xF7C9D6,
+        shrub: 0x74AC4E, shrubDeep: 0x4E8A3C, shrubLight: 0x9DCB60, shrubBloom: 0xF7C9D6,
         sakura: 0xF7B0C8, sakuraDeep: 0xE98BAE, sakuraLight: 0xFCD5E2,
         flowers: [0xF4A7BB, 0xFFD966, 0xFFFFFF, 0xD9A0E0, 0xFF8FA3],
         petal: 0xF9BAD0, petalDeep: 0xEC9AB8,
@@ -1670,10 +1671,120 @@
     }
     return blossomMatCache[key];
   }
+  // ---------------------------------------------------------------
+  //  葉の房。花房と同じ「交差板 + テクスチャ」方式で、絵柄を葉にしたもの。
+  //  色は季節パレットから受け取るので、夏は濃い緑、秋は黄〜赤、と差し替えられる。
+  //  (葉なしの冬にしたいときは、この材質を使わず枝だけ描けばよい)
+  // ---------------------------------------------------------------
+  const leafMatCache = {};
+  function leafMaterial(mid, deep, light) {
+    const key = `${mid}-${deep}-${light}`;
+    if (!leafMatCache[key]) {
+      const S = 128;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const x = c.getContext("2d");
+      const rnd = seededRandom("leaf-" + key);
+      const hex = v => "#" + v.toString(16).padStart(6, "0");
+      // 透明部分にも色を敷く(縮小時に黒が混ざって暗くなるのを防ぐ)
+      x.globalAlpha = .12;
+      x.fillStyle = hex(mid);
+      x.fillRect(0, 0, S, S);
+      x.globalAlpha = 1;
+      // 葉1枚: 先の尖った楕円 + 中央の葉脈
+      const leaf = (cx, cy, r, ang, fill, vein) => {
+        x.save();
+        x.translate(cx, cy);
+        x.rotate(ang);
+        x.fillStyle = fill;
+        x.beginPath();
+        x.moveTo(0, -r);
+        x.quadraticCurveTo(r * .74, -r * .08, 0, r * .92);
+        x.quadraticCurveTo(-r * .74, -r * .08, 0, -r);
+        x.fill();
+        x.strokeStyle = vein;
+        x.lineWidth = Math.max(1, r * .1);
+        x.beginPath();
+        x.moveTo(0, -r * .78);
+        x.lineTo(0, r * .72);
+        x.stroke();
+        x.restore();
+      };
+      // 中心は葉で埋めて透けないようにし、外周は葉を放射状に並べて
+      // 輪郭が葉の形になるようにする(散らすだけだと隙間だらけで透けてしまう)
+      const C = S / 2;
+      const ring = (radius, n, size, color, vein, outward) => {
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2 + rnd() * .5;
+          leaf(
+            C + Math.cos(a) * radius * (.85 + rnd() * .3),
+            C + Math.sin(a) * radius * (.85 + rnd() * .3),
+            size * (.85 + rnd() * .35),
+            outward ? a + Math.PI / 2 : rnd() * Math.PI * 2,
+            hex(color), hex(vein)
+          );
+        }
+      };
+      // 下地(濃い葉)を中心から外へ
+      x.fillStyle = hex(deep);
+      x.beginPath();
+      x.ellipse(C, C, S * .3, S * .28, 0, 0, Math.PI * 2);
+      x.fill();
+      ring(S * .38, 15, 20, deep, deep, true);
+      ring(S * .27, 12, 19, mid, deep, true);
+      ring(S * .15, 9, 18, mid, deep, false);
+      ring(S * .3, 11, 15, light, mid, false);
+      for (let i = 0; i < 10; i++) {
+        const a = rnd() * Math.PI * 2, rr = rnd() * S * .34;
+        leaf(C + Math.cos(a) * rr, C + Math.sin(a) * rr, 11 + rnd() * 7, rnd() * Math.PI * 2, hex(light), hex(mid));
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 2;
+      const mat = new THREE.MeshLambertMaterial({
+        map: tex, transparent: true, alphaTest: .3, side: THREE.FrontSide, vertexColors: true
+      });
+      mat.userData.shared = true;
+      leafMatCache[key] = mat;
+    }
+    return leafMatCache[key];
+  }
+
+  // 葉や花の房を、ドーム(または円錐)状に散らして clusters 配列に足す。
+  // opt: { center, radii{x,y,z}, count, size, bottom(下をどこまで覆うか 0〜1),
+  //        taper(上ほど細くする 0〜1), shell/shellVar(表面からのばらつき), shade[低,高] }
+  function scatterFoliage(ctx, out, opt) {
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const shade = opt.shade || [.78, 1.06];
+    for (let i = 0; i < opt.count; i++) {
+      const t = (i + .5) / opt.count;
+      const cosT = 1 - (1 + opt.bottom) * t;
+      const sinT = Math.sqrt(Math.max(0, 1 - cosT * cosT));
+      const phi = i * golden + ctx.rand() * .7;
+      const shell = (opt.shell || .82) + ctx.rand() * (opt.shellVar || .22);
+      const h = (cosT + 1) / 2;                      // 0 = 下, 1 = 上
+      const narrow = 1 - (opt.taper || 0) * h;       // 円錐にするときは上を細く
+      out.push({
+        position: new THREE.Vector3(
+          opt.center.x + Math.cos(phi) * sinT * opt.radii.x * shell * narrow,
+          opt.center.y + cosT * opt.radii.y * shell,
+          opt.center.z + Math.sin(phi) * sinT * opt.radii.z * shell * narrow
+        ),
+        size: opt.size * (.8 + ctx.rand() * .45),
+        aspect: .85 + ctx.rand() * .3,
+        spin: ctx.rand() * Math.PI,
+        tilt: (ctx.rand() - .5) * .5,
+        color: (v => new THREE.Color(v, v, v * .98))(shade[0] + h * (shade[1] - shade[0]))
+      });
+    }
+  }
+
   // clusters: [{ position, size, aspect, spin, tilt, color }] を1つのジオメトリにまとめる。
   // 法線は樹冠の中心から外向きにして、板でも柔らかく光が当たるようにする。
-  function blossomGeometry(clusters, center, planes) {
-    const total = clusters.length * planes * 12; // 表12頂点 = 表6 + 裏6
+  // flat: true にすると各房に水平の板を1枚足す。俯瞰(真上寄り)から見たとき、
+  // 垂直の板だけだと真横を向いて消えてしまうため、樹木・低木ではこれを使う。
+  function foliageGeometry(clusters, center, planes, flat) {
+    const cards = planes + (flat ? 1 : 0);
+    const total = clusters.length * cards * 12; // 1枚12頂点 = 表6 + 裏6
     const pos = new Float32Array(total * 3);
     const nor = new Float32Array(total * 3);
     const uvs = new Float32Array(total * 2);
@@ -1692,10 +1803,15 @@
       n.copy(cl.position).sub(center);
       if (n.lengthSq() < 1e-6) n.set(0, 1, 0);
       n.normalize().multiplyScalar(.5).addScaledVector(UP, 1).normalize();
-      for (let k = 0; k < planes; k++) {
+      for (let k = 0; k < cards; k++) {
         const a = cl.spin + k * Math.PI / planes;
         u.set(Math.cos(a), 0, Math.sin(a)).multiplyScalar(cl.size * .5);
-        v.set(cl.tilt * Math.cos(a), 1, cl.tilt * Math.sin(a)).normalize().multiplyScalar(cl.size * .5 * cl.aspect);
+        if (flat && k === planes) {
+          // 水平の板(真上から見たときに葉が見えるように)
+          v.set(-Math.sin(a), cl.tilt * .5, Math.cos(a)).normalize().multiplyScalar(cl.size * .5 * cl.aspect);
+        } else {
+          v.set(cl.tilt * Math.cos(a), 1, cl.tilt * Math.sin(a)).normalize().multiplyScalar(cl.size * .5 * cl.aspect);
+        }
         for (let q = 0; q < quad.length; q++) {
           const [sx, sy, tu, tv] = quad[q];
           p.copy(cl.position).addScaledVector(u, sx).addScaledVector(v, sy);
@@ -2150,31 +2266,60 @@
       ctx.pick(roof);
     },
     tree(item, g, ctx) {
-      // 樹木: 幹 + 樹冠(props.shape = "round" | "cone")。丸型は葉の塊を寄せて輪郭に凹凸を出す
+      // 樹木: 根張りのある幹 → 枝分かれ → 葉の房でできた樹冠。
+      // 樹冠は「葉を描いた交差板(leafMaterial)」を散らして作るので、
+      // 単色の塊ではなく葉の重なりとして見える。色は季節パレット由来。
+      // props.shape: "round"(丸い樹冠) / "cone"(円錐の樹冠)
       const P = ctx.season.palette;
+      const cone = propOf(item, "shape", "round") === "cone";
       const s = Math.max(.4, ctx.w / 1.6);
-      const cone = (item.props && item.props.shape) === "cone";
-      const trunk = new THREE.Mesh(GEO.trunk(), ctx.mat(P.trunkDark));
-      trunk.scale.set(.15 * s, 1.25 * s, .15 * s);
-      trunk.position.y = .62 * s;
-      ctx.pick(trunk);
-      if (cone) {
-        [[0, 1.05, .8, .95], [0, 1.75, .62, .8], [0, 2.35, .42, .6]].forEach(([x, y, r, h], i) => {
-          const tier = new THREE.Mesh(new THREE.ConeGeometry(r * s, h * s, 9), ctx.mat(i % 2 ? P.canopyDeep : P.canopy));
-          tier.position.set(x, y * s, 0);
-          ctx.pick(tier);
-        });
-      } else {
-        [[0, 1.65, .74, P.canopy], [-.42, 1.4, .5, P.canopyDeep], [.44, 1.45, .48, P.canopy],
-         [.06, 2.05, .44, P.canopy], [.02, 1.5, .45, P.canopyDeep]].forEach(([x, y, r, c], i) => {
-          const lump = new THREE.Mesh(GEO.puff(), ctx.mat(c));
-          lump.scale.set(r * s, r * s * .88, r * s);
-          lump.position.set(x * s, y * s, (i === 1 ? .3 : i === 2 ? -.28 : .04) * s);
-          ctx.pick(lump);
-        });
+      const bark = ctx.mat(P.trunk), barkDark = ctx.mat(P.trunkDark);
+      const V = (x, y, z) => new THREE.Vector3(x * s, y * s, z * s);
+      const trunkH = cone ? 1.0 : 1.15;
+      const baseR = .15 * s;
+      const R = cone
+        ? { x: .78 * s, y: 1.15 * s, z: .76 * s }
+        : { x: .95 * s, y: .82 * s, z: .92 * s };
+
+      // 根張り
+      [[.13, .1], [-.12, -.08], [.01, -.15]].forEach(([x, z], i) => {
+        const root = new THREE.Mesh(GEO.clump(), barkDark);
+        root.scale.set(.12 * s, .075 * s, .12 * s);
+        root.position.set(x * s, .035 * s, z * s);
+        root.rotation.y = i * 1.4;
+        g.add(root);
+      });
+
+      // 幹(少し曲げた2段)と枝分かれ
+      const bend = V(.06, trunkH * .58, -.04);
+      const fork = V(.01, trunkH, .04);
+      ctx.pick(limb(g, barkDark, V(0, 0, 0), bend, baseR, 1));
+      ctx.pick(limb(g, bark, bend, fork, baseR * .76, 1));
+      const branches = cone ? 3 : 4;
+      for (let i = 0; i < branches; i++) {
+        const a = (i / branches) * Math.PI * 2 + .5 + ctx.rand() * .3;
+        const reach = (cone ? .3 : .52) * (.8 + ctx.rand() * .4);
+        const to = V(fork.x / s + Math.cos(a) * reach, trunkH + (cone ? .5 : .42) + ctx.rand() * .2, fork.z / s + Math.sin(a) * reach);
+        limb(g, bark, fork, to, baseR * .4);
       }
+
+      // 樹冠(葉の房)
+      const center = new THREE.Vector3(fork.x, (trunkH + (cone ? .78 : .62)) * s + R.y * .18, fork.z);
+      const clusters = [];
+      scatterFoliage(ctx, clusters, {
+        center, radii: R,
+        count: Math.round((cone ? 34 : 38) * (ctx.lod ? 1 : .68)),
+        size: Math.min(R.x, R.z) * (cone ? .92 : .85),
+        bottom: cone ? .55 : .62,
+        taper: cone ? .62 : 0,
+        shade: [.74, 1.06]
+      });
+      const canopy = new THREE.Mesh(
+        foliageGeometry(clusters, center, ctx.lod ? 2 : 1, true),
+        leafMaterial(P.canopy, P.canopyDeep, P.canopyLight)
+      );
+      ctx.pick(canopy);
     },
-    // ---- 植栽(春): デフォルメした低ポリ表現。球・円柱は共有ジオメトリを拡縮して使う ----
     sakura(item, g, ctx) {
       // 桜: 「幹 → 主枝 → 小枝 → 花房」。枝を先に組み、その先端と途中に花房を付ける。
       // 花房は交差板 + 花のテクスチャ(blossomMaterial)で、木1本ぶんを1メッシュにまとめる。
@@ -2257,7 +2402,7 @@
       addCluster(new THREE.Vector3(center.x, (trunkH + form.crown.y * 1.24) * s, center.z), .95);
 
       const planes = ctx.lod ? 3 : 2; // スマホでは交差板を1枚減らす
-      const canopy = new THREE.Mesh(blossomGeometry(clusters, center, planes), blossomMaterial(P));
+      const canopy = new THREE.Mesh(foliageGeometry(clusters, center, planes), blossomMaterial(P));
       ctx.pick(canopy);
 
       // --- 根元に散った花びら ---
@@ -2349,39 +2494,57 @@
       }
     },
     shrub(item, g, ctx) {
-      // 低木: 大小の葉の塊を6つ重ねて、輪郭に凹凸のある茂みにする
+      // 低木: 大小2つの山を葉の房で覆う(参考画像のように、大きい茂み + 小さい茂み)。
+      // 葉を描いた交差板を重ねるので、単色の塊ではなく葉が密集した見た目になる。
       const P = ctx.season.palette;
-      const sw = ctx.w / 1.2, sd = ctx.d / .9, sy = Math.min(sw, sd);
-      const lumps = [
-        [0, .42, -.05, .52, P.shrub],
-        [-.42, .32, .12, .4, P.shrubDeep],
-        [.4, .3, -.14, .38, P.shrub],
-        [.16, .58, .2, .34, P.shrubDeep],
-        [-.2, .6, -.18, .3, P.shrub],
-        [.02, .74, .02, .24, P.shrubDeep]
+      const w = ctx.w, d = ctx.d;
+      const unit = Math.min(w, d);
+      const clusters = [];
+      const mounds = [
+        { c: new THREE.Vector3(-w * .17, 0, -d * .02), r: { x: w * .4, y: unit * .6, z: d * .45 }, n: 26 },
+        { c: new THREE.Vector3(w * .27, 0, d * .06),   r: { x: w * .25, y: unit * .46, z: d * .3 }, n: 15 }
       ];
-      lumps.forEach(([x, y, z, r, c]) => {
-        const lump = new THREE.Mesh(GEO.puff(), ctx.mat(c));
-        lump.scale.set(r * sw, r * sy * .95, r * sd);
-        lump.position.set(x * sw, y * sy * .9, z * sd);
-        ctx.pick(lump);
+      mounds.forEach(m => {
+        m.c.y = m.r.y * .62; // 山の中心を持ち上げて、丸い茂みが地面から盛り上がって見えるようにする
+        const leafSize = Math.min(m.r.x, m.r.z) * 1.6;
+        const lod = ctx.lod ? 1 : .7;
+        // 表面を覆う葉
+        scatterFoliage(ctx, clusters, {
+          center: m.c, radii: m.r,
+          count: Math.round(m.n * lod),
+          size: leafSize,
+          bottom: .62,         // 上側のドームを中心に覆う(裾まで散らすと平たく見える)
+          shell: .84, shellVar: .16,
+          shade: [.72, 1.06]
+        });
+        // 内側にも少し入れて、隙間から地面が透けないようにする
+        scatterFoliage(ctx, clusters, {
+          center: m.c, radii: m.r,
+          count: Math.round(m.n * .35 * lod),
+          size: leafSize * .95,
+          bottom: .4, shell: .3, shellVar: .25,
+          shade: [.72, .95]
+        });
       });
-      // 足元の葉(茂みの裾を隠して自然に見せる)
-      for (let i = 0; i < (ctx.lod ? 5 : 3); i++) {
-        const blade = new THREE.Mesh(GEO.leaf(), ctx.mat(P.shrubDeep, { side: THREE.DoubleSide }));
-        blade.scale.set(.3, .24, 1);
-        blade.position.set((ctx.rand() - .5) * sw * .9, .06, (ctx.rand() - .5) * sd * .9);
-        blade.rotation.order = "YXZ";
-        blade.rotation.set(-1.35, ctx.rand() * Math.PI * 2, .12);
-        g.add(blade);
-      }
+      const bush = new THREE.Mesh(
+        foliageGeometry(clusters, new THREE.Vector3(0, unit * .3, 0), ctx.lod ? 2 : 1, true),
+        leafMaterial(P.shrub, P.shrubDeep, P.shrubLight)
+      );
+      ctx.pick(bush);
+
+      // 春の新芽・小さな花(季節の演出があるときだけ)
       if (ctx.season.effects.petals) {
         for (let i = 0; i < (ctx.lod ? 7 : 4); i++) {
-          const bloom = new THREE.Mesh(GEO.puff(), ctx.mat(i % 3 ? P.shrubBloom : P.sakuraLight));
-          const br = .055 + ctx.rand() * .03;
+          const bloom = new THREE.Mesh(GEO.clump(), ctx.mat(i % 3 ? P.shrubBloom : P.sakuraLight));
+          const br = .05 + ctx.rand() * .025;
           bloom.scale.setScalar(br);
-          const ang = ctx.rand() * Math.PI * 2, rad = .3 + ctx.rand() * .2;
-          bloom.position.set(Math.cos(ang) * rad * sw, .35 * sy + ctx.rand() * .45 * sy, Math.sin(ang) * rad * sd);
+          const m = mounds[i % 2];
+          const ang = ctx.rand() * Math.PI * 2, rad = .45 + ctx.rand() * .3;
+          bloom.position.set(
+            m.c.x + Math.cos(ang) * m.r.x * rad,
+            m.c.y + m.r.y * (.5 + ctx.rand() * .5),
+            m.c.z + Math.sin(ang) * m.r.z * rad
+          );
           g.add(bloom);
         }
       }
