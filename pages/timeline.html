@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F2EBDD">
+  <title>年表 | 審神者管理ツール</title>
+  <link rel="stylesheet" href="../assets/timeline.css?v=1">
+</head>
+<body>
+  <main id="app">
+    <div class="header">
+      <h1><span class="seal">史</span>年表</h1>
+      <p>自本丸で起きた出来事を、時系列で振り返れます。刀剣男士の顕現年月日は自動で反映されます。</p>
+    </div>
+
+    <section class="tl-toolbar">
+      <div class="tl-order" role="group" aria-label="並び順">
+        <button id="tl-order-desc" type="button">新しい順</button>
+        <button id="tl-order-asc" type="button">古い順</button>
+      </div>
+      <select id="tl-year-jump" class="tl-year-select" aria-label="年へ移動"></select>
+    </section>
+    <button id="tl-add-btn" class="tl-add-btn" type="button">＋ 出来事を追加</button>
+
+    <p id="tl-empty" class="tl-empty" hidden>まだ出来事がありません。「＋ 出来事を追加」から最初の記録を作ってみましょう。</p>
+    <div id="tl-timeline" class="tl-timeline"></div>
+  </main>
+
+  <div id="tl-editor-overlay" class="modal-overlay" hidden>
+    <section id="tl-editor" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tl-editor-title">
+      <div class="m-eyebrow" id="tl-editor-eyebrow">出来事</div>
+      <h2 id="tl-editor-title">新しい出来事</h2>
+      <p id="tl-editor-error" class="tl-error" role="alert"></p>
+
+      <div class="m-field-label">日付</div>
+      <input id="tl-field-date" class="m-input" type="date">
+
+      <div class="m-field-label">タイトル</div>
+      <input id="tl-field-title" class="m-input" type="text" placeholder="例：大阪城で小判100万枚達成">
+
+      <div class="m-field-label">カテゴリ</div>
+      <select id="tl-field-category" class="m-input"></select>
+
+      <div class="m-field-label">説明</div>
+      <textarea id="tl-field-description" class="m-textarea" placeholder="自由に書いてください"></textarea>
+
+      <button id="tl-save" class="modal-close" type="button">保存</button>
+      <button id="tl-delete" class="modal-danger" type="button" hidden>この出来事を削除</button>
+      <button id="tl-close" class="modal-cancel" type="button">閉じる</button>
+    </section>
+  </div>
+
+  <div id="tl-view-overlay" class="modal-overlay" hidden>
+    <section id="tl-view-card" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tl-view-title">
+      <div class="m-eyebrow">顕現</div>
+      <h2 id="tl-view-title"></h2>
+      <p id="tl-view-date" class="tl-view-date"></p>
+      <p class="tl-view-note">顕現年月日は「刀剣男士」ページのデータをそのまま参照しています。変更や削除はそちらから行ってください。</p>
+      <button id="tl-view-open-master" class="modal-close" type="button">刀剣男士ページを開く</button>
+      <button id="tl-view-close" class="modal-cancel" type="button">閉じる</button>
+    </section>
+  </div>
+
+  <script src="../assets/storage-registry.js?v=domains-1"></script>
+  <script src="../assets/timeline.js?v=1"></script>
+</body>
+</html>
