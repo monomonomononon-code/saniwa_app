@@ -1,4 +1,4 @@
-.diary-inserts { grid-template-columns: repeat(7, 2.25rem); gap: 6px; max-width: 100%; overflow-x: auto; }
+/* diary.css が flex + 横スクロールなので、部屋/関係/刀剣ボタンが増えても組みなおし不要 */
 #diary .diary-inserts [data-reference] { font-size: .875rem; white-space: nowrap; }
 #diary-reference-overlay { position: absolute; z-index: 300; background: rgb(43 38 33 / .35); overflow: hidden; display: flex; align-items: end; }
 #diary-reference-overlay[hidden] { display: none; }
