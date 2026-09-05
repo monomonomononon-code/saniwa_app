@@ -11,6 +11,8 @@
 - `pages/rooms-menu.html` — 部屋割りメニュー(男士の配置 / 見取り図(3D))
 - `pages/honmaru3d.html` — 本丸建築エディタ(3D俯瞰図)。部屋タイプ・建築パーツは同ファイル冒頭の `TEMPLATE_META` / `PART_DEFS` / `PART_RENDERERS` で定義。保存キーは `saniwa-tool.honmaru3d.v1`(version 2)
 - `pages/journal.html` — 日報・日誌
+- `pages/backup.html` / `assets/backup.js` / `assets/backup.css` — 設定・バックアップ(全データのJSON書き出し / 復元)
+- `assets/storage-registry.js` — 保存キーの台帳とバックアップ処理。保存構造の解説は `docs/DATA-STORAGE.md`
 
 部屋タイプ(`TEMPLATE_META`)のキーは `assets/rooms.js` と `pages/honmaru3d.html` で揃えてください。
 
