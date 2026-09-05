@@ -9,7 +9,7 @@
 - `pages/master.html` / `assets/master.css` / `assets/master.js` — 刀剣男士
 - `pages/expcalc.html` / `assets/expcalc.css` / `assets/expcalc.js` — 経験値計算
 - `pages/rooms-menu.html` — 部屋割りメニュー(男士の配置 / 見取り図(3D))
-- `pages/honmaru3d.html` — 本丸建築エディタ(3D俯瞰図)。部屋タイプ・建築パーツは同ファイル冒頭の `TEMPLATE_META` / `PART_DEFS` / `PART_RENDERERS` で定義。保存キーは `saniwa-tool.honmaru3d.v1`(version 2)
+- `pages/honmaru3d.html` — 本丸建築エディタ(3D俯瞰図)。部屋タイプ・建築パーツは同ファイル冒頭の `TEMPLATE_META` / `PART_DEFS` / `PART_RENDERERS` で定義。時間帯は `TIME_PRESETS`、季節は `SEASON_PRESETS`(春のみ実装。夏・秋・冬は同じ形で足して `available: true` にする)。保存キーは `saniwa-tool.honmaru3d.v1`(version 2、`timeMode` / `seasonMode` を含む)
 - `pages/journal.html` — 日報・日誌
 - `pages/backup.html` / `assets/backup.js` / `assets/backup.css` — 設定・バックアップ(全データのJSON書き出し / 復元)
 - `pages/schedule.html` / `assets/schedule.js` / `assets/schedule.css` — 計画表(月表示カレンダー、予定とToDo)。保存は `assets/storage-registry.js` の `load`/`save` 経由(`saniwa-tool.schedule.v1`)のみで、独自の保存処理は持たない
