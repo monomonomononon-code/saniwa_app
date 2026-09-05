@@ -1,0 +1,265 @@
+[hidden] { display: none !important; }
+#app {
+    --paper: #F2EBDD;
+    --paper-deep: #E8DFC9;
+    --wood: #7A4B32;
+    --hanko: #A8382C;
+    --hanko-soft: #C97B6D;
+    --kurenai: #7A2E3D;
+    --kurenai-dark: #521E29;
+    --sumi: #6B6154;
+    --ink: #2B2621;
+    --ink-soft: #5C544A;
+    --tag-bg: #FFFDF6;
+    --tag-border: #C9BFA6;
+
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100vh;
+    padding: 20px 14px 60px;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app * { box-sizing: border-box; }
+  #app button { font-family: inherit; cursor: pointer; }
+
+  .header { margin-bottom: 16px; }
+  .header h1 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .header h1 .seal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    background: var(--kurenai);
+    color: #fff;
+    font-size: 12px;
+    font-family: "Hiragino Mincho ProN", serif;
+    flex-shrink: 0;
+  }
+  .header p { margin: 0; font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
+
+  /* ---- ツールバー(並び順・年ジャンプ・追加) ---- */
+  .tl-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .tl-order {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+  }
+  .tl-order button {
+    border: none;
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .tl-order button.active { background: var(--kurenai); color: #FBF6EA; }
+  .tl-year-select {
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    background: var(--tag-bg);
+    color: var(--ink);
+    font-size: 11.5px;
+    padding: 7px 10px;
+  }
+  .tl-add-btn {
+    width: 100%;
+    min-height: 42px;
+    border: 0;
+    border-radius: 10px;
+    margin-bottom: 18px;
+    background: var(--kurenai);
+    color: #FBF6EA;
+    font-size: 13px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .tl-add-btn:active { background: var(--kurenai-dark); }
+
+  .tl-empty { margin: 20px 4px; color: var(--ink-soft); font-size: 13px; line-height: 1.8; text-align: center; }
+
+  /* ---- 縦の年表 ---- */
+  .tl-timeline { display: grid; gap: 4px; }
+  .tl-year { position: relative; }
+  .tl-year-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: 0;
+    padding: 8px 0 8px 2px;
+    background: var(--paper);
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--kurenai);
+    border-bottom: 1px solid var(--tag-border);
+  }
+  .tl-items {
+    position: relative;
+    margin: 6px 0 10px 9px;
+    padding-left: 20px;
+    border-left: 2px solid var(--sumi);
+  }
+  .tl-item {
+    position: relative;
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 4px 6px 16px 14px;
+    margin-left: -1px;
+  }
+  .tl-item::before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--tl-color, var(--kurenai));
+    border: 2px solid var(--paper);
+    box-shadow: 0 0 0 1px var(--tl-color, var(--kurenai));
+  }
+  .tl-item:active { background: var(--paper-deep); border-radius: 8px; }
+  .tl-item-date {
+    display: block;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin-bottom: 2px;
+  }
+  .tl-item-title-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tl-item-title {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .tl-item-cat {
+    flex-shrink: 0;
+    font-size: 9.5px;
+    color: #FBF6EA;
+    background: var(--tl-color, var(--kurenai));
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .tl-item-auto-badge {
+    flex-shrink: 0;
+    font-size: 9px;
+    color: var(--ink-soft);
+    background: var(--paper-deep);
+    border: 1px solid var(--tag-border);
+    padding: 1px 6px;
+    border-radius: 999px;
+  }
+  .tl-item-desc {
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+  .tl-item.virtual .tl-item-title { color: var(--ink); }
+
+  /* ---- 追加・編集モーダル ---- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(20,16,12,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 24px;
+  }
+  .modal-card {
+    background: var(--paper);
+    border-radius: 12px;
+    width: 100%; max-width: 360px;
+    max-height: 88vh; overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 20px 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .m-eyebrow { font-size: 11px; color: var(--ink-soft); margin-bottom: 2px; }
+  .modal-card h2 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 20px; margin: 0 0 6px;
+    overflow-wrap: anywhere;
+  }
+  .tl-error { min-height: 1.4em; margin: 0 0 6px; color: var(--hanko); font-size: 12px; }
+  .m-field-label { font-size: 10.5px; color: var(--ink-soft); margin: 10px 0 4px; }
+  .m-input {
+    width: 100%; box-sizing: border-box; min-width: 0;
+    background: #fff; border: 1px solid var(--tag-border);
+    border-radius: 7px; padding: 9px 10px; font-size: 16px;
+    font-family: inherit; color: var(--ink);
+  }
+  .m-input:focus { outline: 1px solid var(--kurenai); }
+  select.m-input { -webkit-appearance: none; appearance: none; }
+  input[type="date"].m-input {
+    -webkit-appearance: none; appearance: none;
+    display: block; width: 100%; min-height: 38px; line-height: 1.3;
+  }
+  .m-textarea {
+    width: 100%; background: #fff; border: 1px solid var(--tag-border);
+    border-radius: 7px; padding: 9px 10px; font-size: 16px;
+    font-family: inherit; color: var(--ink);
+    min-height: 90px; resize: vertical;
+  }
+  .modal-close {
+    width: 100%; background: var(--kurenai); color: #FBF6EA; border: none;
+    border-radius: 8px; padding: 11px; font-size: 13px; font-family: inherit; margin-top: 16px;
+  }
+  .modal-close:active { background: var(--kurenai-dark); }
+  .modal-danger {
+    width: 100%; background: transparent; color: var(--hanko); border: 1px solid var(--hanko-soft);
+    border-radius: 8px; padding: 9px; font-size: 12px; font-family: inherit; margin-top: 8px;
+  }
+  .modal-cancel {
+    width: 100%; background: transparent; color: var(--ink-soft); border: none;
+    padding: 8px; font-size: 12.5px; font-family: inherit; margin-top: 4px;
+  }
+
+  /* ---- 顕現(参照専用)モーダル ---- */
+  .tl-view-date { margin: 0 0 8px; font-size: 13px; color: var(--ink-soft); }
+  .tl-view-note {
+    margin: 0;
+    padding: 9px 11px;
+    border-radius: 8px;
+    background: var(--paper-deep);
+    color: var(--ink-soft);
+    font-size: 11.5px;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 380px) {
+    .tl-item-title { font-size: 14px; }
+    .tl-year-head { font-size: 16px; }
+  }
