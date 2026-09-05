@@ -91,19 +91,23 @@
 
 ### timeline(年表)
 
-- **正本**: `timeline.v1`。**手動で追加した出来事だけ**を持つ(`{ version: 1, entries: Entry[] }`)。
+- **正本**: `timeline.v1`。**手動で追加した出来事と、他ドメインへの「参照」だけ**を持つ(`{ version: 1, entries: Entry[] }`)。
   ```
   Entry = { id, date, title, description, category, sourceType, sourceId, createdAt, updatedAt }
   category:   summon(顕現) / event / honmaru / achievement / other
-  sourceType: manual / character / journal / system
-  sourceId:   sourceType が manual 以外のときだけ、元データのidを入れる
+  sourceType: manual / character / report / journal / system
+  sourceId:   sourceType が manual 以外のときだけ、元データの一意なキーを入れる
   ```
-- **刀剣男士の顕現イベントは `timeline.v1` に一切保存しない。** `assets/timeline.js` の `characterEntries()` が、表示のたびに `master.v1`(characters ドメイン、正本)を読み直して `sourceType: "character"` の「仮想の項目」をその場で組み立てるだけ。そのため:
+- **刀剣男士の顕現イベント(`sourceType:"character"`)は `timeline.v1` に一切保存しない。** `assets/timeline.js` の `characterEntries()` が、表示のたびに `master.v1`(characters ドメイン、正本)を読み直して「仮想の項目」をその場で組み立てるだけ。そのため:
   - 顕現年月日を master.v1 側で変更すれば、年表は次に開いたとき(または再描画したとき)そのまま新しい日付で表示される。二重管理も同期処理も発生しない。
   - 刀剣男士を削除すれば、対応する仮想項目も自動的に生成されなくなる(年表側に残骸は残らない)。
   - 同じキャラクターの顕現が2件以上表示される余地がそもそもない(1キャラクターにつき `master.v1` の1レコードから1件しか作られないため)。`allEntries()` はさらに、`timeline.v1` 側に誤って `sourceType:"character"` の項目が保存されていても表示上は無視する保険を持つ。
   - 仮想項目はクリックすると参照専用のモーダルが開くだけで、編集・削除ボタンは出さない(「刀剣男士ページを開く」から `pages/master.html` 側へ誘導する)。
-- 将来、日誌の1項目を年表へ送る機能を作るときは、`sourceType: "journal"`、`sourceId: <日誌のID>` を持つ**手動追加と同じ形の永続エントリ**を `timeline.v1` に1件足すだけでよい(本文をまるごとコピーせず、タイトル・要約程度を `title`/`description` に入れる想定)。`sourceType: "system"` は、将来アプリ側が自動生成する出来事(例: バージョンアップ記念など)向けの予約。
+- **日報(`sourceType:"report"`)は、顕現とは逆に `timeline.v1` へ実際に1件のエントリを持つ**が、内容(日課・資材・周回数など)は一切複製しない。`sourceId` には日報側が持つ一意なキー、つまり `report.v1.entries` のオブジェクトキーである日付文字列("YYYY-MM-DD")をそのまま使う(report.v1 は日付ごとに1件しか持てない設計なので、新しいIDを発行する必要がない)。
+  - **書き込み側**: `assets/report.js` の日報詳細画面いちばん下にある「史へ記す」ボタン(`renderTimelineToggle`)が、`storage-registry.js` の `load("timeline")`/`save("timeline", ...)` 経由で参照エントリを追加・削除する。追加前に `sourceType==="report" && sourceId===<日付>` が既にあるか調べ、あれば追加せず「史に記録済み(外す)」表示に切り替えるだけ(重複防止)。
+  - **表示側**: `assets/timeline.js` の年表では「日報」という短いタイトルの項目としてのみ表示され、タップすると `renderReportSummary()` が `store.load("report")` で `report.v1` を読み直し、`window.SaniwaReportStore`(`pages/timeline.html` に読み込み済み)の `normalizeEntry`/`getTotals`/`DAILY_TASKS`/`RESOURCE_KEYS` を使って、その場でその日の活動内容を組み立てて展開表示する(結果はキャッシュせず、開くたびに最新の report.v1 を見るので、日報を後から編集しても次に開いたときに自然に反映される)。
+  - **元の日報が見つからない場合**(該当日の `report.v1.entries[日付]` が存在しない)は、展開しても「元の日報が見つかりません」とだけ表示し、エラーにはしない。展開部分には常に「史から外す」ボタンがあり、参照エントリだけを `timeline.v1` から削除できる(日報自体は触らない)。
+- 将来、日誌の1項目を年表へ送る機能を作るときは、`sourceType: "journal"`、`sourceId: <日誌のID>` を持つ、上の `report` と同じ考え方の**参照エントリ**を `timeline.v1` に1件足すだけでよい(本文をまるごとコピーせず、タイトル・要約程度を `title`/`description` に入れる想定)。`sourceType: "system"` は、将来アプリ側が自動生成する出来事(例: バージョンアップ記念など)向けの予約。
 
 ### settings(ユーザー設定)
 
@@ -272,7 +276,7 @@ window.SaniwaStorage.remove("rooms");           // rooms.v1 を削除
 | journal(日報) | ○ 同期する | 日付(1エントリ)単位 | 日々の記録なので、過去分を毎回送り直さずに済む。差分同期にも向く |
 | journal(日誌) | ○ 同期する | 作品単位、本文が長い作品は章単位も検討 | 本文量が増えやすいデータなので、最初から分割候補として意識しておく |
 | schedule(予定) | ○ 同期する | 予定1件(`events[]` の要素)単位 | 開始日〜終了日を持つ1件のオブジェクトなので、日付単位に分けると複数日にまたがる予定を分割してしまう。ToDo は予定に内包されるので一緒に同期する |
-| timeline(年表) | ○ 同期する | 出来事(`entries[]` の要素)単位 | 追記が中心のログ的データ。ただし `sourceType:"character"` の顕現イベントは `timeline.v1` に保存されないため、そもそも同期対象に含まれない(同期時は characters ドメインの `activationDate` を見て、クライアント側で組み立て直す) |
+| timeline(年表) | ○ 同期する | 出来事(`entries[]` の要素)単位 | 追記が中心のログ的データ。`sourceType:"character"` の顕現イベントはそもそも `timeline.v1` に保存されないため同期対象に含まれない(characters ドメインの `activationDate` から組み立て直す)。`sourceType:"report"` は軽量な参照(id・date・sourceId 程度)しか持たないため、journal(日報)ドメインと一緒に同期しても負荷は小さい |
 | settings | △ 同期してもよいが必須ではない | ユーザー設定としてまるごと | 複数端末で見た目を揃えたい場合のみ同期。無くても支障はない |
 | home(activityLog / sharedCharacters) | ✕ 同期しない | 端末ローカル | activityLog は端末ごとのフィードでよく、sharedCharacters は characters の写しなので同期するとむしろ食い違いの原因になる |
 | backupMetadata | ✕ 同期しない | 端末ローカル | バックアップ機能自身の作業状態であり、ユーザーの本丸データではない |
