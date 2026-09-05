@@ -133,6 +133,8 @@
     min-width: 34px;
   }
   .hud-time button.active { background: var(--indigo); border-color: var(--indigo); }
+  .hud-season button.active { background: var(--hanko); border-color: var(--hanko); }
+  .hud-time button:disabled { opacity: .38; cursor: default; }
 
   .hint {
     position: absolute;
@@ -477,7 +479,7 @@
     .info-panel { left: 6px; right: 6px; bottom: 6px; max-height: 52%; }
     #app.editing .info-panel {
       bottom: calc(var(--dock-h) + 12px);
-      max-height: calc(100% - var(--dock-h) - 190px); /* HUD(右上のボタン群)と重ならない高さ */
+      max-height: calc(100% - var(--dock-h) - 226px); /* HUD(右上のボタン群: 3ボタン + 時間帯 + 季節)と重ならない高さ */
     }
   }
 </style>
@@ -533,7 +535,74 @@
     night:   { label: "夜", clear: 0x2B3446, fog: [0x2B3446, 45, 110], hemi: [0x8FA5CC, 0x2E3340, 0.62], sun: [0xBFD0F0, 0.42, [-8, 16, -10]], ambient: [0x54637F, 0.42], ground: 0x6E7284, grid: [0x5A6070, 0x4A5060] }
   };
   const TIME_ORDER = ["morning", "noon", "evening", "night"];
-  const environment = { time: "noon", modifiers: [] };
+  const environment = { time: "noon", season: "spring", modifiers: [] };
+
+  // =====================================================================
+  //  季節プリセット
+  //  「時間帯」と「季節」は独立した2軸で、同時に効く。
+  //    時間帯 = 光(空・霧・ライト・地面)   ← TIME_PRESETS
+  //    季節   = 色と飾り(植栽の色、季節演出) ← SEASON_PRESETS
+  //  夏・秋・冬を追加するときは、下の spring と同じ形のオブジェクトを書いて
+  //  available: true にするだけ(UIボタン・保存・描画はすべてここから拾う)。
+  //    label       : ボタン表示
+  //    environment : 時間帯の環境(env)に重ねる色味。tint に amount だけ寄せる(夜は nightAmount)
+  //    palette     : 季節で色が変わる部品の色。描画関数は ctx.season.palette 経由で参照する。
+  //                  足りないキーは spring の値で補われるので、差分だけ書けばよい
+  //    effects     : ループ中に動く演出。petals = 舞い散る花びら(count は端末で切り替え)
+  //                  秋なら { petals: { color: 0xC9552E, ... } } で紅葉が散る、など
+  // =====================================================================
+  const SEASON_ORDER = ["spring", "summer", "autumn", "winter"];
+  const DEFAULT_SEASON = "spring";
+  const SEASON_PRESETS = {
+    spring: {
+      label: "春", available: true,
+      environment: { tint: 0xFFD9E2, amount: 0.12, nightAmount: 0.04 },
+      palette: {
+        lawn: 0x8DB26A, lawnEdge: 0x5E7E45,
+        canopy: 0x6CA457, trunk: 0x6B4A2E,
+        pine: 0x3F6D4A, pineDark: 0x2F5238,
+        bamboo: 0x9CC95B, bambooNode: 0x6D993A, bambooLeaf: 0x7FB34E,
+        shrub: 0x7FB264, shrubBloom: 0xF7C9D6,
+        sakura: 0xF8C3D2, sakuraDeep: 0xEE9DB7, sakuraLight: 0xFCE3EA,
+        flowers: [0xF4A7BB, 0xFFD966, 0xFFFFFF, 0xD9A0E0, 0xFF8FA3],
+        petal: 0xFFC9D9, petalDeep: 0xF3A8C0,
+        water: 0x6BA3CC, waterRim: 0x8E8A78,
+        stone: 0x8B877B, stoneDark: 0x6E6A5E,
+        bridge: 0xB8342A, bridgeDeck: 0xA9784E, bridgeCap: 0x2B2621
+      },
+      effects: { petals: { count: 140, mobileCount: 70, color: 0xFFC9D9, speed: .55 } }
+    },
+    summer: { label: "夏", available: false },
+    autumn: { label: "秋", available: false },
+    winter: { label: "冬", available: false }
+  };
+  function seasonPreset(key) {
+    const p = SEASON_PRESETS[key];
+    return p && p.available ? p : SEASON_PRESETS[DEFAULT_SEASON];
+  }
+  // 描画関数へ渡す季節コンテキスト(rebuild ごとに1回だけ作る)
+  function activeSeason() {
+    const key = SEASON_PRESETS[environment.season] && SEASON_PRESETS[environment.season].available ? environment.season : DEFAULT_SEASON;
+    const preset = SEASON_PRESETS[key];
+    return {
+      key,
+      palette: Object.assign({}, SEASON_PRESETS.spring.palette, preset.palette || {}),
+      effects: preset.effects || {}
+    };
+  }
+  // 季節の色味を時間帯プリセットの上に重ねる modifier(時間帯とは干渉せず、上乗せだけ)
+  environment.modifiers.push({
+    id: "season",
+    apply(env) {
+      const tint = seasonPreset(environment.season).environment;
+      if (!tint || typeof THREE === "undefined") return;
+      const amount = environment.time === "night" ? tint.nightAmount : tint.amount;
+      const mix = hex => new THREE.Color(hex).lerp(new THREE.Color(tint.tint), amount).getHex();
+      env.clear = mix(env.clear);
+      env.fog[0] = mix(env.fog[0]);
+      env.hemi[0] = mix(env.hemi[0]);
+    }
+  });
 
   // =====================================================================
   //  建築パーツ定義 (UI・保存・描画はすべてここから生成)
@@ -545,7 +614,8 @@
     { id: "room",         label: "部屋",       note: "部屋は「部屋割り」にも追加され、刀剣男士を配置できます。" },
     { id: "furniture",    label: "家具・小物", note: "部屋の床の高さに置きます。ドラッグで部屋の中や庭に配置できます。" },
     { id: "architecture", label: "建築" },
-    { id: "exterior",     label: "外構・庭" }
+    { id: "exterior",     label: "外構・庭" },
+    { id: "planting",     label: "植栽",       note: "季節(春/夏/秋/冬)に合わせて色や花が変わります。庭エリアや建物のまわりに自由に置けます。" }
   ];
   const PART_DEFS = [
     // --- 家具・小物 ---
@@ -564,7 +634,16 @@
     { type: "pond",     category: "exterior", label: "池",     glyph: "池", color: "#5E8FB3", defaultSize: { x: 3.5, z: 2.6 }, minSize: .8, sizeStep: .5,  y: 0, labelY: .5,  labelBorder: "#3F5A70" },
     { type: "field",    category: "exterior", label: "畑",     glyph: "畑", color: "#765139", defaultSize: { x: 4.8, z: 3.2 }, minSize: .8, sizeStep: .75, y: 0, labelY: .55 },
     { type: "stable",   category: "exterior", label: "馬小屋", glyph: "馬", color: "#7A4B32", defaultSize: { x: 4, z: 3 },     minSize: 1,  sizeStep: .75, y: 0, labelY: 2.05 },
-    { type: "tree",     category: "exterior", label: "樹木",   glyph: "木", color: "#4E6B3A", defaultSize: { x: 1.6, z: 1.6 }, minSize: .6, sizeStep: .25, y: 0, labelY: 3.0 }
+    { type: "bridge",   category: "exterior", label: "太鼓橋", glyph: "橋", color: "#B8342A", defaultSize: { x: 4, z: 1.4 },   minSize: 1,  sizeStep: .5,  y: 0, labelY: 1.95, labelBorder: "#B8342A" },
+    { type: "stone",    category: "exterior", label: "石",     glyph: "石", color: "#8B877B", defaultSize: { x: 1, z: .8 },    minSize: .4, sizeStep: .25, y: 0, labelY: 1.0 },
+    { type: "petals",   category: "exterior", label: "花びらの絨毯", glyph: "弁", color: "#F3B4C7", defaultSize: { x: 2.4, z: 2.4 }, minSize: .8, sizeStep: .5, y: 0, labelY: .45, labelBorder: "#D98BA5" },
+    // --- 植栽(季節で色が変わる。色は SEASON_PRESETS.palette を参照) ---
+    { type: "tree",     category: "planting", label: "樹木",   glyph: "木", color: "#4E6B3A", defaultSize: { x: 1.6, z: 1.6 }, minSize: .6, sizeStep: .25, y: 0, labelY: 3.0 },
+    { type: "sakura",   category: "planting", label: "桜",     glyph: "桜", color: "#EE9DB7", defaultSize: { x: 2, z: 2 },     minSize: .8, sizeStep: .25, y: 0, labelY: 3.4, labelBorder: "#D98BA5" },
+    { type: "pine",     category: "planting", label: "松",     glyph: "松", color: "#3F6D4A", defaultSize: { x: 1.8, z: 1.8 }, minSize: .6, sizeStep: .25, y: 0, labelY: 3.1 },
+    { type: "bamboo",   category: "planting", label: "竹",     glyph: "竹", color: "#7FB34E", defaultSize: { x: 1.2, z: 1.2 }, minSize: .5, sizeStep: .25, y: 0, labelY: 3.9 },
+    { type: "shrub",    category: "planting", label: "低木",   glyph: "叢", color: "#7FB264", defaultSize: { x: 1.2, z: .9 },  minSize: .4, sizeStep: .25, y: 0, labelY: 1.2 },
+    { type: "flowers",  category: "planting", label: "花",     glyph: "花", color: "#F4A7BB", defaultSize: { x: 1.2, z: 1 },   minSize: .4, sizeStep: .25, y: 0, labelY: .95, labelBorder: "#D98BA5" }
   ];
   const PART_BY_TYPE = Object.fromEntries(PART_DEFS.map(d => [d.type, d]));
   function partDef(type) { return PART_BY_TYPE[type] || null; }
@@ -582,6 +661,7 @@
   let pendingRoomPlacement = null; // 部屋タブから追加した部屋の初期配置(棟・位置)
   let buildingState = loadBuildingState();
   environment.time = buildingState.timeMode;
+  environment.season = buildingState.seasonMode;
 
   function defaultBuildingState() {
     return {
@@ -589,7 +669,8 @@
       wings: [{ id: "wing-main", name: "主屋" }],
       roomLayouts: {},
       buildingObjects: [],
-      timeMode: "noon"
+      timeMode: "noon",
+      seasonMode: DEFAULT_SEASON
     };
   }
   function finiteNumber(value, fallback) {
@@ -646,7 +727,9 @@
         ? saved.buildingObjects.map(o => normalizeObject(o, wingIds)).filter(Boolean)
         : [];
       const timeMode = TIME_PRESETS[saved.timeMode] ? saved.timeMode : "noon";
-      return { version: STATE_VERSION, wings, roomLayouts, buildingObjects, timeMode };
+      // 未実装の季節が保存されていても春に戻す(季節を後から足しても壊れない)
+      const seasonMode = SEASON_PRESETS[saved.seasonMode] && SEASON_PRESETS[saved.seasonMode].available ? saved.seasonMode : DEFAULT_SEASON;
+      return { version: STATE_VERSION, wings, roomLayouts, buildingObjects, timeMode, seasonMode };
     } catch (e) {
       return fallback;
     }
@@ -655,6 +738,7 @@
     try {
       buildingState.version = STATE_VERSION;
       buildingState.timeMode = environment.time;
+      buildingState.seasonMode = environment.season;
       localStorage.setItem(BUILD_STORAGE_KEY, JSON.stringify(buildingState));
       buildDirty = false;
       updateSaveStatus(showFeedback ? "保存しました" : "保存済み");
@@ -740,6 +824,7 @@
       <button id="btn-reset">視点を戻す</button>
       <button id="btn-top">真上から</button>
       <div class="hud-time" id="hud-time" role="group" aria-label="時間帯"></div>
+      <div class="hud-time hud-season" id="hud-season" role="group" aria-label="季節"></div>
     </div>
     <div class="hint" id="hint">ドラッグで回転 / ピンチでズーム / 2本指でパン</div>
     <div class="info-panel" id="info-panel"></div>
@@ -858,7 +943,9 @@
     groundMat.color.setHex(env.ground);
     rebuildGrid(env.grid);
     app.classList.toggle("night", environment.time === "night");
+    app.dataset.season = activeSeason().key;
     document.querySelectorAll("#hud-time button").forEach(b => b.classList.toggle("active", b.dataset.time === environment.time));
+    document.querySelectorAll("#hud-season button").forEach(b => b.classList.toggle("active", b.dataset.season === environment.season));
   }
   function setTimeMode(key) {
     if (!TIME_PRESETS[key]) return;
@@ -867,6 +954,16 @@
     applyEnvironment();
     markBuildDirty();
     saveBuildingState(false);
+  }
+  // 季節の切替: 光は時間帯のまま、植栽の色と季節演出だけ差し替わる(rebuild で描き直す)
+  function setSeasonMode(key) {
+    if (!SEASON_PRESETS[key] || !SEASON_PRESETS[key].available) return;
+    environment.season = key;
+    buildingState.seasonMode = key;
+    applyEnvironment();
+    markBuildDirty();
+    saveBuildingState(false);
+    rebuild();
   }
   const hudTime = document.getElementById("hud-time");
   TIME_ORDER.forEach(key => {
@@ -877,6 +974,23 @@
     b.onclick = () => setTimeMode(key);
     hudTime.appendChild(b);
   });
+  const hudSeason = document.getElementById("hud-season");
+  SEASON_ORDER.forEach(key => {
+    const preset = SEASON_PRESETS[key];
+    if (!preset) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.season = key;
+    b.textContent = preset.label;
+    if (!preset.available) {
+      b.disabled = true;
+      b.title = `${preset.label}は準備中です`;
+      b.setAttribute("aria-label", `${preset.label}(準備中)`);
+    } else {
+      b.onclick = () => setSeasonMode(key);
+    }
+    hudSeason.appendChild(b);
+  });
   applyEnvironment();
 
   let honmaruGroup = null;   // 部屋一式
@@ -885,6 +999,7 @@
   let draggableGroups = new Map();
   let layoutCache = [];      // { room, meta, w, d, x, z, rotation, wingId }
   let extent = { w: 10, d: 8 };
+  let seasonCtx = activeSeason(); // rebuild ごとに更新される季節コンテキスト
   const floorTextureCache = {};
 
   // =====================================================================
@@ -1086,19 +1201,145 @@
   // =====================================================================
   //  シーン構築
   // =====================================================================
+  // 共有ジオメトリ / 共有マテリアル(植栽・季節パーツ用)。
+  // 球や円柱を毎回作らず使い回し、userData.shared で disposeGroup の破棄対象から外す。
+  // 端末負荷を抑える要点: 低ポリ(球10x8 / 円柱8角) + 同色はマテリアル共有。
+  const sharedGeometry = {};
+  function sharedGeo(key, make) {
+    if (!sharedGeometry[key]) {
+      sharedGeometry[key] = make();
+      sharedGeometry[key].userData.shared = true;
+    }
+    return sharedGeometry[key];
+  }
+  const GEO = {
+    sphere: () => sharedGeo("sphere", () => new THREE.SphereGeometry(1, 10, 8)),
+    trunk:  () => sharedGeo("trunk",  () => new THREE.CylinderGeometry(.75, 1, 1, 8)),
+    stick:  () => sharedGeo("stick",  () => new THREE.CylinderGeometry(1, 1, 1, 6)),
+    rock:   () => sharedGeo("rock",   () => new THREE.DodecahedronGeometry(1, 0)),
+    disc:   () => sharedGeo("disc",   () => new THREE.CircleGeometry(1, 6)),
+    plane:  () => sharedGeo("plane",  () => new THREE.PlaneGeometry(1, 1)),
+    cube:   () => sharedGeo("cube",   () => new THREE.BoxGeometry(1, 1, 1))
+  };
+  let materialCache = new Map();
+  function cachedMat(color, opts) {
+    const key = opts ? `${color}:${JSON.stringify(opts)}` : String(color);
+    let m = materialCache.get(key);
+    if (!m) {
+      m = new THREE.MeshLambertMaterial(Object.assign({ color }, opts || {}));
+      m.userData.shared = true;
+      materialCache.set(key, m);
+    }
+    return m;
+  }
+  function resetMaterialCache() {
+    materialCache.forEach(m => m.dispose());
+    materialCache = new Map();
+  }
+  // 配置ごとに固定の乱数(id から生成)。石や花の散らばりが再描画のたびに変わらないようにする
+  function seededRandom(seed) {
+    let h = 2166136261;
+    const str = String(seed || "");
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return () => {
+      h += 0x6D2B79F5;
+      let t = Math.imul(h ^ (h >>> 15), 1 | h);
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
   function disposeGroup(group) {
     if (!group) return;
     group.traverse(obj => {
-      if (obj.geometry) obj.geometry.dispose();
+      if (obj.geometry && !obj.geometry.userData.shared) obj.geometry.dispose();
       if (obj.material) {
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
         mats.forEach(m => {
+          if (m.userData && m.userData.shared) return;
           if (m.map && !Object.values(floorTextureCache).includes(m.map)) m.map.dispose();
           m.dispose();
         });
       }
     });
     scene.remove(group);
+  }
+
+  // =====================================================================
+  //  季節演出(舞い散る花びら)
+  //  THREE.Points 1つ(= 描画1回)で全粒子をまかなう。粒子数は端末幅で切替、
+  //  「視差効果を減らす」設定の端末では出さない。季節を足すときは
+  //  SEASON_PRESETS.<season>.effects.petals に色・量を書くだけでこの仕組みがそのまま使える。
+  // =====================================================================
+  let petalSystem = null;
+  let petalTexture = null;
+  function makePetalTexture() {
+    const c = document.createElement("canvas");
+    c.width = c.height = 32;
+    const x = c.getContext("2d");
+    x.fillStyle = "#fff";
+    x.beginPath();
+    x.ellipse(16, 16, 12, 7, .5, 0, Math.PI * 2);
+    x.fill();
+    x.globalCompositeOperation = "destination-out";
+    x.beginPath();
+    x.arc(27, 9, 5, 0, Math.PI * 2); // 花びらの切れ込み
+    x.fill();
+    return new THREE.CanvasTexture(c);
+  }
+  function disposeSeasonEffects() {
+    if (!petalSystem) return;
+    scene.remove(petalSystem.points);
+    petalSystem.points.geometry.dispose();
+    petalSystem.points.material.dispose();
+    petalSystem = null;
+  }
+  function rebuildSeasonEffects() {
+    disposeSeasonEffects();
+    const fx = seasonCtx.effects.petals;
+    if (!fx) return;
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const count = reduceMotion ? 0 : (isMobileLayout() ? fx.mobileCount : fx.count);
+    if (!count) return;
+    const area = { w: extent.w + 12, d: extent.d + 12, h: 9 };
+    const pos = new Float32Array(count * 3);
+    const drift = new Float32Array(count * 3); // [落下速度, 揺れの位相, 揺れ幅]
+    const rnd = Math.random;
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (rnd() - .5) * area.w;
+      pos[i * 3 + 1] = rnd() * area.h;
+      pos[i * 3 + 2] = (rnd() - .5) * area.d;
+      drift[i * 3] = fx.speed * (.7 + rnd() * .7);
+      drift[i * 3 + 1] = rnd() * Math.PI * 2;
+      drift[i * 3 + 2] = .3 + rnd() * .5;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    if (!petalTexture) petalTexture = makePetalTexture();
+    const mat = new THREE.PointsMaterial({
+      size: .26, map: petalTexture, color: fx.color, transparent: true, opacity: .95,
+      depthWrite: false, sizeAttenuation: true, alphaTest: .15
+    });
+    const points = new THREE.Points(geo, mat);
+    points.frustumCulled = false;
+    scene.add(points);
+    petalSystem = { points, pos, drift, area, count };
+  }
+  function updateSeasonEffects(dt, t) {
+    if (!petalSystem) return;
+    const { pos, drift, area, count } = petalSystem;
+    for (let i = 0; i < count; i++) {
+      const k = i * 3;
+      pos[k + 1] -= drift[k] * dt;
+      pos[k] += Math.sin(t * 1.4 + drift[k + 1]) * drift[k + 2] * dt;
+      pos[k + 2] += Math.cos(t * .9 + drift[k + 1]) * drift[k + 2] * .5 * dt;
+      if (pos[k + 1] < -.25) {
+        pos[k + 1] = area.h;
+        pos[k] = (Math.random() - .5) * area.w;
+        pos[k + 2] = (Math.random() - .5) * area.d;
+      }
+    }
+    petalSystem.points.geometry.attributes.position.needsUpdate = true;
   }
 
   let rebuildQueued = false;
@@ -1118,14 +1359,17 @@
 
   function rebuild() {
     disposeGroup(honmaruGroup);
+    resetMaterialCache();
     honmaruGroup = new THREE.Group();
     pickables = [];
     draggableGroups = new Map();
     layoutCache = layoutRooms();
+    seasonCtx = activeSeason();
 
     layoutCache.forEach(item => honmaruGroup.add(buildRoom(item)));
     buildingState.buildingObjects.forEach(item => honmaruGroup.add(buildStructure(item)));
     scene.add(honmaruGroup);
+    rebuildSeasonEffects();
 
     // 統計
     const placed = rooms.reduce((n, r) => n + (r.occupants || []).length, 0);
@@ -1263,6 +1507,41 @@
   // =====================================================================
   const lambert = color => new THREE.MeshLambertMaterial({ color });
   const box = (w, h, d, mat) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  // 地面に平たい円(花びら・小石など)を散らす。opt: { count, y, radius, w, d, colors }
+  function scatterDiscs(g, ctx, opt) {
+    for (let i = 0; i < opt.count; i++) {
+      const disc = new THREE.Mesh(GEO.disc(), ctx.mat(opt.colors[i % opt.colors.length]));
+      disc.rotation.x = -Math.PI / 2;
+      disc.rotation.z = ctx.rand() * Math.PI;
+      disc.scale.set(opt.radius, opt.radius * .7, 1);
+      disc.position.set((ctx.rand() - .5) * opt.w, opt.y, (ctx.rand() - .5) * opt.d);
+      g.add(disc);
+    }
+  }
+  // 花びらの絨毯用テクスチャ(色ごとに1枚だけ作って共有)
+  const petalSheetCache = {};
+  function petalSheetMaterial(color, deep, w, d) {
+    const key = `${color}-${deep}`;
+    if (!petalSheetCache[key]) {
+      const c = document.createElement("canvas");
+      c.width = c.height = 128;
+      const x = c.getContext("2d");
+      const rnd = seededRandom(key);
+      for (let i = 0; i < 70; i++) {
+        x.fillStyle = "#" + (i % 3 ? color : deep).toString(16).padStart(6, "0");
+        x.beginPath();
+        x.ellipse(rnd() * 128, rnd() * 128, 4 + rnd() * 3, 2.5 + rnd() * 2, rnd() * Math.PI, 0, Math.PI * 2);
+        x.fill();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      petalSheetCache[key] = tex;
+    }
+    const tex = petalSheetCache[key].clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(Math.max(1, w / 1.6), Math.max(1, d / 1.6));
+    return new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false });
+  }
   const PART_RENDERERS = {
     placeholder(item, g, ctx) {
       ctx.pick(Object.assign(box(ctx.w, .3, ctx.d, lambert(0xBBB3A0)), { position: new THREE.Vector3(0, .15, 0) }));
@@ -1344,30 +1623,110 @@
       }
     },
     garden(item, g, ctx) {
-      const lawn = box(ctx.w, .1, ctx.d, lambert(0x75855B));
+      // 庭(芝): 色は季節パレット(春は若草色)
+      const P = ctx.season.palette;
+      const lawn = box(ctx.w, .1, ctx.d, lambert(P.lawn));
       lawn.position.y = -.12;
       ctx.pick(lawn);
       const border = new THREE.LineSegments(
         new THREE.EdgesGeometry(new THREE.BoxGeometry(ctx.w, .11, ctx.d)),
-        new THREE.LineBasicMaterial({ color: 0x52613E })
+        new THREE.LineBasicMaterial({ color: P.lawnEdge })
       );
       border.position.y = -.12;
       g.add(border);
     },
     pond(item, g, ctx) {
-      // 池: 縁石 + 少し窪んだ青い水面 + 石
-      const rim = box(ctx.w + .4, .14, ctx.d + .4, lambert(0x8E8A78));
-      rim.position.y = -.17;
+      // 池: 縁石 + 水面 + 石。水の色は季節パレット、春は花びらが浮く。
+      // 庭(芝)の上に置いても隠れないよう、縁石の上面は芝(-.07)より上に出す
+      const P = ctx.season.palette;
+      const rim = box(ctx.w + .4, .14, ctx.d + .4, lambert(P.waterRim));
+      rim.position.y = -.05;
       ctx.pick(rim);
-      const water = box(ctx.w, .06, ctx.d, new THREE.MeshLambertMaterial({ color: 0x5E8FB3, transparent: true, opacity: .88 }));
-      water.position.y = -.2;
+      // 水面は縁石の上面(.02)より少し上に出す(縁石の箱の中に埋もれると見えない)
+      const water = box(ctx.w, .06, ctx.d, new THREE.MeshLambertMaterial({ color: P.water, transparent: true, opacity: .9 }));
+      water.position.y = .01;
       ctx.pick(water);
       [[-.3, -.25], [.32, .2], [.1, .38]].forEach(([fx, fz], i) => {
-        const stone = new THREE.Mesh(new THREE.SphereGeometry(.12 + i * .03, 10, 8), lambert(0x6E6A5E));
-        stone.position.set(fx * ctx.w, -.14, fz * ctx.d);
+        const stone = new THREE.Mesh(new THREE.SphereGeometry(.12 + i * .03, 10, 8), lambert(P.stoneDark));
+        stone.position.set(fx * ctx.w, .06, fz * ctx.d);
         stone.scale.y = .6;
         g.add(stone);
       });
+      if (ctx.season.effects.petals) {
+        scatterDiscs(g, ctx, { count: Math.min(9, Math.round(ctx.w * ctx.d * .8)), y: .045, radius: .07, w: ctx.w * .9, d: ctx.d * .9, colors: [P.petal, P.petalDeep] });
+      }
+    },
+    bridge(item, g, ctx) {
+      // 赤い太鼓橋: 反った板を並べた橋面 + 赤い欄干(柱・二段の手すり) + 黒い擬宝珠
+      const P = ctx.season.palette;
+      const L = ctx.w, W = Math.max(.6, ctx.d);
+      const rise = Math.min(1.1, Math.max(.35, L * .22));
+      const segs = Math.max(5, Math.min(9, Math.round(L / .6)));
+      const red = ctx.mat(P.bridge), deck = ctx.mat(P.bridgeDeck), deckLine = ctx.mat(P.bridgeCap), cap = ctx.mat(P.bridgeCap);
+      const arch = x => rise * Math.sin(Math.PI * (x + L / 2) / L);
+      for (let i = 0; i < segs; i++) {
+        const x0 = -L / 2 + i * (L / segs), x1 = x0 + L / segs;
+        const y0 = arch(x0), y1 = arch(x1);
+        const len = Math.hypot(x1 - x0, y1 - y0), ang = Math.atan2(y1 - y0, x1 - x0);
+        const plank = box(len + .03, .12, W, deck);
+        plank.position.set((x0 + x1) / 2, (y0 + y1) / 2 + .06, 0);
+        plank.rotation.z = ang;
+        ctx.pick(plank);
+        const seam = box(.02, .125, W - .08, deckLine); // 板の継ぎ目
+        seam.position.set(x0, y0 + .06, 0);
+        seam.rotation.z = ang;
+        g.add(seam);
+        [-1, 1].forEach(side => {
+          [.34, .62].forEach(h => {
+            const rail = box(len + .05, .07, .07, red);
+            rail.position.set((x0 + x1) / 2, (y0 + y1) / 2 + h, side * (W / 2 - .06));
+            rail.rotation.z = ang;
+            g.add(rail);
+          });
+        });
+      }
+      const posts = Math.max(3, Math.min(6, Math.round(L / 1.1) + 1));
+      for (let i = 0; i < posts; i++) {
+        const x = -L / 2 + i * (L / (posts - 1));
+        const y = arch(Math.max(-L / 2 + .04, Math.min(L / 2 - .04, x)));
+        [-1, 1].forEach(side => {
+          const post = box(.1, .68, .1, red);
+          post.position.set(x, y + .4, side * (W / 2 - .06));
+          g.add(post);
+          const knob = box(.15, .09, .15, cap);
+          knob.position.set(x, y + .78, side * (W / 2 - .06));
+          g.add(knob);
+        });
+      }
+      [-1, 1].forEach(side => {
+        const step = box(.5, .08, W + .2, ctx.mat(P.stone));
+        step.position.set(side * (L / 2 + .2), .04, 0);
+        g.add(step);
+      });
+    },
+    stone(item, g, ctx) {
+      // 石: 十二面体を潰して2〜3個寄せる(庭石・飛び石に)
+      const P = ctx.season.palette;
+      const n = ctx.w * ctx.d > 1.2 ? 3 : 2;
+      for (let i = 0; i < n; i++) {
+        const rock = new THREE.Mesh(GEO.rock(), ctx.mat(i % 2 ? P.stoneDark : P.stone));
+        const sx = (i === 0 ? .5 : .28 + ctx.rand() * .12) * ctx.w;
+        const sz = (i === 0 ? .42 : .26 + ctx.rand() * .1) * ctx.d;
+        const sy = Math.min(sx, sz) * (.55 + ctx.rand() * .25);
+        rock.scale.set(sx, sy, sz);
+        rock.position.set(i === 0 ? -ctx.w * .12 : ctx.w * (.2 + i * .12), sy * .55, i === 0 ? 0 : (i === 1 ? .22 : -.24) * ctx.d);
+        rock.rotation.set(ctx.rand() * .5, ctx.rand() * Math.PI, ctx.rand() * .3);
+        ctx.pick(rock);
+      }
+    },
+    petals(item, g, ctx) {
+      // 花びらの絨毯: 透過テクスチャを貼った薄い板(桜や池のまわりに敷く)
+      const P = ctx.season.palette;
+      const sheet = new THREE.Mesh(GEO.plane(), petalSheetMaterial(P.petal, P.petalDeep, ctx.w, ctx.d));
+      sheet.rotation.x = -Math.PI / 2;
+      sheet.scale.set(ctx.w, ctx.d, 1);
+      sheet.position.y = .012;
+      ctx.pick(sheet);
     },
     field(item, g, ctx) {
       const soil = box(ctx.w, .14, ctx.d, lambert(0x765139));
@@ -1399,17 +1758,144 @@
       ctx.pick(roof);
     },
     tree(item, g, ctx) {
-      // 樹木: 幹 + 樹冠(props.shape = "round" | "cone")
+      // 樹木: 幹 + 樹冠(props.shape = "round" | "cone")。樹冠の色は季節パレット
+      const P = ctx.season.palette;
       const s = Math.max(.4, ctx.w / 1.6);
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.1 * s, .16 * s, 1.2 * s, 10), lambert(0x6B4A2E));
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.1 * s, .16 * s, 1.2 * s, 10), lambert(P.trunk));
       trunk.position.y = .6 * s;
       ctx.pick(trunk);
-      const leaf = lambert(0x4E6B3A);
+      const leaf = lambert(P.canopy);
       const crown = (item.props && item.props.shape) === "cone"
         ? new THREE.Mesh(new THREE.ConeGeometry(.75 * s, 1.6 * s, 12), leaf)
         : new THREE.Mesh(new THREE.SphereGeometry(.75 * s, 14, 12), leaf);
       crown.position.y = (item.props && item.props.shape) === "cone" ? 1.7 * s : 1.6 * s;
       ctx.pick(crown);
+    },
+    // ---- 植栽(春): デフォルメした低ポリ表現。球・円柱は共有ジオメトリを拡縮して使う ----
+    sakura(item, g, ctx) {
+      // 桜: 短めの幹 + 斜めの枝2本 + 大小の球を寄せた「もこもこ」の花冠 + 根元に散った花びら
+      const P = ctx.season.palette;
+      const s = Math.max(.5, ctx.w / 2);
+      const trunkMat = ctx.mat(P.trunk);
+      const trunk = new THREE.Mesh(GEO.trunk(), trunkMat);
+      trunk.scale.set(.15 * s, 1.15 * s, .15 * s);
+      trunk.position.y = .57 * s;
+      ctx.pick(trunk);
+      [[-1, .25], [1, -.2]].forEach(([dir, dz]) => {
+        const branch = new THREE.Mesh(GEO.stick(), trunkMat);
+        branch.scale.set(.06 * s, .75 * s, .06 * s);
+        branch.position.set(dir * .28 * s, 1.2 * s, dz * s);
+        branch.rotation.z = -dir * .65;
+        g.add(branch);
+      });
+      const puffs = [
+        [0, 1.8, 0, .88, P.sakura], [-.58, 1.5, .12, .62, P.sakuraDeep], [.6, 1.56, -.1, .64, P.sakura],
+        [.1, 1.5, .58, .58, P.sakuraLight], [-.12, 1.46, -.58, .56, P.sakuraDeep], [0, 2.3, 0, .52, P.sakuraLight]
+      ];
+      puffs.forEach(([x, y, z, r, color]) => {
+        const puff = new THREE.Mesh(GEO.sphere(), ctx.mat(color));
+        puff.scale.set(r * s, r * s * .82, r * s);
+        puff.position.set(x * s, y * s, z * s);
+        ctx.pick(puff);
+      });
+      if (ctx.season.effects.petals) {
+        scatterDiscs(g, ctx, { count: 10, y: .01, radius: .07, w: 2.2 * s, d: 2.2 * s, colors: [P.petal, P.petalDeep] });
+      }
+    },
+    pine(item, g, ctx) {
+      // 松: 少し傾いた幹 + 平たい球を段々に重ねた枝ぶり(盆栽風)
+      const P = ctx.season.palette;
+      const s = Math.max(.5, ctx.w / 1.8);
+      const trunk = new THREE.Mesh(GEO.trunk(), ctx.mat(P.trunk));
+      trunk.scale.set(.14 * s, 1.7 * s, .14 * s);
+      trunk.position.set(-.05 * s, .85 * s, 0);
+      trunk.rotation.z = .14;
+      ctx.pick(trunk);
+      const tiers = [[.12, 1.05, 0, .95, .34], [-.4, 1.45, .18, .7, .28], [.36, 1.8, -.12, .58, .25], [-.06, 2.15, .06, .44, .22]];
+      tiers.forEach(([x, y, z, r, flat], i) => {
+        const tier = new THREE.Mesh(GEO.sphere(), ctx.mat(i % 2 ? P.pineDark : P.pine));
+        tier.scale.set(r * s, flat * s, r * s * .92);
+        tier.position.set(x * s, y * s, z * s);
+        ctx.pick(tier);
+        if (i > 0) {
+          const twig = new THREE.Mesh(GEO.stick(), ctx.mat(P.trunk));
+          twig.scale.set(.04 * s, Math.abs(x) * s + .2 * s, .04 * s);
+          twig.position.set(x * s * .5, (y - .12) * s, z * s * .5);
+          twig.rotation.z = x > 0 ? -1.1 : 1.1;
+          g.add(twig);
+        }
+      });
+    },
+    bamboo(item, g, ctx) {
+      // 竹: 細長い稈を数本 + 節の輪 + 上部の葉(薄い板)
+      const P = ctx.season.palette;
+      const n = Math.max(2, Math.min(6, Math.round(ctx.w / .35)));
+      const culmMat = ctx.mat(P.bamboo), nodeMat = ctx.mat(P.bambooNode), leafMat = ctx.mat(P.bambooLeaf, { side: THREE.DoubleSide });
+      for (let i = 0; i < n; i++) {
+        const ang = ctx.rand() * Math.PI * 2, dist = ctx.rand() * .32;
+        const x = Math.cos(ang) * dist * ctx.w, z = Math.sin(ang) * dist * ctx.d;
+        const h = 2.6 + ctx.rand() * 1.2;
+        const culm = new THREE.Mesh(GEO.stick(), culmMat);
+        culm.scale.set(.06, h, .06);
+        culm.position.set(x, h / 2, z);
+        culm.rotation.z = (ctx.rand() - .5) * .08;
+        ctx.pick(culm);
+        for (let k = 1; k <= 3; k++) {
+          const node = new THREE.Mesh(GEO.stick(), nodeMat);
+          node.scale.set(.075, .06, .075);
+          node.position.set(x, h * k / 4, z);
+          g.add(node);
+        }
+        for (let k = 0; k < 3; k++) {
+          const leaf = new THREE.Mesh(GEO.plane(), leafMat);
+          leaf.scale.set(.55, .16, 1);
+          leaf.position.set(x, h - .25 - k * .35, z);
+          leaf.rotation.set(0, ctx.rand() * Math.PI, .35 + ctx.rand() * .3);
+          g.add(leaf);
+        }
+      }
+    },
+    shrub(item, g, ctx) {
+      // 低木: 球を3つ寄せた丸い茂み。春は小さな花が付く
+      const P = ctx.season.palette;
+      const sw = ctx.w / 1.2, sd = ctx.d / .9;
+      const lumps = [[0, .44, 0, .55], [-.36, .36, .14, .42], [.34, .34, -.14, .4]];
+      lumps.forEach(([x, y, z, r]) => {
+        const lump = new THREE.Mesh(GEO.sphere(), ctx.mat(P.shrub));
+        lump.scale.set(r * sw, r * Math.min(sw, sd) * .9, r * sd);
+        lump.position.set(x * sw, y * Math.min(sw, sd) * .9, z * sd);
+        ctx.pick(lump);
+      });
+      if (ctx.season.effects.petals) {
+        for (let i = 0; i < 6; i++) {
+          const bloom = new THREE.Mesh(GEO.sphere(), ctx.mat(P.shrubBloom));
+          bloom.scale.setScalar(.07);
+          const ang = ctx.rand() * Math.PI * 2;
+          bloom.position.set(Math.cos(ang) * .45 * sw, .5 * Math.min(sw, sd) + ctx.rand() * .3, Math.sin(ang) * .4 * sd);
+          g.add(bloom);
+        }
+      }
+    },
+    flowers(item, g, ctx) {
+      // 花: 若草色の下地 + 茎と丸い花(色は季節パレットから順番に)
+      const P = ctx.season.palette;
+      const bed = box(ctx.w, .05, ctx.d, ctx.mat(P.lawn));
+      bed.position.y = .02;
+      ctx.pick(bed);
+      const n = Math.max(4, Math.min(16, Math.round(ctx.w * ctx.d * 7)));
+      const stemMat = ctx.mat(P.bambooLeaf);
+      for (let i = 0; i < n; i++) {
+        const x = (ctx.rand() - .5) * ctx.w * .85, z = (ctx.rand() - .5) * ctx.d * .85;
+        const h = .22 + ctx.rand() * .14;
+        const stem = new THREE.Mesh(GEO.stick(), stemMat);
+        stem.scale.set(.018, h, .018);
+        stem.position.set(x, .05 + h / 2, z);
+        g.add(stem);
+        const head = new THREE.Mesh(GEO.sphere(), ctx.mat(P.flowers[i % P.flowers.length]));
+        head.scale.set(.085, .07, .085);
+        head.position.set(x, .05 + h, z);
+        g.add(head);
+      }
     },
     tansu(item, g, ctx) {
       // 箪笥: 木箱 + 引き出しの筋 + 金具
@@ -1479,7 +1965,9 @@
     const ctx = {
       w: item.size.x, d: item.size.z, def,
       pick: mesh => tagPickable(mesh, item.id, g),
-      mat: lambert, box
+      mat: cachedMat, box,
+      season: seasonCtx,                 // { key, palette, effects } 季節で色を変える部品はここを見る
+      rand: seededRandom(item.id)        // 配置ごとに固定の乱数(散らばり表現用)
     };
     (PART_RENDERERS[item.type] || PART_RENDERERS.placeholder)(item, g, ctx);
 
@@ -2292,8 +2780,13 @@
   window.addEventListener("resize", resize);
   resize();
 
+  let lastFrame = performance.now();
   function loop() {
     requestAnimationFrame(loop);
+    const now = performance.now();
+    const dt = Math.min(.05, (now - lastFrame) / 1000); // タブ復帰時に花びらが飛びすぎないよう上限
+    lastFrame = now;
+    updateSeasonEffects(dt, now / 1000);
     if (tween) {
       const k = Math.min(1, (performance.now() - tween.start) / tween.dur);
       const e = easeOut(k);
