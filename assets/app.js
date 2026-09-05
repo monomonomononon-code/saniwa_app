@@ -1,4 +1,7 @@
 (function(){
+  // バックアップ復元の予約があれば、どの画面より先に localStorage へ反映する(assets/storage-registry.js)
+  try { window.SaniwaStorage && window.SaniwaStorage.applyPendingImport(); } catch (e) {}
+
   const root = document.getElementById("app");
 
   const homeView = document.createElement("div");
@@ -116,7 +119,7 @@
     { label: "経験値計算", glyph: "戦", color: "var(--gold)", action: () => showView("expcalc-view") },
     { label: "日報", glyph: "記", color: "#70536B", action: () => showView("journal-view") },
     { label: "本丸設定",       glyph: "本", color: "var(--tag-border)", disabled: true },
-    { label: "設定",           glyph: "設", color: "var(--tag-border)", disabled: true }
+    { label: "設定・バックアップ", glyph: "設", color: "var(--indigo)", action: () => showView("backup-view") }
   ];
   const menuList = document.getElementById("menu-list");
   MENU_ITEMS.forEach(item => {
@@ -225,6 +228,9 @@
   const journalSub = makeSubView("journal-view", "日報");
   journalSub.iframe.title = "日報・日誌";
   let journalLoaded = false;
+  const backupSub = makeSubView("backup-view", "設定・バックアップ");
+  backupSub.iframe.title = "設定・バックアップ";
+  let backupLoaded = false;
 
   let roomsMenuLoaded = false, roomsLoaded = false, honmaru3dLoaded = false;
   let networkLoaded = false, masterLoaded = false, expcalcLoaded = false;
@@ -251,6 +257,18 @@
     } catch (e) {}
   }
   window.addEventListener("pagehide", saveAppState);
+
+  // バックアップ書き出しの直前に呼ばれる。各画面が pagehide で行う保存を、その場で実行させる
+  // (各画面はメモリ上の状態を pagehide でしか保存しないものがあるため)
+  window.saniwaFlushState = () => {
+    saveAppState();
+    [roomsSub, networkSub, masterSub, honmaru3dSub].forEach(sub => {
+      try {
+        const w = sub.iframe.contentWindow;
+        if (w && sub.iframe.src) w.dispatchEvent(new Event("pagehide"));
+      } catch (e) {}
+    });
+  };
 
   function broadcastCharacters() {
     [roomsSub, honmaru3dSub, networkSub, masterSub, expcalcSub].forEach(sub => {
@@ -411,6 +429,11 @@
     if (id === "journal-view" && !journalLoaded) {
       journalSub.iframe.src = "pages/journal.html";
       journalLoaded = true;
+    }
+    if (id === "backup-view") {
+      // 開くたびに読み直し、最新の保存状況を表示する
+      backupSub.iframe.src = "pages/backup.html?v=1&t=" + Date.now();
+      backupLoaded = true;
     }
     if (id === "rooms-view" && !roomsLoaded) {
       roomsSub.iframe.src = "pages/rooms.html";
