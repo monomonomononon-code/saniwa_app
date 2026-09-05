@@ -135,6 +135,34 @@
   .hud-time button.active { background: var(--indigo); border-color: var(--indigo); }
   .hud-season button.active { background: var(--hanko); border-color: var(--hanko); }
   .hud-time button:disabled { opacity: .38; cursor: default; }
+  .hud-toggles { display: flex; gap: 6px; }
+  #btn-room-labels.active { background: var(--indigo); border-color: var(--indigo); color: #FBF6EA; }
+  #btn-screenshot.active { background: var(--hanko); border-color: var(--hanko); color: #FBF6EA; }
+
+  /* ---- スクショ用表示: 3D景観だけを見せる。解除ボタンだけは常に残す ---- */
+  .exit-screenshot {
+    display: none;
+    position: absolute;
+    z-index: 60;
+    top: 10px;
+    left: 10px;
+    background: rgba(43,38,33,0.55);
+    color: #FBF6EA;
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: 999px;
+    padding: 7px 13px;
+    font-size: 11.5px;
+    font-family: inherit;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  #app.screenshot .exit-screenshot { display: inline-block; }
+  #app.screenshot .topbar,
+  #app.screenshot .hud,
+  #app.screenshot .hint,
+  #app.screenshot .edit-panel,
+  #app.screenshot .info-panel {
+    display: none !important;
+  }
 
   .hint {
     position: absolute;
@@ -479,7 +507,7 @@
     .info-panel { left: 6px; right: 6px; bottom: 6px; max-height: 52%; }
     #app.editing .info-panel {
       bottom: calc(var(--dock-h) + 12px);
-      max-height: calc(100% - var(--dock-h) - 226px); /* HUD(右上のボタン群: 3ボタン + 時間帯 + 季節)と重ならない高さ */
+      max-height: calc(100% - var(--dock-h) - 262px); /* HUD(右上のボタン群: 3ボタン + 時間帯 + 季節 + 表示切替2つ)と重ならない高さ */
     }
   }
 </style>
@@ -754,6 +782,10 @@
   let buildingState = loadBuildingState();
   environment.time = buildingState.timeMode;
   environment.season = buildingState.seasonMode;
+  // 部屋名ラベルの表示/非表示。時間帯・季節と同じく「端末の表示設定」として同じJSONに同居させる
+  // (新しい保存キーを増やさない)。スクショ用表示はここには含めず、再読み込みで必ず解除される。
+  let roomLabelsVisible = buildingState.roomLabelsVisible !== false;
+  let screenshotMode = false;
 
   function defaultBuildingState() {
     return {
@@ -762,7 +794,8 @@
       roomLayouts: {},
       buildingObjects: [],
       timeMode: "noon",
-      seasonMode: DEFAULT_SEASON
+      seasonMode: DEFAULT_SEASON,
+      roomLabelsVisible: true
     };
   }
   function finiteNumber(value, fallback) {
@@ -821,7 +854,8 @@
       const timeMode = TIME_PRESETS[saved.timeMode] ? saved.timeMode : "noon";
       // 未実装の季節が保存されていても春に戻す(季節を後から足しても壊れない)
       const seasonMode = SEASON_PRESETS[saved.seasonMode] && SEASON_PRESETS[saved.seasonMode].available ? saved.seasonMode : DEFAULT_SEASON;
-      return { version: STATE_VERSION, wings, roomLayouts, buildingObjects, timeMode, seasonMode };
+      const roomLabelsVisible = saved.roomLabelsVisible !== false; // 欠落(旧データ)は表示扱い
+      return { version: STATE_VERSION, wings, roomLayouts, buildingObjects, timeMode, seasonMode, roomLabelsVisible };
     } catch (e) {
       return fallback;
     }
@@ -831,6 +865,7 @@
       buildingState.version = STATE_VERSION;
       buildingState.timeMode = environment.time;
       buildingState.seasonMode = environment.season;
+      buildingState.roomLabelsVisible = roomLabelsVisible;
       localStorage.setItem(BUILD_STORAGE_KEY, JSON.stringify(buildingState));
       buildDirty = false;
       updateSaveStatus(showFeedback ? "保存しました" : "保存済み");
@@ -917,7 +952,12 @@
       <button id="btn-top">真上から</button>
       <div class="hud-time" id="hud-time" role="group" aria-label="時間帯"></div>
       <div class="hud-time hud-season" id="hud-season" role="group" aria-label="季節"></div>
+      <div class="hud-toggles">
+        <button id="btn-room-labels">部屋名を消す</button>
+        <button id="btn-screenshot">スクショ用表示</button>
+      </div>
     </div>
+    <button id="btn-exit-screenshot" class="exit-screenshot" type="button">表示を戻す</button>
     <div class="hint" id="hint">ドラッグで回転 / ピンチでズーム / 2本指でパン</div>
     <div class="info-panel" id="info-panel"></div>
     <div class="edit-panel" id="edit-panel">
@@ -1643,6 +1683,7 @@
       if (!stillThere) selected = null;
     }
     applySelection();
+    updateLabelVisibility(); // rebuild は毎回スプライトを作り直すので、表示状態をここで適用し直す
     if (editMode) renderWingEditor();
   }
 
@@ -2933,15 +2974,8 @@
       lod: isMobileLayout() ? 0 : 1      // 0 = スマホ(飾りを間引いて描画数を減らす)
     };
     (PART_RENDERERS[item.type] || PART_RENDERERS.placeholder)(item, g, ctx);
-
-    const label = makeLabelSprite(item.name, {
-      font: MINCHO, weight: "600", fontSize: 30, worldHeight: .48,
-      bg: "#FFFDF6", border: def.labelBorder || "#7A4B32"
-    });
-    label.position.set(0, def.labelY != null ? def.labelY : .55, 0);
-    label.userData = { kind: "structure", id: item.id };
-    g.add(label);
-    pickables.push(label);
+    // 建築・景観パーツの名札は3D空間には常時表示しない(選択時の名称は
+    // 情報パネル側 renderStructurePanel が item.name から表示する)。
     return g;
   }
 
@@ -3439,6 +3473,52 @@
   }
 
   // =====================================================================
+  //  ラベル表示・スクショ用表示
+  //  景観・建築パーツの名札はそもそも作らない(buildStructure側で対応済み)。
+  //  ここは「部屋名」「刀剣男士名」の2種類のラベルだけを、状態に応じて出し分ける。
+  //  表示状態は3通り:
+  //    通常          → 部屋名○ / 刀剣男士名○
+  //    部屋名を消す  → 部屋名✕ / 刀剣男士名○
+  //    スクショ用    → 部屋名✕ / 刀剣男士名✕ (+ 画面上の全UIも非表示)
+  // =====================================================================
+  function updateLabelVisibility() {
+    const hideRoom = screenshotMode || !roomLabelsVisible;
+    const hideChar = screenshotMode;
+    pickables.forEach(o => {
+      if (!o.isSprite) return;
+      if (o.userData.kind === "room") o.visible = !hideRoom;
+      else if (o.userData.kind === "char") o.visible = !hideChar;
+    });
+  }
+  function updateRoomLabelButton() {
+    const btn = document.getElementById("btn-room-labels");
+    if (!btn) return;
+    btn.textContent = roomLabelsVisible ? "部屋名を消す" : "部屋名を表示";
+    btn.classList.toggle("active", !roomLabelsVisible);
+  }
+  function setRoomLabelsVisible(next) {
+    roomLabelsVisible = !!next;
+    saveBuildingState(false); // 時間帯・季節と同じ場所に device 設定として保存
+    updateRoomLabelButton();
+    updateLabelVisibility();
+  }
+  function setScreenshotMode(next) {
+    const on = !!next;
+    if (on === screenshotMode) return;
+    if (on && editMode) setEditMode(false); // 建築編集の枠ごと隠すので、編集自体も終了しておく
+    screenshotMode = on;
+    app.classList.toggle("screenshot", screenshotMode);
+    if (screenshotMode) setSelection(null); // 情報パネルも隠すので選択も解除する
+    updateLabelVisibility();
+    const btn = document.getElementById("btn-screenshot");
+    if (btn) btn.classList.toggle("active", screenshotMode);
+  }
+  document.getElementById("btn-room-labels").onclick = () => setRoomLabelsVisible(!roomLabelsVisible);
+  document.getElementById("btn-screenshot").onclick = () => setScreenshotMode(true);
+  document.getElementById("btn-exit-screenshot").onclick = () => setScreenshotMode(false);
+  updateRoomLabelButton();
+
+  // =====================================================================
   //  追加・編集操作
   // =====================================================================
   function defaultWingForNew() {
@@ -3692,7 +3772,8 @@
 
   function hitAt(cx, cy) {
     updateRay(cx, cy);
-    const hits = raycaster.intersectObjects(pickables, false);
+    // 非表示のラベル(部屋名OFF・スクショ用表示中)は、隠れたまま選択できてしまわないよう除外する
+    const hits = raycaster.intersectObjects(pickables.filter(o => o.visible), false);
     if (!hits.length) return null;
     const ud = hits[0].object.userData;
     return ud && ud.kind ? { kind: ud.kind, id: ud.id } : null;
