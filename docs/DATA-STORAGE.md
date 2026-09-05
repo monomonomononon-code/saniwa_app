@@ -19,7 +19,7 @@
 |---|---|---|---|---|---|---|
 | `saniwa-tool.master.v1` | characters | user | 刀剣男士の台帳(正本) | `Character[]` | `assets/master.js` 17-26行 | 編集モーダルを閉じたとき、新規追加時、セリフ保存時、画面を閉じるとき(pagehide) |
 | `saniwa-tool.rooms.v1` | rooms | user | 部屋割り | `{ unplaced: {id,name}[], rooms: Room[] }` | `assets/rooms.js` 36-45行 | 配置変更・部屋追加のたび(notify)、pagehide |
-| `saniwa-tool.honmaru3d.v1` | buildingObjects | user | 3D 建築(棟・部屋の位置回転・建築パーツ・家具・時間帯) | `{ version:2, wings, roomLayouts, buildingObjects, timeMode }` | `pages/honmaru3d.html` `loadBuildingState` / `saveBuildingState` | 変更のたびに自動保存、保存ボタン、pagehide |
+| `saniwa-tool.honmaru3d.v1` | buildingObjects | user | 3D 建築(棟・部屋の位置回転・建築パーツ・家具・植栽・時間帯・季節) | `{ version:2, wings, roomLayouts, buildingObjects, timeMode, seasonMode }` | `pages/honmaru3d.html` `loadBuildingState` / `saveBuildingState` | 変更のたびに自動保存、保存ボタン、pagehide |
 | `saniwa-tool.network.v1` | relationships | user | 相関図 | `{ tabs: Tab[], activeTabId }` | `assets/network.js` 57-69行 | 関係・配置・タブ操作のたび(notify)、pagehide |
 | `saniwa-tool.report.v1` | journal | user | 日報 | `{ version:2, entries: { "YYYY-MM-DD": Entry } }` | `assets/report-data.js` 108-125行 | 日報の保存ボタン、経験値計算機からの記録追加 |
 | `saniwa-tool.diary.v1` | journal | user | 日誌 | `{ version:1, works: Work[] }` | `assets/diary.js` 15-40行 | 保存ボタン、章やタイトルの確定時 |
@@ -65,6 +65,7 @@
   - `roomLayouts`: 部屋ごとの3D上の位置・回転・所属棟(部屋そのものの正本は `rooms.v1`。ここは「置き方」だけ)
   - `buildingObjects`: 建築パーツ・外構・家具(廊下、屋根、池、箪笥など)。種類ごとの定義は同ファイル内の `PART_DEFS`
   - `timeMode`: 時間帯(朝/昼/夕/夜)。実態は「settings」寄りの情報だが、既存の保存形式を変えないため今はここに同居させている
+  - `seasonMode`: 季節(`spring` / `summer` / `autumn` / `winter`)。現在は `spring` のみ実装。未実装の値や欠落は読み込み時に `spring` へ戻る。定義は同ファイルの `SEASON_PRESETS`。植栽パーツ(sakura / pine / bamboo / shrub / flowers / tree)や庭・池の色はこの値で描き分ける
 - 部屋が削除されても `roomLayouts` に残骸が残る(実害はない)。
 - 家具(tansu / chabudai / futon / sofa)は建築パーツと同じ `buildingObjects` 配列に、`category: "furniture"` として入っている。専用の保存先はない。
 
