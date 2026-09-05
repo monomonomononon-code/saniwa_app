@@ -2,6 +2,9 @@
   "use strict";
   const store = window.SaniwaReportStore;
   if (!store) return;
+  // 年表(timeline.v1)への「史へ記す」連携。assets/storage-registry.js の共通API経由のみで読み書きし、
+  // 日報の内容そのものは複製しない(sourceType:"report", sourceId:日付キー の参照だけを保存する)。
+  const timelineStore = window.SaniwaStorage || null;
 
   const today = new Date();
   let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -197,6 +200,45 @@
     if (!entry.expRecords.length) expWrap.appendChild(element("p", "report-empty-line", "経験値記録なし"));
     entry.expRecords.forEach(record => expWrap.appendChild(renderExpRecord(record, false)));
     addViewSection("経験値計算機からの記録", expWrap);
+
+    if (timelineStore) dayContent.appendChild(renderTimelineToggle(selectedDate));
+  }
+
+  // ---- 年表(史)への登録・解除 ----
+  // sourceType:"report" + sourceId(日付キー) の組を一意なキーとして扱い、重複登録を防ぐ。
+  // 日付キーは report.v1 の entries が本来持つ一意なキーそのものなので、新たなIDを発行しない。
+  function loadTimelineEntries() {
+    const data = timelineStore.load("timeline");
+    return Array.isArray(data && data.entries) ? data.entries : [];
+  }
+  function findTimelineEntryIndex(entries, dateKey) {
+    return entries.findIndex(e => e && e.sourceType === "report" && e.sourceId === dateKey);
+  }
+  function toggleTimelineEntry(dateKey) {
+    const entries = loadTimelineEntries();
+    const idx = findTimelineEntryIndex(entries, dateKey);
+    if (idx === -1) {
+      const now = new Date().toISOString();
+      entries.push({
+        id: store.uid("tl"), date: dateKey, title: "日報", description: "",
+        category: "honmaru", sourceType: "report", sourceId: dateKey,
+        createdAt: now, updatedAt: now
+      });
+    } else {
+      entries.splice(idx, 1);
+    }
+    timelineStore.save("timeline", { version: 1, entries });
+    renderDay();
+  }
+  function renderTimelineToggle(dateKey) {
+    const wrap = element("div", "report-timeline-section");
+    const registered = findTimelineEntryIndex(loadTimelineEntries(), dateKey) !== -1;
+    const btn = element("button", "report-timeline-btn" + (registered ? " active" : ""),
+      registered ? "史に記録済み（外す）" : "史へ記す");
+    btn.type = "button";
+    btn.onclick = () => toggleTimelineEntry(dateKey);
+    wrap.appendChild(btn);
+    return wrap;
   }
 
   function removeButton(action) {
