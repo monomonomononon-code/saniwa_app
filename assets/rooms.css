@@ -169,7 +169,8 @@
     border-radius: 5px;
     font-size: 10.5px;
     padding: 3px 4px;
-    width: 54px;
+    width: auto;
+    max-width: 92px;
     flex-shrink: 0;
   }
 
@@ -182,6 +183,12 @@
   }
   .room-surface.aspect-wide {
     aspect-ratio: 8 / 3;
+  }
+  .room-surface.aspect-big {
+    aspect-ratio: 8 / 5;
+  }
+  .room-surface.aspect-small {
+    aspect-ratio: 4 / 2.4;
   }
   .room-surface.dragover {
     outline: 2px dashed rgba(255,255,255,0.7);
