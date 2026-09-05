@@ -65,7 +65,7 @@
   - `roomLayouts`: 部屋ごとの3D上の位置・回転・所属棟(部屋そのものの正本は `rooms.v1`。ここは「置き方」だけ)
   - `buildingObjects`: 建築パーツ・外構・家具(廊下、屋根、池、箪笥など)。種類ごとの定義は同ファイル内の `PART_DEFS`。各パーツの `props` には見た目オプション(`pond.style` = round/stream、`sakura.form` = round/spread/tall、`stone.style` = cluster/steps、`tree.shape` = round/cone)が入る。未知の値や欠落は描画時に既定値へ読み替え、`sakura.form` の旧値(standard / young)も別名として読めるので、古いバックアップでも壊れない
   - `timeMode`: 時間帯(朝/昼/夕/夜)。実態は「settings」寄りの情報だが、既存の保存形式を変えないため今はここに同居させている
-  - `seasonMode`: 季節(`spring` / `summer` / `autumn` / `winter`)。現在は `spring` のみ実装。未実装の値や欠落は読み込み時に `spring` へ戻る。定義は同ファイルの `SEASON_PRESETS`。植栽パーツ(sakura / pine / bamboo / shrub / flowers / tree)や庭・池の色はこの値で描き分ける
+  - `seasonMode`: 季節(`spring` / `summer` / `autumn` / `winter`)。4季節とも実装済み。未知の値や欠落は読み込み時に `spring` へ戻る。定義は同ファイルの `SEASON_PRESETS`。植栽パーツ(sakura / pine / bamboo / shrub / flowers / tree)や庭・池の色はこの値で描き分ける
 - 部屋が削除されても `roomLayouts` に残骸が残る(実害はない)。
 - 家具(tansu / chabudai / futon / sofa)は建築パーツと同じ `buildingObjects` 配列に、`category: "furniture"` として入っている。専用の保存先はない。
 
