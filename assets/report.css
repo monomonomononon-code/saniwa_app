@@ -31,6 +31,19 @@
 .report-day-empty-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--report-purple-soft); color: var(--report-purple); font-family: serif; }
 .report-view-section { padding: 15px 0; border-bottom: 1px solid #DED4C0; }
 .report-view-section:last-child { border-bottom: 0; }
+.report-timeline-section { padding-top: 15px; }
+.report-timeline-btn {
+  min-height: 42px;
+  border: 1px solid var(--report-line);
+  border-radius: 999px;
+  padding: 9px 18px;
+  background: #FFFDF6;
+  color: var(--report-purple);
+  font: inherit;
+  font-size: 13px;
+}
+.report-timeline-btn:active { background: var(--report-purple-soft); }
+.report-timeline-btn.active { background: var(--report-purple); color: #FFFDF6; border-color: var(--report-purple); }
 .report-view-section h3,
 .report-form-section h3 { margin: 0 0 9px; color: var(--report-purple-dark); font: 600 16px/1.4 "Hiragino Mincho ProN", "Yu Mincho", serif; }
 .report-view-list { margin: 0; padding-left: 1.25em; line-height: 1.8; }
