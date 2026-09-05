@@ -6,11 +6,22 @@
 
   let characters = CHAR_NAMES.map((n, i) => ({ id: "c" + i, name: n }));
 
+  // 部屋タイプ定義。3D俯瞰図(honmaru3d.html)の TEMPLATE_META とキーを揃えること。
+  // floor: 汎用SVG床の描き方 / fill: 床色 / line: 目地色 / accent: 敷物などの差し色
   const TEMPLATE_META = {
-    a: { label: "六畳", size: 1, aspectClass: "" },
-    b: { label: "広間", size: 2, aspectClass: "aspect-wide" },
-    c: { label: "洋間", size: 1, aspectClass: "" }
+    a:       { label: "六畳",       size: 1, aspectClass: "" },
+    b:       { label: "広間",       size: 2, aspectClass: "aspect-wide" },
+    c:       { label: "洋間",       size: 1, aspectClass: "" },
+    living:  { label: "居間",       size: 1, aspectClass: "", floor: "tatami", fill: "#A7A97C", line: "#6E7452", accent: "#7C4A2D" },
+    kitchen: { label: "厨",         size: 1, aspectClass: "", floor: "earth",  fill: "#8C8270", line: "#5E564B", accent: "#4F3020" },
+    toilet:  { label: "厠",         size: 1, aspectClass: "aspect-small", floor: "plank", fill: "#B9B09A", line: "#8C8270" },
+    forge:   { label: "鍛刀部屋",   size: 1, aspectClass: "", floor: "earth",  fill: "#6F6258", line: "#4A423B", accent: "#A8382C" },
+    large:   { label: "大型の部屋", size: 2, aspectClass: "aspect-big", floor: "tatami", fill: "#95A077", line: "#59653F" }
   };
+  const TEMPLATE_KEYS = Object.keys(TEMPLATE_META);
+  function templateOptionsHtml() {
+    return TEMPLATE_KEYS.map(key => `<option value="${key}">${TEMPLATE_META[key].label}</option>`).join("");
+  }
 
   const state = {
     unplaced: characters.map(c => ({ id: c.id, name: c.name })),
@@ -113,6 +124,37 @@
     </svg>`
   };
 
+  // 個別SVGを持たない部屋タイプ向けの汎用床。見た目の作り込みは後から TATAMI_SVG に追加すれば差し替わる。
+  function makeGenericFloorSvg(meta) {
+    const fill = meta.fill || "#9AA179";
+    const line = meta.line || "#6E7452";
+    let body = "";
+    if (meta.floor === "tatami") {
+      body = `<g stroke="${line}" stroke-width="2" fill="none" opacity="0.55">
+        <rect x="4" y="4" width="192" height="142"/><rect x="204" y="4" width="192" height="142"/>
+        <rect x="4" y="154" width="192" height="142"/><rect x="204" y="154" width="192" height="142"/></g>`;
+      if (meta.accent) body += `<rect x="150" y="110" width="100" height="80" rx="8" fill="${meta.accent}" opacity="0.35"/>`;
+    } else if (meta.floor === "earth") {
+      body = `<g fill="${line}" opacity="0.25">
+        <circle cx="60" cy="70" r="6"/><circle cx="330" cy="120" r="5"/><circle cx="200" cy="230" r="7"/><circle cx="110" cy="200" r="4"/><circle cx="300" cy="250" r="5"/></g>`;
+      if (meta.accent) body += `<rect x="150" y="100" width="100" height="100" rx="6" fill="${meta.accent}" opacity="0.5"/>`;
+    } else {
+      body = `<g stroke="${line}" stroke-width="1" opacity="0.45">` +
+        [50, 100, 150, 200, 250, 300, 350].map(x => `<line x1="${x}" y1="0" x2="${x}" y2="300"/>`).join("") + `</g>`;
+    }
+    return `<svg viewBox="0 0 400 300" preserveAspectRatio="none">
+      <rect width="400" height="300" fill="${fill}"/>${body}
+      <rect x="0" y="0" width="400" height="10" fill="#5C3722" opacity="0.5"/>
+      <rect x="0" y="0" width="10" height="300" fill="#5C3722" opacity="0.3"/>
+      <rect x="150" y="0" width="55" height="10" fill="#D9CBA3" opacity="0.9"/>
+    </svg>`;
+  }
+  function floorSvgOf(template) {
+    if (TATAMI_SVG[template]) return TATAMI_SVG[template];
+    const meta = TEMPLATE_META[template];
+    return meta ? makeGenericFloorSvg(meta) : TATAMI_SVG.a;
+  }
+
   let dragging = null; // { charId, ghostEl }
   let openProfileId = null;
   let addRoomOpen = false;
@@ -125,9 +167,23 @@
     } catch (e) { /* 単体表示の場合は何もしない */ }
   }
 
+  // 3D俯瞰図(建築エディタ)からの部屋追加。部屋データの正本はこのページなので、ここで追加して同期し直す。
+  function addRoomFromTemplate(template, name, note) {
+    const meta = TEMPLATE_META[template] || TEMPLATE_META.a;
+    const key = TEMPLATE_META[template] ? template : "a";
+    const finalName = (name || "").trim() || meta.label;
+    const room = { id: "r" + Date.now() + Math.random().toString(16).slice(2, 6), name: finalName, template: key, note: (note || "").trim(), occupants: [] };
+    state.rooms.push(room);
+    notify(`部屋「${finalName}」(${meta.label})を追加`);
+    render();
+    return room;
+  }
+
   window.addEventListener("message", e => {
     const data = e.data;
-    if (!data || data.type !== "characters_sync" || !Array.isArray(data.characters)) return;
+    if (!data) return;
+    if (data.type === "room_add" && data.template) { addRoomFromTemplate(data.template, data.name, data.note); return; }
+    if (data.type !== "characters_sync" || !Array.isArray(data.characters)) return;
     data.characters.forEach(sc => {
       let c = characters.find(x => x.id === sc.id);
       if (!c) {
@@ -224,11 +280,11 @@
 
     const typeRow = document.createElement("div");
     typeRow.className = "type-picker";
-    [["a","六畳"],["b","広間"],["c","洋間"]].forEach(([val, label]) => {
+    TEMPLATE_KEYS.forEach(val => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "type-btn" + (addRoomDraft.template === val ? " active" : "");
-      btn.textContent = label;
+      btn.textContent = TEMPLATE_META[val].label;
       btn.onclick = () => { addRoomDraft.template = val; render(); };
       typeRow.appendChild(btn);
     });
@@ -343,8 +399,8 @@
     nameInput.oninput = e => { room.name = e.target.value; syncRooms(); };
     const tplSelect = document.createElement("select");
     tplSelect.className = "room-template-select";
-    tplSelect.innerHTML = `<option value="a">六畳</option><option value="b">広間</option><option value="c">洋間</option>`;
-    tplSelect.value = room.template;
+    tplSelect.innerHTML = templateOptionsHtml();
+    tplSelect.value = TEMPLATE_META[room.template] ? room.template : "a";
     tplSelect.onchange = e => { room.template = e.target.value; render(); };
     head.appendChild(nameInput);
     head.appendChild(tplSelect);
@@ -361,7 +417,7 @@
     surface.className = "room-surface" + (meta.aspectClass ? " " + meta.aspectClass : "");
     surface.dataset.dropzone = "room";
     surface.dataset.roomId = room.id;
-    surface.innerHTML = TATAMI_SVG[room.template] || TATAMI_SVG.a;
+    surface.innerHTML = floorSvgOf(room.template);
 
     room.occupants.forEach(o => {
       const tag = document.createElement("div");
