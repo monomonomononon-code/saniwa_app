@@ -118,6 +118,7 @@
     { label: "刀剣男士", glyph: "刀", color: "var(--moss)", action: () => showView("master-view") },
     { label: "経験値計算", glyph: "戦", color: "var(--gold)", action: () => showView("expcalc-view") },
     { label: "日報", glyph: "記", color: "#70536B", action: () => showView("journal-view") },
+    { label: "計画表", glyph: "計", color: "var(--teal)", action: () => showView("schedule-view") },
     { label: "本丸設定",       glyph: "本", color: "var(--tag-border)", disabled: true },
     { label: "設定・バックアップ", glyph: "設", color: "var(--indigo)", action: () => showView("backup-view") }
   ];
@@ -231,6 +232,9 @@
   const backupSub = makeSubView("backup-view", "設定・バックアップ");
   backupSub.iframe.title = "設定・バックアップ";
   let backupLoaded = false;
+  const scheduleSub = makeSubView("schedule-view", "計画表");
+  scheduleSub.iframe.title = "計画表";
+  let scheduleLoaded = false;
 
   let roomsMenuLoaded = false, roomsLoaded = false, honmaru3dLoaded = false;
   let networkLoaded = false, masterLoaded = false, expcalcLoaded = false;
@@ -434,6 +438,10 @@
       // 開くたびに読み直し、最新の保存状況を表示する
       backupSub.iframe.src = "pages/backup.html?v=1&t=" + Date.now();
       backupLoaded = true;
+    }
+    if (id === "schedule-view" && !scheduleLoaded) {
+      scheduleSub.iframe.src = "pages/schedule.html";
+      scheduleLoaded = true;
     }
     if (id === "rooms-view" && !roomsLoaded) {
       roomsSub.iframe.src = "pages/rooms.html";
