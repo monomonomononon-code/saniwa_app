@@ -58,6 +58,10 @@
         <div class="app-icon-glyph schedule">計</div>
         <div class="app-icon-label">計画表</div>
       </button>
+      <button class="app-icon-btn" id="open-timeline">
+        <div class="app-icon-glyph timeline">史</div>
+        <div class="app-icon-label">年表</div>
+      </button>
       <button class="app-icon-btn soon" id="open-honmaru">
         <div class="app-icon-glyph soon">本</div>
         <div class="app-icon-label">本丸設定</div>
@@ -123,6 +127,7 @@
     { label: "経験値計算", glyph: "戦", color: "var(--gold)", action: () => showView("expcalc-view") },
     { label: "日報", glyph: "記", color: "#70536B", action: () => showView("journal-view") },
     { label: "計画表", glyph: "計", color: "var(--teal)", action: () => showView("schedule-view") },
+    { label: "年表", glyph: "史", color: "var(--kurenai)", action: () => showView("timeline-view") },
     { label: "本丸設定",       glyph: "本", color: "var(--tag-border)", disabled: true },
     { label: "設定・バックアップ", glyph: "設", color: "var(--indigo)", action: () => showView("backup-view") }
   ];
@@ -239,6 +244,8 @@
   const scheduleSub = makeSubView("schedule-view", "計画表");
   scheduleSub.iframe.title = "計画表";
   let scheduleLoaded = false;
+  const timelineSub = makeSubView("timeline-view", "年表");
+  timelineSub.iframe.title = "年表";
 
   let roomsMenuLoaded = false, roomsLoaded = false, honmaru3dLoaded = false;
   let networkLoaded = false, masterLoaded = false, expcalcLoaded = false;
@@ -359,6 +366,11 @@
       }
       return;
     }
+    if (data.source === "timeline" && e.source === timelineSub.iframe.contentWindow) {
+      // 顕現イベント(参照専用)から「刀剣男士ページを開く」を押したときだけ使う
+      if (data.type === "open_character_list") showView("master-view");
+      return;
+    }
     if (data.source !== "rooms" && data.source !== "network" && data.source !== "master" && data.source !== "expcalc") return;
     if (data.source === "rooms" && e.source !== roomsSub.iframe.contentWindow) return;
     if (data.source === "network" && e.source !== networkSub.iframe.contentWindow) return;
@@ -447,6 +459,10 @@
       scheduleSub.iframe.src = "pages/schedule.html";
       scheduleLoaded = true;
     }
+    if (id === "timeline-view") {
+      // 刀剣男士の顕現年月日は master.v1 が正本。開くたびに読み直して最新の状態を反映する
+      timelineSub.iframe.src = "pages/timeline.html?t=" + Date.now();
+    }
     if (id === "rooms-view" && !roomsLoaded) {
       roomsSub.iframe.src = "pages/rooms.html";
       roomsLoaded = true;
@@ -483,5 +499,6 @@
   document.getElementById("open-expcalc").onclick = () => showView("expcalc-view");
   document.getElementById("open-journal").onclick = () => showView("journal-view");
   document.getElementById("open-schedule").onclick = () => showView("schedule-view");
+  document.getElementById("open-timeline").onclick = () => showView("timeline-view");
 })();
 
