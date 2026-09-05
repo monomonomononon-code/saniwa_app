@@ -1,0 +1,307 @@
+[hidden] { display: none !important; }
+#app {
+    --paper: #F2EBDD;
+    --paper-deep: #E8DFC9;
+    --wood: #7A4B32;
+    --wood-dark: #5C3722;
+    --hanko: #A8382C;
+    --hanko-soft: #C97B6D;
+    --teal: #2F6B5E;
+    --teal-dark: #204B41;
+    --ink: #2B2621;
+    --ink-soft: #5C544A;
+    --tag-bg: #FFFDF6;
+    --tag-border: #C9BFA6;
+
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100vh;
+    padding: 20px 14px 60px;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app * { box-sizing: border-box; }
+  #app button { font-family: inherit; cursor: pointer; }
+
+  .header { margin-bottom: 16px; }
+  .header h1 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .header h1 .seal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    background: var(--teal);
+    color: #fff;
+    font-size: 12px;
+    font-family: "Hiragino Mincho ProN", serif;
+    flex-shrink: 0;
+  }
+  .header p { margin: 0; font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
+
+  /* ---- 月の切り替え ---- */
+  .sched-month-nav {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .sched-month-nav > button {
+    width: 44px; height: 40px;
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    background: var(--tag-bg);
+    color: var(--teal);
+    font-size: 24px;
+    line-height: 1;
+  }
+  .sched-month-nav > button:active { background: var(--paper-deep); }
+  .sched-month-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .sched-month-mid h2 {
+    margin: 0;
+    font: 600 19px/1.3 "Hiragino Mincho ProN", "Yu Mincho", serif;
+    letter-spacing: .06em;
+  }
+  #sched-today {
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    background: var(--tag-bg);
+    color: var(--ink-soft);
+    font-size: 11px;
+    padding: 3px 12px;
+  }
+  #sched-today:active { background: var(--paper-deep); }
+
+  /* ---- 曜日ヘッダー ---- */
+  .sched-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    margin-bottom: 2px;
+  }
+  .sched-weekdays span {
+    padding: 2px 0 6px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 11px;
+  }
+  .sched-weekdays span:first-child { color: var(--hanko); }
+  .sched-weekdays span:last-child { color: #406987; }
+
+  /* ---- カレンダー本体 ----
+     1週間 = 「日付ボタン」1行 + 「予定バー」最大4段。
+     行番号はJS側で直接指定するため、ここでは行の高さだけ決める。 */
+  .sched-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    row-gap: 2px;
+    column-gap: 2px;
+  }
+  .sched-day {
+    position: relative;
+    min-height: 34px;
+    padding: 4px 2px 3px;
+    border: 0;
+    border-top: 1px solid var(--tag-border);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    text-align: center;
+  }
+  .sched-day-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 13px;
+  }
+  .sched-day:nth-child(7n + 1) .sched-day-num { color: #A33D43; }
+  .sched-day.outside { opacity: .35; }
+  .sched-day.today .sched-day-num { background: var(--teal); color: #FBF6EA; font-weight: 600; }
+  .sched-day.selected { border-top-color: var(--teal); }
+  .sched-day.selected .sched-day-num { box-shadow: inset 0 0 0 2px var(--teal); }
+  .sched-day-more {
+    position: absolute;
+    right: 3px;
+    bottom: 2px;
+    font-size: 9px;
+    color: var(--ink-soft);
+    background: var(--paper-deep);
+    border-radius: 999px;
+    padding: 1px 4px;
+  }
+  .sched-bar {
+    min-height: 18px;
+    padding: 1px 6px;
+    border: none;
+    border-radius: 0;
+    background: var(--sched-color, var(--teal));
+    color: #FBF6EA;
+    font-size: 10.5px;
+    line-height: 16px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sched-bar.cap-start { border-top-left-radius: 6px; border-bottom-left-radius: 6px; margin-left: 1px; }
+  .sched-bar.cap-end { border-top-right-radius: 6px; border-bottom-right-radius: 6px; margin-right: 1px; }
+  .sched-bar:active { filter: brightness(.94); }
+
+  /* ---- その日の予定一覧 ---- */
+  .sched-day-panel {
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid var(--tag-border);
+    border-radius: 14px;
+    background: rgb(255 253 246 / .7);
+  }
+  .sched-day-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--tag-border);
+    margin-bottom: 10px;
+  }
+  .sched-day-panel-head h2 {
+    margin: 0;
+    font: 600 16px/1.4 "Hiragino Mincho ProN", "Yu Mincho", serif;
+  }
+  .sched-add-btn {
+    min-height: 38px;
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 16px;
+    background: var(--teal);
+    color: #FBF6EA;
+    font-size: 12.5px;
+  }
+  .sched-add-btn:active { background: var(--teal-dark); }
+  .sched-day-list { display: grid; gap: 8px; }
+  .sched-day-empty { margin: 6px 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.7; }
+  .sched-day-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid var(--tag-border);
+    border-left: 4px solid var(--sched-color, var(--teal));
+    border-radius: 8px;
+    background: var(--tag-bg);
+    font: inherit;
+    color: var(--ink);
+  }
+  .sched-day-row:active { background: var(--paper-deep); }
+  .sched-day-row-title { font-weight: 600; }
+  .sched-day-row-range,
+  .sched-day-row-progress { font-size: 11px; color: var(--ink-soft); }
+  .sched-day-row-progress { margin-left: auto; }
+
+  /* ---- 予定の追加・編集モーダル ---- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(20,16,12,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 24px;
+  }
+  .modal-card {
+    background: var(--paper);
+    border-radius: 12px;
+    width: 100%; max-width: 360px;
+    max-height: 88vh; overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 20px 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .m-eyebrow { font-size: 11px; color: var(--ink-soft); margin-bottom: 2px; }
+  .modal-card h2 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 20px; margin: 0 0 6px;
+    overflow-wrap: anywhere;
+  }
+  .sched-error { min-height: 1.4em; margin: 0 0 6px; color: var(--hanko); font-size: 12px; }
+  .m-field-label { font-size: 10.5px; color: var(--ink-soft); margin: 10px 0 4px; }
+  .m-input {
+    width: 100%; box-sizing: border-box; min-width: 0;
+    background: #fff; border: 1px solid var(--tag-border);
+    border-radius: 7px; padding: 9px 10px; font-size: 16px;
+    font-family: inherit; color: var(--ink);
+  }
+  .m-input:focus { outline: 1px solid var(--teal); }
+  input[type="date"].m-input {
+    -webkit-appearance: none; appearance: none;
+    display: block; width: 100%; min-height: 38px; line-height: 1.3;
+  }
+  .sched-date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .m-textarea {
+    width: 100%; background: #fff; border: 1px solid var(--tag-border);
+    border-radius: 7px; padding: 9px 10px; font-size: 16px;
+    font-family: inherit; color: var(--ink);
+    min-height: 70px; resize: vertical;
+  }
+
+  .sched-todo-list { display: grid; gap: 6px; }
+  .sched-todo-empty { margin: 2px 0; color: var(--ink-soft); font-size: 12px; }
+  .sched-todo-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px;
+    border: 1px solid var(--tag-border);
+    border-radius: 7px;
+    background: #fff;
+  }
+  .sched-todo-row input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--teal); }
+  .sched-todo-text { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
+  .sched-todo-row.done .sched-todo-text { color: var(--ink-soft); text-decoration: line-through; }
+  .sched-todo-del { flex-shrink: 0; background: transparent; border: none; color: var(--hanko); font-size: 17px; line-height: 1; padding: 2px 4px; }
+  .sched-todo-add-row { display: flex; gap: 6px; margin-top: 6px; }
+  .sched-todo-add-row .m-input { flex: 1; }
+  .sched-todo-add-row button {
+    flex-shrink: 0;
+    border: 1px dashed var(--tag-border);
+    border-radius: 7px;
+    background: var(--paper-deep);
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 0 12px;
+  }
+
+  .modal-close {
+    width: 100%; background: var(--teal); color: #FBF6EA; border: none;
+    border-radius: 8px; padding: 11px; font-size: 13px; font-family: inherit; margin-top: 16px;
+  }
+  .modal-close:active { background: var(--teal-dark); }
+  .modal-danger {
+    width: 100%; background: transparent; color: var(--hanko); border: 1px solid var(--hanko-soft);
+    border-radius: 8px; padding: 9px; font-size: 12px; font-family: inherit; margin-top: 8px;
+  }
+  .modal-cancel {
+    width: 100%; background: transparent; color: var(--ink-soft); border: none;
+    padding: 8px; font-size: 12.5px; font-family: inherit; margin-top: 4px;
+  }
+
+  @media (max-width: 380px) {
+    .sched-day-num { width: 21px; height: 21px; font-size: 12px; }
+    .sched-bar { font-size: 9.5px; line-height: 14px; }
+    .sched-date-row { grid-template-columns: 1fr; gap: 0; }
+  }
