@@ -110,7 +110,7 @@
   root.appendChild(menuPanel);
 
   const MENU_ITEMS = [
-    { label: "部屋割り", glyph: "丸", color: "var(--wood)", action: () => showView("rooms-view") },
+    { label: "部屋割り", glyph: "丸", color: "var(--wood)", action: () => showView("rooms-category-view") },
     { label: "相関図",   glyph: "縁", color: "var(--hanko)", action: () => showView("network-view") },
     { label: "刀剣男士", glyph: "刀", color: "var(--moss)", action: () => showView("master-view") },
     { label: "経験値計算", glyph: "戦", color: "var(--gold)", action: () => showView("expcalc-view") },
@@ -191,7 +191,8 @@
   document.getElementById("banner-next").onclick = () => { goToSlide(bannerIndex + 1); resetTimer(); };
   resetTimer();
 
-  function makeSubView(id, title) {
+  function makeSubView(id, title, options) {
+    options = options || {};
     const view = document.createElement("div");
     view.className = "view";
     view.id = id;
@@ -199,8 +200,8 @@
     topbar.className = "sub-topbar";
     const backBtn = document.createElement("button");
     backBtn.className = "back-btn";
-    backBtn.textContent = "← ホーム";
-    backBtn.onclick = () => showView("home-view");
+    backBtn.textContent = options.backLabel || "← ホーム";
+    backBtn.onclick = () => showView(options.backView || "home-view");
     topbar.appendChild(backBtn);
     const frameWrap = document.createElement("div");
     frameWrap.className = "sub-frame-wrap";
@@ -212,7 +213,12 @@
     return { view, iframe };
   }
 
-  const roomsSub = makeSubView("rooms-view", "部屋割り");
+  const roomsMenuSub = makeSubView("rooms-category-view", "部屋割り");
+  roomsMenuSub.iframe.title = "部屋割りメニュー";
+  const roomsSub = makeSubView("rooms-view", "男士の配置", { backLabel: "← 部屋割り", backView: "rooms-category-view" });
+  roomsSub.iframe.title = "男士の配置";
+  const honmaru3dSub = makeSubView("honmaru3d-view", "見取り図（3D）", { backLabel: "← 部屋割り", backView: "rooms-category-view" });
+  honmaru3dSub.iframe.title = "本丸 見取り図（3D）";
   const networkSub = makeSubView("network-view", "相関図");
   const masterSub = makeSubView("master-view", "刀剣男士");
   const expcalcSub = makeSubView("expcalc-view", "経験値計算");
@@ -220,8 +226,10 @@
   journalSub.iframe.title = "日報・日誌";
   let journalLoaded = false;
 
-  let roomsLoaded = false, networkLoaded = false, masterLoaded = false, expcalcLoaded = false;
+  let roomsMenuLoaded = false, roomsLoaded = false, honmaru3dLoaded = false;
+  let networkLoaded = false, masterLoaded = false, expcalcLoaded = false;
   let activityLog = [];
+  let sharedRooms = { rooms: [], unplaced: [] };
 
   const SHARED_CHAR_NAMES = [
     "山姥切国広","歌仙兼定","加州清光","陸奥守吉行","蜂須賀虎徹",
@@ -245,13 +253,20 @@
   window.addEventListener("pagehide", saveAppState);
 
   function broadcastCharacters() {
-    [roomsSub, networkSub, masterSub, expcalcSub].forEach(sub => {
+    [roomsSub, honmaru3dSub, networkSub, masterSub, expcalcSub].forEach(sub => {
       try {
         sub.iframe.contentWindow && sub.iframe.contentWindow.postMessage(
           { type: "characters_sync", characters: sharedCharacters }, "*"
         );
       } catch (e) {}
     });
+  }
+  function sendRoomsToHonmaru3d() {
+    try {
+      honmaru3dSub.iframe.contentWindow && honmaru3dSub.iframe.contentWindow.postMessage(
+        { type: "rooms_sync", rooms: sharedRooms.rooms, unplaced: sharedRooms.unplaced }, "*"
+      );
+    } catch (e) {}
   }
   // Read-only snapshots: references never mutate the source pages or storage.
   window.readSaniwaReferences = () => ({
@@ -298,9 +313,34 @@
   window.addEventListener("message", e => {
     const data = e.data;
     if (!data || !data.source) return;
+    if (data.source === "roomsMenu" && e.source === roomsMenuSub.iframe.contentWindow) {
+      if (data.type === "open_rooms_editor") showView("rooms-view");
+      if (data.type === "open_honmaru3d") showView("honmaru3d-view");
+      return;
+    }
+    if (data.source === "honmaru3d" && e.source === honmaru3dSub.iframe.contentWindow) {
+      if (data.type === "ready") {
+        e.source.postMessage({ type: "characters_sync", characters: sharedCharacters }, "*");
+        sendRoomsToHonmaru3d();
+      }
+      return;
+    }
     if (data.source !== "rooms" && data.source !== "network" && data.source !== "master" && data.source !== "expcalc") return;
+    if (data.source === "rooms" && e.source !== roomsSub.iframe.contentWindow) return;
+    if (data.source === "network" && e.source !== networkSub.iframe.contentWindow) return;
+    if (data.source === "master" && e.source !== masterSub.iframe.contentWindow) return;
+    if (data.source === "expcalc" && e.source !== expcalcSub.iframe.contentWindow) return;
     if (data.source === "expcalc" && data.type === "open_character_list" && e.source === expcalcSub.iframe.contentWindow) {
       showView("master-view");
+      return;
+    }
+
+    if (data.source === "rooms" && data.type === "rooms_sync" && Array.isArray(data.rooms)) {
+      sharedRooms = {
+        rooms: JSON.parse(JSON.stringify(data.rooms)),
+        unplaced: Array.isArray(data.unplaced) ? JSON.parse(JSON.stringify(data.unplaced)) : []
+      };
+      sendRoomsToHonmaru3d();
       return;
     }
 
@@ -356,6 +396,10 @@
   function showView(id) {
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(id).classList.add("active");
+    if (id === "rooms-category-view" && !roomsMenuLoaded) {
+      roomsMenuSub.iframe.src = "pages/rooms-menu.html";
+      roomsMenuLoaded = true;
+    }
     if (id === "journal-view" && !journalLoaded) {
       journalSub.iframe.src = "pages/journal.html";
       journalLoaded = true;
@@ -363,6 +407,18 @@
     if (id === "rooms-view" && !roomsLoaded) {
       roomsSub.iframe.src = "pages/rooms.html";
       roomsLoaded = true;
+    }
+    if (id === "honmaru3d-view") {
+      if (!roomsLoaded) {
+        roomsSub.iframe.src = "pages/rooms.html";
+        roomsLoaded = true;
+      }
+      if (!honmaru3dLoaded) {
+        honmaru3dSub.iframe.src = "pages/honmaru3d.html";
+        honmaru3dLoaded = true;
+      } else {
+        sendRoomsToHonmaru3d();
+      }
     }
     if (id === "network-view" && !networkLoaded) {
       networkSub.iframe.src = "pages/network.html";
@@ -378,7 +434,7 @@
     }
   }
 
-  document.getElementById("open-rooms").onclick = () => showView("rooms-view");
+  document.getElementById("open-rooms").onclick = () => showView("rooms-category-view");
   document.getElementById("open-network").onclick = () => showView("network-view");
   document.getElementById("open-master").onclick = () => showView("master-view");
   document.getElementById("open-expcalc").onclick = () => showView("expcalc-view");
