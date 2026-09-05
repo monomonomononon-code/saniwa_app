@@ -24,8 +24,16 @@
     const list = $("store-list");
     list.replaceChildren();
     let total = 0;
+    let currentDomain = null;
     store.inspect().forEach(item => {
       total += item.bytes;
+      if (item.domain !== currentDomain) {
+        currentDomain = item.domain;
+        const heading = document.createElement("div");
+        heading.className = "store-domain";
+        heading.textContent = store.DOMAIN_LABELS[currentDomain] || currentDomain || "その他";
+        list.appendChild(heading);
+      }
       const row = document.createElement("div");
       row.className = "store-row" + (item.present ? "" : " empty") + (item.broken ? " broken" : "");
       const label = document.createElement("span"); label.className = "label"; label.textContent = item.label;
