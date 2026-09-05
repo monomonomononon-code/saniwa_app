@@ -24,6 +24,7 @@
 | `saniwa-tool.report.v1` | journal | user | 日報 | `{ version:2, entries: { "YYYY-MM-DD": Entry } }` | `assets/report-data.js` 108-125行 | 日報の保存ボタン、経験値計算機からの記録追加 |
 | `saniwa-tool.diary.v1` | journal | user | 日誌 | `{ version:1, works: Work[] }` | `assets/diary.js` 15-40行 | 保存ボタン、章やタイトルの確定時 |
 | `saniwa-tool.schedule.v1` | schedule | user | 予定(開始日〜終了日・メモ・ToDo) | `{ version:1, events: Event[] }` | `assets/schedule.js`(`storage-registry.js` の `load`/`save` 経由のみ、直接の localStorage 操作なし) | 追加・編集・削除フォームの保存/削除ボタン |
+| `saniwa-tool.timeline.v1` | timeline | user | 手動で追加した年表項目のみ(顕現イベントは含まない) | `{ version:1, entries: Entry[] }` | `assets/timeline.js`(`storage-registry.js` の `load`/`save` 経由のみ、直接の localStorage 操作なし) | 追加・編集・削除フォームの保存/削除ボタン |
 | `saniwa-tool.app.v1` | home | device | ホームの更新履歴、共有キャラ一覧(写し) | `{ activityLog, sharedCharacters }` | `assets/app.js` 243-253行 | キャラ更新受信時、履歴追加時、pagehide |
 | `saniwa-tool.pending-import.v1` | backupMetadata | device | バックアップ復元の予約(次回起動時に反映) | `{ format, version, exportedAt, stagedAt, stores }` | `assets/storage-registry.js` | 復元ボタンを押したとき |
 | `saniwa-tool.snapshot-before-import.v1` | backupMetadata | device | 復元直前の全データの退避(1世代のみ) | バックアップJSONと同じ形 | 同上 | 復元が実際に反映されるとき(`applyPendingImport`) |
@@ -88,6 +89,22 @@
 - ToDo は予定に内包される配列(別ストアには分けていない)。「大阪城」の予定に「山姥切国広をLv199にする」等のToDoが数件ぶら下がる、という関係。
 - `assets/schedule.js` は `assets/storage-registry.js` の `load("schedule")` / `save("schedule", state)` のみを使い、`localStorage` を直接操作しない。新機能がこの窓口だけで実装できる実例。
 
+### timeline(年表)
+
+- **正本**: `timeline.v1`。**手動で追加した出来事だけ**を持つ(`{ version: 1, entries: Entry[] }`)。
+  ```
+  Entry = { id, date, title, description, category, sourceType, sourceId, createdAt, updatedAt }
+  category:   summon(顕現) / event / honmaru / achievement / other
+  sourceType: manual / character / journal / system
+  sourceId:   sourceType が manual 以外のときだけ、元データのidを入れる
+  ```
+- **刀剣男士の顕現イベントは `timeline.v1` に一切保存しない。** `assets/timeline.js` の `characterEntries()` が、表示のたびに `master.v1`(characters ドメイン、正本)を読み直して `sourceType: "character"` の「仮想の項目」をその場で組み立てるだけ。そのため:
+  - 顕現年月日を master.v1 側で変更すれば、年表は次に開いたとき(または再描画したとき)そのまま新しい日付で表示される。二重管理も同期処理も発生しない。
+  - 刀剣男士を削除すれば、対応する仮想項目も自動的に生成されなくなる(年表側に残骸は残らない)。
+  - 同じキャラクターの顕現が2件以上表示される余地がそもそもない(1キャラクターにつき `master.v1` の1レコードから1件しか作られないため)。`allEntries()` はさらに、`timeline.v1` 側に誤って `sourceType:"character"` の項目が保存されていても表示上は無視する保険を持つ。
+  - 仮想項目はクリックすると参照専用のモーダルが開くだけで、編集・削除ボタンは出さない(「刀剣男士ページを開く」から `pages/master.html` 側へ誘導する)。
+- 将来、日誌の1項目を年表へ送る機能を作るときは、`sourceType: "journal"`、`sourceId: <日誌のID>` を持つ**手動追加と同じ形の永続エントリ**を `timeline.v1` に1件足すだけでよい(本文をまるごとコピーせず、タイトル・要約程度を `title`/`description` に入れる想定)。`sourceType: "system"` は、将来アプリ側が自動生成する出来事(例: バージョンアップ記念など)向けの予約。
+
 ### settings(ユーザー設定)
 
 - **専用のキーはまだない**。唯一の設定らしい設定は `honmaru3d.v1.timeMode`(時間帯)で、buildingObjects ドメインのJSONに同居している。
@@ -103,20 +120,14 @@
 - `app.v1` の `activityLog`(更新履歴フィード、最大30件)と `sharedCharacters`(characters ドメインの写し)。
 - ユーザーの本丸データそのものではなく、`scope: "device"` 扱い。将来は `sharedCharacters` の保存自体をやめ、起動時に `master.v1` から作る形にするのが望ましい(§6 参照)。
 
-### 今後追加予定: timeline(年表)
+### 今後追加予定の機能
 
-まだ実装していない機能ですが、同じ仕組みに乗せやすいよう `assets/storage-registry.js` に設計だけ `PLANNED_STORES` として残しています(実際の一覧・バックアップには含まれません)。`schedule`(予定)は本セクション執筆時点では未実装でしたが、その後実装して上の `schedule` ドメインへ昇格しました。実装時にデータ構造が「日付をキーにしたオブジェクト」ではなく「予定1件ごとの配列」に変わった経緯は §8 に補足しています。
+`schedule`(予定)・`timeline`(年表)はどちらも、当初は `assets/storage-registry.js` の `PLANNED_STORES`(設計だけのメモ、実際の一覧・バックアップには含まれない)に置いてから、実装時に上の `STORES` へ1件足す形で昇格させました。`PLANNED_STORES` は現時点では空ですが、同じ手順で次の機能を追加できます。
 
-| id | 想定キー | ドメイン | scope | 想定する形 |
-|---|---|---|---|---|
-| timeline | `saniwa-tool.timeline.v1` | timeline | user | `{ version: 1, entries: [{ id, date, title, body }] }`(日誌と同じ「配列を1つのオブジェクトに入れる」形) |
+1. 新しいキー(例 `saniwa-tool.<name>.v1`)を決め、その機能ページで読み書きする(`assets/storage-registry.js` の `load`/`save` 経由。`localStorage` を直接触らない)。
+2. `assets/storage-registry.js` の `STORES` 配列に、id / key / label / owner / domain / scope / summary を1件足す。
 
-実装するときの手順は次の1本だけです。
-
-1. 新しいキー(例 `saniwa-tool.timeline.v1`)を決め、その機能ページで読み書きする(`assets/storage-registry.js` の `load`/`save` 経由。`localStorage` を直接触らない)。
-2. `assets/storage-registry.js` の `STORES` 配列に、上の表と同じ内容(id / key / label / owner / domain / scope / summary)を1件足す。
-
-これだけで、一覧表示・全データバックアップ・復元のすべてに自動的に乗ります(`STORES` を見ている `inspect` / `exportAll` / `validateBackup` / `applyPendingImport` はどれもこの配列をループしているだけなので)。`assets/schedule.js` がこの手順で実装した最初の実例です。
+これだけで、一覧表示・全データバックアップ・復元のすべてに自動的に乗ります(`STORES` を見ている `inspect` / `exportAll` / `validateBackup` / `applyPendingImport` はどれもこの配列をループしているだけなので)。`assets/schedule.js` と `assets/timeline.js` がこの手順で実装した実例です。
 
 ## 3. 気づいた課題(クラウド化の前に知っておくこと)
 
@@ -148,7 +159,7 @@
     "report":     { "entries": {} },
     "diary":      { "works": [] },
     "schedule":   { "events": [] },
-    "timeline":   { "entries": [] }              // 追加予定
+    "timeline":   { "entries": [] }              // 手動項目のみ。顕現イベントは characters から都度組み立てる
   },
   "deviceState": {                              // 端末ごとに違ってよい(同期しない)
     "network": { "activeTabId": "" },
@@ -235,8 +246,9 @@ window.SaniwaStorage.remove("rooms");           // rooms.v1 を削除
 | `assets/diary.js` | `persist` と起動時読み込み(15-40行) | 同上。保存失敗時の扱い(`blocked`)は維持 |
 | `assets/app.js` | `APP_STORAGE_KEY` 周り(243-253行)、`sharedCharacters` の初期化 | `sharedCharacters` を保存せず master から生成する。`activityLog` は deviceState 側へ |
 | `assets/diary-reference.js` | 15-18行 | 直接 `localStorage.getItem` している部分を窓口経由に |
-| 新規 | `pages/timeline.html`(実装時) | §2 の `PLANNED_STORES` の形で `STORES` に登録。`pages/schedule.html` / `assets/schedule.js` と同じ作り方(窓口経由のみ)にすれば移行不要 |
 | 新規 | 認証・同期モジュール(例: `assets/cloud-sync.js`) | ログイン、ユーザー id の取得、`updatedAt` 比較による同期。Supabase / Firebase はここだけが依存する |
+
+`pages/schedule.html` / `assets/schedule.js` と `pages/timeline.html` / `assets/timeline.js` は、最初から窓口(`load`/`save`)経由だけで作ったので、この移行作業は不要です。次に同じ形で機能を足すときのお手本にしてください。
 
 ### 段階的な進め方(案)
 
@@ -260,9 +272,9 @@ window.SaniwaStorage.remove("rooms");           // rooms.v1 を削除
 | journal(日報) | ○ 同期する | 日付(1エントリ)単位 | 日々の記録なので、過去分を毎回送り直さずに済む。差分同期にも向く |
 | journal(日誌) | ○ 同期する | 作品単位、本文が長い作品は章単位も検討 | 本文量が増えやすいデータなので、最初から分割候補として意識しておく |
 | schedule(予定) | ○ 同期する | 予定1件(`events[]` の要素)単位 | 開始日〜終了日を持つ1件のオブジェクトなので、日付単位に分けると複数日にまたがる予定を分割してしまう。ToDo は予定に内包されるので一緒に同期する |
-| timeline(年表) | ○ 同期する | エントリ単位 | 日報と同様、追記が中心のログ的データ |
+| timeline(年表) | ○ 同期する | 出来事(`entries[]` の要素)単位 | 追記が中心のログ的データ。ただし `sourceType:"character"` の顕現イベントは `timeline.v1` に保存されないため、そもそも同期対象に含まれない(同期時は characters ドメインの `activationDate` を見て、クライアント側で組み立て直す) |
 | settings | △ 同期してもよいが必須ではない | ユーザー設定としてまるごと | 複数端末で見た目を揃えたい場合のみ同期。無くても支障はない |
 | home(activityLog / sharedCharacters) | ✕ 同期しない | 端末ローカル | activityLog は端末ごとのフィードでよく、sharedCharacters は characters の写しなので同期するとむしろ食い違いの原因になる |
 | backupMetadata | ✕ 同期しない | 端末ローカル | バックアップ機能自身の作業状態であり、ユーザーの本丸データではない |
 
-まとめると、**「本丸の中身(characters / rooms / buildingObjects / relationships / journal / schedule / 今後の timeline)」はユーザー単位でクラウドに同期し、「この端末での見え方や作業状態(home / settings / backupMetadata)」は端末ローカルに残す**、という分け方が一番シンプルです。同期の実装自体は次の段階(§7)で着手します。
+まとめると、**「本丸の中身(characters / rooms / buildingObjects / relationships / journal / schedule / timeline)」はユーザー単位でクラウドに同期し、「この端末での見え方や作業状態(home / settings / backupMetadata)」は端末ローカルに残す**、という分け方が一番シンプルです。同期の実装自体は次の段階(§7)で着手します。
