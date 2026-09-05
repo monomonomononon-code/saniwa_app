@@ -100,6 +100,101 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
   }
   .hud button:active { background: var(--paper-deep); }
+  .hud button.active {
+    color: #FBF6EA;
+    background: var(--hanko);
+    border-color: var(--hanko);
+  }
+
+  .edit-panel {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    display: none;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 10px;
+    border: 1px solid var(--tag-border);
+    border-radius: 12px;
+    background: rgba(255, 253, 246, .96);
+    box-shadow: 0 5px 18px rgba(0, 0, 0, .18);
+  }
+  .edit-panel.open { display: block; }
+  .edit-panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 7px;
+    color: var(--ink-soft);
+    font-size: 11px;
+  }
+  .edit-actions {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 3px;
+    scrollbar-width: thin;
+  }
+  .edit-actions button {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 7px 11px;
+    border: 1px solid var(--tag-border);
+    border-radius: 8px;
+    color: var(--ink);
+    background: var(--paper-deep);
+    font: inherit;
+    font-size: 12px;
+  }
+  .edit-actions .save-build { color: #FBF6EA; background: var(--indigo); border-color: var(--indigo); }
+  .wing-editor { display: grid; gap: 6px; margin-top: 8px; }
+  .wing-row { display: flex; gap: 6px; align-items: center; }
+  .wing-row input {
+    min-width: 0;
+    flex: 1;
+    padding: 7px 9px;
+    border: 1px solid var(--tag-border);
+    border-radius: 7px;
+    color: var(--ink);
+    background: #fff;
+    font: inherit;
+    font-size: 12px;
+  }
+  .wing-add {
+    padding: 7px 10px;
+    border: 1px solid var(--tag-border);
+    border-radius: 7px;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    font-size: 12px;
+  }
+  .edit-note { margin-top: 6px; color: var(--ink-soft); font-size: 10px; line-height: 1.45; }
+
+  .ip-select {
+    width: 100%;
+    margin-top: 4px;
+    padding: 8px;
+    border: 1px solid var(--tag-border);
+    border-radius: 7px;
+    color: var(--ink);
+    background: #fff;
+    font: inherit;
+    font-size: 12px;
+  }
+  .ip-mini-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ip-mini-actions button {
+    padding: 7px 9px;
+    border: 1px solid var(--tag-border);
+    border-radius: 7px;
+    color: var(--ink);
+    background: var(--paper-deep);
+    font: inherit;
+    font-size: 11px;
+  }
+  .ip-mini-actions button.danger { color: #FBF6EA; background: var(--hanko); border-color: var(--hanko); }
 
   .hint {
     position: absolute;
@@ -223,6 +318,17 @@
     max-width: 280px;
   }
   .overlay-msg.error .box { border-style: solid; border-color: var(--hanko); color: var(--hanko); }
+  #app.editing .topbar { opacity: .72; }
+  #app.editing .hint { display: none; }
+  #app.editing .info-panel { bottom: 118px; max-height: 45%; }
+  @media (max-width: 540px) {
+    .topbar h1 { font-size: 17px; }
+    .legend { max-width: 62%; }
+    .hud { top: 8px; right: 8px; }
+    .hud button { padding: 6px 9px; }
+    .edit-panel { left: 6px; right: 6px; bottom: max(6px, env(safe-area-inset-bottom)); padding: 8px; }
+    #app.editing .info-panel { bottom: 112px; }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -243,6 +349,13 @@
   };
   const SANS = '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif';
   const MINCHO = '"Hiragino Mincho ProN", "Yu Mincho", serif';
+  const BUILD_STORAGE_KEY = "saniwa-tool.honmaru3d.v1";
+  const STRUCTURE_META = {
+    corridor: { label: "廊下", defaultSize: { x: 5, z: 1.15 } },
+    garden: { label: "庭", defaultSize: { x: 5, z: 4 } },
+    field: { label: "畑", defaultSize: { x: 4.8, z: 3.2 } },
+    stable: { label: "馬小屋", defaultSize: { x: 4, z: 3 } }
+  };
 
   function metaOf(tpl) { return TEMPLATE_META[tpl] || TEMPLATE_META.a; }
   function roomWidth(meta) { return meta.units * UNIT_W + (meta.units - 1) * GAP; }
@@ -251,7 +364,94 @@
   let characters = [];
   let rooms = [];
   let unplaced = [];
-  let selected = null; // { kind: "room" | "char", id }
+  let selected = null; // { kind: "room" | "char" | "structure", id }
+  let editMode = false;
+  let buildDirty = false;
+  let buildingState = loadBuildingState();
+
+  function defaultBuildingState() {
+    return {
+      version: 1,
+      wings: [{ id: "wing-main", name: "主屋" }],
+      roomLayouts: {},
+      buildingObjects: []
+    };
+  }
+  function finiteNumber(value, fallback) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  function normalizePosition(value, fallback) {
+    const f = fallback || { x: 0, y: 0, z: 0 };
+    return {
+      x: finiteNumber(value && value.x, f.x),
+      y: finiteNumber(value && value.y, f.y),
+      z: finiteNumber(value && value.z, f.z)
+    };
+  }
+  function loadBuildingState() {
+    const fallback = defaultBuildingState();
+    try {
+      const saved = JSON.parse(localStorage.getItem(BUILD_STORAGE_KEY));
+      if (!saved || typeof saved !== "object") return fallback;
+      const wings = Array.isArray(saved.wings) && saved.wings.length
+        ? saved.wings.filter(w => w && w.id).map(w => ({ id: String(w.id), name: String(w.name || "名称未設定") }))
+        : fallback.wings;
+      const wingIds = new Set(wings.map(w => w.id));
+      const roomLayouts = {};
+      if (saved.roomLayouts && typeof saved.roomLayouts === "object") {
+        Object.keys(saved.roomLayouts).forEach(id => {
+          const item = saved.roomLayouts[id] || {};
+          roomLayouts[id] = {
+            position: normalizePosition(item.position),
+            rotation: finiteNumber(item.rotation, 0),
+            wingId: wingIds.has(item.wingId) ? item.wingId : wings[0].id
+          };
+        });
+      }
+      const buildingObjects = Array.isArray(saved.buildingObjects)
+        ? saved.buildingObjects.filter(o => o && o.id && STRUCTURE_META[o.type]).map(o => ({
+            id: String(o.id),
+            type: o.type,
+            name: String(o.name || STRUCTURE_META[o.type].label),
+            position: normalizePosition(o.position),
+            rotation: finiteNumber(o.rotation, 0),
+            size: {
+              x: Math.max(.8, finiteNumber(o.size && o.size.x, STRUCTURE_META[o.type].defaultSize.x)),
+              z: Math.max(.8, finiteNumber(o.size && o.size.z, STRUCTURE_META[o.type].defaultSize.z))
+            }
+          }))
+        : [];
+      return { version: 1, wings, roomLayouts, buildingObjects };
+    } catch (e) {
+      return fallback;
+    }
+  }
+  function saveBuildingState(showFeedback) {
+    try {
+      localStorage.setItem(BUILD_STORAGE_KEY, JSON.stringify(buildingState));
+      buildDirty = false;
+      updateSaveStatus(showFeedback ? "保存しました" : "保存済み");
+      return true;
+    } catch (e) {
+      updateSaveStatus("保存できませんでした");
+      return false;
+    }
+  }
+  function updateSaveStatus(text) {
+    const node = document.getElementById("save-status");
+    if (node) node.textContent = text || (buildDirty ? "未保存" : "保存済み");
+  }
+  function markBuildDirty() {
+    buildDirty = true;
+    updateSaveStatus();
+  }
+  function roomLayout(roomId) { return buildingState.roomLayouts[roomId] || null; }
+  function structureOf(id) { return buildingState.buildingObjects.find(o => o.id === id) || null; }
+  function wingName(id) {
+    const wing = buildingState.wings.find(w => w.id === id);
+    return wing ? wing.name : "主屋";
+  }
 
   function nameOf(charId) {
     const c = characters.find(x => x.id === charId);
@@ -294,16 +494,30 @@
       </div>
     </div>
     <div class="hud">
+      <button id="btn-mode">建築編集</button>
       <button id="btn-reset">視点を戻す</button>
       <button id="btn-top">真上から</button>
     </div>
     <div class="hint" id="hint">ドラッグで回転 / ピンチでズーム / 2本指でパン</div>
     <div class="info-panel" id="info-panel"></div>
+    <div class="edit-panel" id="edit-panel">
+      <div class="edit-panel-title"><span>建築パーツを追加</span><span id="save-status">保存済み</span></div>
+      <div class="edit-actions">
+        <button type="button" data-add-structure="corridor">＋ 廊下</button>
+        <button type="button" data-add-structure="garden">＋ 庭</button>
+        <button type="button" data-add-structure="field">＋ 畑</button>
+        <button type="button" data-add-structure="stable">＋ 馬小屋</button>
+        <button type="button" class="save-build" id="btn-save-build">配置を保存</button>
+      </div>
+      <div class="wing-editor" id="wing-editor"></div>
+      <div class="edit-note">部屋や建築パーツをドラッグして移動できます。空いている場所のドラッグは視点操作です。</div>
+    </div>
     <div class="overlay-msg" id="overlay" style="display:none"><div class="box" id="overlay-text"></div></div>
   `;
   const stage = document.getElementById("stage");
   const statsEl = document.getElementById("stats");
   const panelEl = document.getElementById("info-panel");
+  const editPanelEl = document.getElementById("edit-panel");
   const overlayEl = document.getElementById("overlay");
   const overlayText = document.getElementById("overlay-text");
 
@@ -360,6 +574,7 @@
   let honmaruGroup = null;   // 部屋一式
   let highlightGroup = null; // 選択ハイライト
   let pickables = [];        // レイキャスト対象
+  let draggableGroups = new Map();
   let layoutCache = [];      // { room, meta, w, d, x, z }
   let extent = { w: 10, d: 8 };
   const floorTextureCache = {};
@@ -489,12 +704,45 @@
     if (out.length) {
       const maxX = Math.max.apply(null, out.map(o => o.x + o.w / 2));
       const maxZ = Math.max.apply(null, out.map(o => o.z + o.d / 2));
-      out.forEach(o => { o.x -= maxX / 2; o.z -= maxZ / 2; });
-      extent = { w: maxX, d: maxZ };
-    } else {
-      extent = { w: 10, d: 8 };
+      let initialized = false;
+      out.forEach(o => {
+        const autoPosition = { x: o.x - maxX / 2, y: 0, z: o.z - maxZ / 2 };
+        let layout = roomLayout(o.room.id);
+        if (!layout) {
+          layout = {
+            position: autoPosition,
+            rotation: 0,
+            wingId: buildingState.wings[0].id
+          };
+          buildingState.roomLayouts[o.room.id] = layout;
+          initialized = true;
+        }
+        o.x = finiteNumber(layout.position && layout.position.x, autoPosition.x);
+        o.z = finiteNumber(layout.position && layout.position.z, autoPosition.z);
+        o.rotation = finiteNumber(layout.rotation, 0);
+        o.wingId = layout.wingId || buildingState.wings[0].id;
+      });
+      if (initialized) saveBuildingState(false);
     }
+    updateExtent(out);
     return out;
+  }
+
+  function updateExtent(roomItems) {
+    const bounds = [];
+    (roomItems || []).forEach(o => bounds.push({ x: o.x, z: o.z, w: o.w, d: o.d }));
+    buildingState.buildingObjects.forEach(o => bounds.push({
+      x: o.position.x,
+      z: o.position.z,
+      w: o.size.x,
+      d: o.size.z
+    }));
+    if (!bounds.length) { extent = { w: 10, d: 8 }; return; }
+    const minX = Math.min.apply(null, bounds.map(o => o.x - o.w / 2));
+    const maxX = Math.max.apply(null, bounds.map(o => o.x + o.w / 2));
+    const minZ = Math.min.apply(null, bounds.map(o => o.z - o.d / 2));
+    const maxZ = Math.max.apply(null, bounds.map(o => o.z + o.d / 2));
+    extent = { w: Math.max(10, maxX - minX), d: Math.max(8, maxZ - minZ) };
   }
 
   // ---- シーン構築 ----
@@ -532,16 +780,18 @@
     disposeGroup(honmaruGroup);
     honmaruGroup = new THREE.Group();
     pickables = [];
+    draggableGroups = new Map();
     layoutCache = layoutRooms();
 
     layoutCache.forEach(item => honmaruGroup.add(buildRoom(item)));
+    buildingState.buildingObjects.forEach(item => honmaruGroup.add(buildStructure(item)));
     scene.add(honmaruGroup);
 
     // 統計
     const placed = rooms.reduce((n, r) => n + (r.occupants || []).length, 0);
-    statsEl.textContent = `部屋 ${rooms.length}室 / 配置済 ${placed}振り / 配置待ち ${unplaced.length}振り`;
+    statsEl.textContent = `部屋 ${rooms.length}室 / 建築 ${buildingState.buildingObjects.length}件 / 配置済 ${placed}振り`;
 
-    if (rooms.length === 0) {
+    if (rooms.length === 0 && buildingState.buildingObjects.length === 0) {
       showOverlay("まだ部屋がありません。「部屋割り」で部屋を追加すると、ここに立体表示されます。", false);
     } else {
       hideOverlay();
@@ -551,7 +801,9 @@
     if (selected) {
       const stillThere = selected.kind === "room"
         ? rooms.some(r => r.id === selected.id)
-        : !!roomOfChar(selected.id);
+        : selected.kind === "structure"
+          ? !!structureOf(selected.id)
+          : !!roomOfChar(selected.id);
       if (!stillThere) selected = null;
     }
     applySelection();
@@ -561,6 +813,9 @@
     const { room, meta, w, d, x, z } = item;
     const g = new THREE.Group();
     g.position.set(x, 0, z);
+    g.rotation.y = item.rotation || 0;
+    g.userData = { kind: "room", id: room.id };
+    draggableGroups.set(`room:${room.id}`, g);
 
     // 土台(縁側っぽい木の枠)
     const base = new THREE.Mesh(
@@ -650,6 +905,91 @@
     return g;
   }
 
+  function tagPickable(object, id, group) {
+    object.userData = { kind: "structure", id };
+    group.add(object);
+    pickables.push(object);
+  }
+
+  function buildStructure(item) {
+    const g = new THREE.Group();
+    g.position.set(item.position.x, item.position.y || 0, item.position.z);
+    g.rotation.y = item.rotation || 0;
+    g.userData = { kind: "structure", id: item.id };
+    draggableGroups.set(`structure:${item.id}`, g);
+    const w = item.size.x, d = item.size.z;
+
+    if (item.type === "corridor") {
+      const floor = new THREE.Mesh(
+        new THREE.BoxGeometry(w, .16, d),
+        new THREE.MeshLambertMaterial({ color: 0x9A6846 })
+      );
+      floor.position.y = .02;
+      tagPickable(floor, item.id, g);
+      [-d / 2 + .08, d / 2 - .08].forEach(z => {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(w, .08, .08), new THREE.MeshLambertMaterial({ color: 0x5C3722 }));
+        rail.position.set(0, .14, z);
+        g.add(rail);
+      });
+    } else if (item.type === "garden") {
+      const lawn = new THREE.Mesh(
+        new THREE.BoxGeometry(w, .1, d),
+        new THREE.MeshLambertMaterial({ color: 0x75855B })
+      );
+      lawn.position.y = -.12;
+      tagPickable(lawn, item.id, g);
+      const border = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.BoxGeometry(w, .11, d)),
+        new THREE.LineBasicMaterial({ color: 0x52613E })
+      );
+      border.position.y = -.12;
+      g.add(border);
+    } else if (item.type === "field") {
+      const soil = new THREE.Mesh(
+        new THREE.BoxGeometry(w, .14, d),
+        new THREE.MeshLambertMaterial({ color: 0x765139 })
+      );
+      soil.position.y = -.08;
+      tagPickable(soil, item.id, g);
+      const rows = 5;
+      for (let i = 0; i < rows; i++) {
+        const ridge = new THREE.Mesh(
+          new THREE.BoxGeometry(w * .88, .13, Math.max(.12, d / 12)),
+          new THREE.MeshLambertMaterial({ color: 0x9A6B42 })
+        );
+        ridge.position.set(0, .05, -d * .34 + i * d * .17);
+        g.add(ridge);
+      }
+    } else if (item.type === "stable") {
+      const wood = new THREE.MeshLambertMaterial({ color: 0x7A4B32 });
+      const dark = new THREE.MeshLambertMaterial({ color: 0x4F3020 });
+      const base = new THREE.Mesh(new THREE.BoxGeometry(w, .18, d), wood);
+      base.position.y = 0;
+      tagPickable(base, item.id, g);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(w, 1.45, .16), wood);
+      back.position.set(0, .78, -d / 2 + .08);
+      tagPickable(back, item.id, g);
+      [-w / 2 + .1, w / 2 - .1].forEach(x => {
+        const side = new THREE.Mesh(new THREE.BoxGeometry(.18, 1.45, d), wood);
+        side.position.set(x, .78, 0);
+        tagPickable(side, item.id, g);
+      });
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(w + .45, .22, d + .45), dark);
+      roof.position.y = 1.62;
+      tagPickable(roof, item.id, g);
+    }
+
+    const label = makeLabelSprite(item.name, {
+      font: MINCHO, weight: "600", fontSize: 30, worldHeight: .48,
+      bg: "#FFFDF6", border: item.type === "garden" ? "#52613E" : "#7A4B32"
+    });
+    label.position.set(0, item.type === "stable" ? 2.05 : .55, 0);
+    label.userData = { kind: "structure", id: item.id };
+    g.add(label);
+    pickables.push(label);
+    return g;
+  }
+
   // ---- 選択 ----
   function applySelection() {
     disposeGroup(highlightGroup);
@@ -670,6 +1010,18 @@
           new THREE.MeshBasicMaterial({ color: 0xA8382C, transparent: true, opacity: 0.32 })
         );
         ring.position.set(item.x, 0.02, item.z);
+        ring.rotation.y = item.rotation || 0;
+        highlightGroup.add(ring);
+      }
+    } else if (selected.kind === "structure") {
+      const item = structureOf(selected.id);
+      if (item) {
+        const ring = new THREE.Mesh(
+          new THREE.BoxGeometry(item.size.x + .5, .07, item.size.z + .5),
+          new THREE.MeshBasicMaterial({ color: 0x3F5A70, transparent: true, opacity: .3 })
+        );
+        ring.position.set(item.position.x, .01, item.position.z);
+        ring.rotation.y = item.rotation || 0;
         highlightGroup.add(ring);
       }
     } else {
@@ -697,9 +1049,12 @@
     for (const item of layoutCache) {
       const o = (item.room.occupants || []).find(x => x.charId === charId);
       if (o) {
+        const localX = -item.w / 2 + (Number(o.x) || 50) / 100 * item.w;
+        const localZ = -item.d / 2 + (Number(o.y) || 50) / 100 * item.d;
+        const angle = item.rotation || 0;
         return {
-          x: item.x - item.w / 2 + (Number(o.x) || 50) / 100 * item.w,
-          z: item.z - item.d / 2 + (Number(o.y) || 50) / 100 * item.d,
+          x: item.x + localX * Math.cos(angle) + localZ * Math.sin(angle),
+          z: item.z - localX * Math.sin(angle) + localZ * Math.cos(angle),
           item
         };
       }
@@ -746,6 +1101,11 @@
         panelEl.appendChild(note);
       }
       const occ = room.occupants || [];
+      const wingRow = document.createElement("div");
+      wingRow.className = "ip-row";
+      wingRow.innerHTML = `<span>棟</span><span></span>`;
+      wingRow.lastChild.textContent = wingName((roomLayout(room.id) || {}).wingId);
+      panelEl.appendChild(wingRow);
       const row = document.createElement("div");
       row.className = "ip-row";
       row.innerHTML = `<span>住人</span><span>${occ.length}振り</span>`;
@@ -776,6 +1136,84 @@
       };
       actions.appendChild(focusBtn);
       panelEl.appendChild(actions);
+
+      if (editMode) {
+        const layout = roomLayout(room.id);
+        const wingLabel = document.createElement("div");
+        wingLabel.className = "ip-row";
+        wingLabel.innerHTML = "<span>所属する棟</span>";
+        const wingSelect = document.createElement("select");
+        wingSelect.className = "ip-select";
+        buildingState.wings.forEach(wing => {
+          const option = document.createElement("option");
+          option.value = wing.id;
+          option.textContent = wing.name;
+          wingSelect.appendChild(option);
+        });
+        wingSelect.value = layout ? layout.wingId : buildingState.wings[0].id;
+        wingSelect.onchange = () => {
+          buildingState.roomLayouts[room.id].wingId = wingSelect.value;
+          markBuildDirty();
+          saveBuildingState(false);
+          renderPanel(selected);
+        };
+        wingLabel.appendChild(wingSelect);
+        panelEl.appendChild(wingLabel);
+        const editActions = document.createElement("div");
+        editActions.className = "ip-mini-actions";
+        const rotate = document.createElement("button");
+        rotate.textContent = "90°回転";
+        rotate.onclick = () => rotateSelection();
+        editActions.appendChild(rotate);
+        panelEl.appendChild(editActions);
+      }
+    } else if (sel.kind === "structure") {
+      const item = structureOf(sel.id);
+      if (!item) { panelEl.classList.remove("open"); return; }
+      eyebrow.textContent = "建築パーツ";
+      const title = document.createElement("div");
+      title.className = "ip-title";
+      title.textContent = item.name;
+      panelEl.appendChild(title);
+      const typeRow = document.createElement("div");
+      typeRow.className = "ip-row";
+      typeRow.innerHTML = `<span>種類</span><span>${STRUCTURE_META[item.type].label}</span>`;
+      panelEl.appendChild(typeRow);
+      const sizeRow = document.createElement("div");
+      sizeRow.className = "ip-row";
+      sizeRow.innerHTML = `<span>大きさ</span><span>${item.size.x.toFixed(1)} × ${item.size.z.toFixed(1)}</span>`;
+      panelEl.appendChild(sizeRow);
+      const focusActions = document.createElement("div");
+      focusActions.className = "ip-actions";
+      const focus = document.createElement("button");
+      focus.className = "ip-btn secondary";
+      focus.textContent = "ここに寄る";
+      focus.onclick = () => focusOn(new THREE.Vector3(item.position.x, .4, item.position.z), Math.max(item.size.x, item.size.z) * 1.5 + 3);
+      focusActions.appendChild(focus);
+      panelEl.appendChild(focusActions);
+      if (editMode) {
+        const editActions = document.createElement("div");
+        editActions.className = "ip-mini-actions";
+        const rotate = document.createElement("button");
+        rotate.textContent = "90°回転";
+        rotate.onclick = () => rotateSelection();
+        editActions.appendChild(rotate);
+        [
+          ["横 −", "x", -.75], ["横 ＋", "x", .75],
+          ["奥行 −", "z", -.75], ["奥行 ＋", "z", .75]
+        ].forEach(([label, axis, amount]) => {
+          const button = document.createElement("button");
+          button.textContent = label;
+          button.onclick = () => resizeStructure(item.id, axis, amount);
+          editActions.appendChild(button);
+        });
+        const remove = document.createElement("button");
+        remove.className = "danger";
+        remove.textContent = "削除";
+        remove.onclick = () => removeStructure(item.id);
+        editActions.appendChild(remove);
+        panelEl.appendChild(editActions);
+      }
     } else {
       const c = charOf(sel.id) || { name: nameOf(sel.id) };
       const room = roomOfChar(sel.id);
@@ -829,18 +1267,193 @@
     panelEl.classList.add("open");
   }
 
+  function renderWingEditor() {
+    const wrap = document.getElementById("wing-editor");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    buildingState.wings.forEach(wing => {
+      const row = document.createElement("div");
+      row.className = "wing-row";
+      const input = document.createElement("input");
+      input.value = wing.name;
+      input.setAttribute("aria-label", "棟名");
+      input.oninput = () => {
+        wing.name = input.value || "名称未設定";
+        markBuildDirty();
+      };
+      input.onchange = () => {
+        saveBuildingState(false);
+        if (selected && selected.kind === "room") renderPanel(selected);
+      };
+      row.appendChild(input);
+      wrap.appendChild(row);
+    });
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "wing-add";
+    add.textContent = "＋ 棟を追加";
+    add.onclick = () => {
+      const count = buildingState.wings.length;
+      buildingState.wings.push({
+        id: `wing-${Date.now()}-${count}`,
+        name: count === 1 ? "第一棟" : `第${count}棟`
+      });
+      markBuildDirty();
+      saveBuildingState(false);
+      renderWingEditor();
+      if (selected && selected.kind === "room") renderPanel(selected);
+    };
+    wrap.appendChild(add);
+  }
+
+  function setEditMode(next) {
+    editMode = !!next;
+    app.classList.toggle("editing", editMode);
+    editPanelEl.classList.toggle("open", editMode);
+    const button = document.getElementById("btn-mode");
+    button.classList.toggle("active", editMode);
+    button.textContent = editMode ? "編集を終了" : "建築編集";
+    setSelection(null);
+    if (editMode) {
+      renderWingEditor();
+      updateSaveStatus();
+      topView();
+    }
+  }
+
+  function addStructure(type) {
+    const meta = STRUCTURE_META[type];
+    if (!meta) return;
+    const sameTypeCount = buildingState.buildingObjects.filter(o => o.type === type).length;
+    const id = `structure-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    buildingState.buildingObjects.push({
+      id,
+      type,
+      name: sameTypeCount ? `${meta.label}${sameTypeCount + 1}` : meta.label,
+      position: { x: controls.target.x, y: 0, z: controls.target.z },
+      rotation: 0,
+      size: { x: meta.defaultSize.x, z: meta.defaultSize.z }
+    });
+    markBuildDirty();
+    saveBuildingState(false);
+    selected = { kind: "structure", id };
+    rebuild();
+  }
+
+  function rotateSelection() {
+    if (!selected) return;
+    if (selected.kind === "room") {
+      const layout = roomLayout(selected.id);
+      if (!layout) return;
+      layout.rotation = (finiteNumber(layout.rotation, 0) + Math.PI / 2) % (Math.PI * 2);
+    } else if (selected.kind === "structure") {
+      const item = structureOf(selected.id);
+      if (!item) return;
+      item.rotation = (finiteNumber(item.rotation, 0) + Math.PI / 2) % (Math.PI * 2);
+    } else return;
+    markBuildDirty();
+    saveBuildingState(false);
+    rebuild();
+  }
+
+  function resizeStructure(id, axis, amount) {
+    const item = structureOf(id);
+    if (!item || (axis !== "x" && axis !== "z")) return;
+    item.size[axis] = Math.max(.8, Math.min(30, item.size[axis] + amount));
+    markBuildDirty();
+    saveBuildingState(false);
+    rebuild();
+  }
+
+  function removeStructure(id) {
+    const item = structureOf(id);
+    if (!item || !window.confirm(`${item.name}を削除しますか？`)) return;
+    buildingState.buildingObjects = buildingState.buildingObjects.filter(o => o.id !== id);
+    selected = null;
+    markBuildDirty();
+    saveBuildingState(false);
+    rebuild();
+  }
+
+  document.getElementById("btn-mode").onclick = () => setEditMode(!editMode);
+  document.getElementById("btn-save-build").onclick = () => saveBuildingState(true);
+  document.querySelectorAll("[data-add-structure]").forEach(button => {
+    button.onclick = () => addStructure(button.dataset.addStructure);
+  });
+  window.addEventListener("pagehide", () => saveBuildingState(false));
+
   // ---- ピッキング(ドラッグと区別してタップだけ拾う) ----
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
+  const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   let downPos = null;
   let activePointers = 0;
+  let dragState = null;
   const el = renderer.domElement;
   el.addEventListener("pointerdown", e => {
     activePointers++;
     downPos = { x: e.clientX, y: e.clientY, multi: activePointers > 1 };
+    if (!editMode || activePointers > 1) return;
+    const hit = hitAt(e.clientX, e.clientY);
+    if (!hit || (hit.kind !== "room" && hit.kind !== "structure")) return;
+    const point = groundPoint(e.clientX, e.clientY);
+    const group = draggableGroups.get(`${hit.kind}:${hit.id}`);
+    if (!point || !group) return;
+    dragState = {
+      kind: hit.kind,
+      id: hit.id,
+      pointerId: e.pointerId,
+      offsetX: group.position.x - point.x,
+      offsetZ: group.position.z - point.z,
+      moved: false,
+      group
+    };
+    controls.enabled = false;
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+  }, true);
+  el.addEventListener("pointermove", e => {
+    if (!dragState || e.pointerId !== dragState.pointerId) return;
+    if (activePointers > 1) {
+      dragState = null;
+      controls.enabled = true;
+      return;
+    }
+    const point = groundPoint(e.clientX, e.clientY);
+    if (!point) return;
+    if (!dragState.moved && downPos && Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 5) {
+      dragState.moved = true;
+    }
+    if (!dragState.moved) return;
+    const x = Math.round((point.x + dragState.offsetX) * 4) / 4;
+    const z = Math.round((point.z + dragState.offsetZ) * 4) / 4;
+    dragState.group.position.x = x;
+    dragState.group.position.z = z;
+    if (dragState.kind === "room") {
+      const layout = roomLayout(dragState.id);
+      if (layout) { layout.position.x = x; layout.position.z = z; }
+    } else {
+      const item = structureOf(dragState.id);
+      if (item) { item.position.x = x; item.position.z = z; }
+    }
+    markBuildDirty();
   });
   el.addEventListener("pointerup", e => {
     activePointers = Math.max(0, activePointers - 1);
+    if (dragState && e.pointerId === dragState.pointerId) {
+      const completed = dragState;
+      dragState = null;
+      controls.enabled = true;
+      try { el.releasePointerCapture(e.pointerId); } catch (err) {}
+      downPos = null;
+      if (completed.moved) {
+        saveBuildingState(false);
+        selected = { kind: completed.kind, id: completed.id };
+        rebuild();
+      } else {
+        setSelection({ kind: completed.kind, id: completed.id });
+      }
+      return;
+    }
     if (!downPos) return;
     const moved = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 8;
     const multi = downPos.multi;
@@ -848,18 +1461,37 @@
     if (moved || multi) return;
     pick(e.clientX, e.clientY);
   });
-  el.addEventListener("pointercancel", () => { activePointers = 0; downPos = null; });
+  el.addEventListener("pointercancel", () => {
+    activePointers = 0;
+    downPos = null;
+    dragState = null;
+    controls.enabled = true;
+  });
 
-  function pick(cx, cy) {
+  function updateRay(cx, cy) {
     const r = el.getBoundingClientRect();
     ndc.x = ((cx - r.left) / r.width) * 2 - 1;
     ndc.y = -((cy - r.top) / r.height) * 2 + 1;
     raycaster.setFromCamera(ndc, camera);
+  }
+
+  function hitAt(cx, cy) {
+    updateRay(cx, cy);
     const hits = raycaster.intersectObjects(pickables, false);
-    if (!hits.length) { setSelection(null); return; }
+    if (!hits.length) return null;
     const ud = hits[0].object.userData;
-    if (!ud || !ud.kind) { setSelection(null); return; }
-    setSelection({ kind: ud.kind, id: ud.id });
+    return ud && ud.kind ? { kind: ud.kind, id: ud.id } : null;
+  }
+
+  function groundPoint(cx, cy) {
+    updateRay(cx, cy);
+    return raycaster.ray.intersectPlane(dragPlane, new THREE.Vector3());
+  }
+
+  function pick(cx, cy) {
+    const hit = hitAt(cx, cy);
+    if (!hit) { setSelection(null); return; }
+    setSelection(hit);
   }
 
   // ---- カメラ ----
