@@ -32,6 +32,16 @@
   function saveState() {
     try { localStorage.setItem(ROOM_STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   }
+  function syncRooms() {
+    try {
+      window.parent && window.parent.postMessage({
+        source: "rooms",
+        type: "rooms_sync",
+        rooms: JSON.parse(JSON.stringify(state.rooms)),
+        unplaced: JSON.parse(JSON.stringify(state.unplaced))
+      }, "*");
+    } catch (e) {}
+  }
   window.readSaniwaReference = () => JSON.parse(JSON.stringify(state));
   window.addEventListener("pagehide", saveState);
   function findChar(id) {
@@ -196,6 +206,7 @@
     if (addRoomOpen) {
       el.appendChild(renderAddRoomModal());
     }
+    syncRooms();
   }
 
   function renderAddRoomModal() {
@@ -329,7 +340,7 @@
     const nameInput = document.createElement("input");
     nameInput.className = "room-name-input";
     nameInput.value = room.name;
-    nameInput.oninput = e => { room.name = e.target.value; };
+    nameInput.oninput = e => { room.name = e.target.value; syncRooms(); };
     const tplSelect = document.createElement("select");
     tplSelect.className = "room-template-select";
     tplSelect.innerHTML = `<option value="a">六畳</option><option value="b">広間</option><option value="c">洋間</option>`;
@@ -343,7 +354,7 @@
     noteInput.className = "room-note-input";
     noteInput.placeholder = "備考(日当たりがいい、など)";
     noteInput.value = room.note || "";
-    noteInput.oninput = e => { room.note = e.target.value; };
+    noteInput.oninput = e => { room.note = e.target.value; syncRooms(); };
     card.appendChild(noteInput);
 
     const surface = document.createElement("div");
