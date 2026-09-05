@@ -54,6 +54,10 @@
         <div class="app-icon-glyph journal">記</div>
         <div class="app-icon-label">日報</div>
       </button>
+      <button class="app-icon-btn" id="open-schedule">
+        <div class="app-icon-glyph schedule">計</div>
+        <div class="app-icon-label">計画表</div>
+      </button>
       <button class="app-icon-btn soon" id="open-honmaru">
         <div class="app-icon-glyph soon">本</div>
         <div class="app-icon-label">本丸設定</div>
@@ -478,5 +482,6 @@
   document.getElementById("open-master").onclick = () => showView("master-view");
   document.getElementById("open-expcalc").onclick = () => showView("expcalc-view");
   document.getElementById("open-journal").onclick = () => showView("journal-view");
+  document.getElementById("open-schedule").onclick = () => showView("schedule-view");
 })();
 
