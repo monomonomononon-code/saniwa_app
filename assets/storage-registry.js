@@ -32,7 +32,7 @@
   const SNAPSHOT_KEY = PREFIX + "snapshot-before-import.v1";
   const LAST_IMPORT_KEY = PREFIX + "last-import.v1";
 
-  // 機能ごとのグループ名(表示用ラベル)。timeline はまだ PLANNED_STORES(下記)向けの予約のみ。
+  // 機能ごとのグループ名(表示用ラベル)。
   const DOMAIN_LABELS = {
     characters: "刀剣男士",
     rooms: "部屋割り",
@@ -40,8 +40,8 @@
     relationships: "相関図",
     journal: "日報・日誌",
     schedule: "予定",
-    home: "ホーム(端末ローカル)",
-    timeline: "年表(準備中)"
+    timeline: "年表",
+    home: "ホーム(端末ローカル)"
   };
 
   const count = (n, unit) => `${n}${unit}`;
@@ -75,6 +75,12 @@
     { id: "schedule", key: PREFIX + "schedule.v1", label: "予定", owner: "assets/schedule.js",
       domain: "schedule", scope: "user",
       summary: d => d && Array.isArray(d.events) ? `${count(d.events.length, "件")} / ToDo${count(d.events.reduce((n, e) => n + (Array.isArray(e.todos) ? e.todos.length : 0), 0), "件")}` : "" },
+    // 手動で追加した出来事(1件=配列の1要素)だけを保存する。刀剣男士の顕現イベントは
+    // master.v1 を正本として毎回動的に生成する「仮想の項目」であり、ここには保存しない
+    // (二重管理を避けるため)。詳しくは assets/timeline.js の characterEntries() を参照。
+    { id: "timeline", key: PREFIX + "timeline.v1", label: "年表", owner: "assets/timeline.js",
+      domain: "timeline", scope: "user",
+      summary: d => d && Array.isArray(d.entries) ? count(d.entries.length, "件") : "" },
     // activityLog(更新履歴)は端末のフィード、sharedCharacters は master.v1 の写し(キャッシュ)。
     // どちらも「ユーザーの正データ」ではないため scope は device 扱い(詳細は docs/DATA-STORAGE.md)。
     { id: "app", key: PREFIX + "app.v1", label: "ホーム(更新履歴・共有キャラ一覧)", owner: "assets/app.js",
@@ -85,12 +91,9 @@
 
   // 今後追加予定の機能の設計メモ(コードとしては未使用・未登録)。
   // 実装するときは、この情報を元に1件 STORES へ足すだけで一覧・バックアップ・取り込みに乗る。
-  // ("schedule" はここにあった予定だったが、実装時に STORES へ昇格済み。上の schedule エントリを参照)
-  const PLANNED_STORES = [
-    { id: "timeline", key: PREFIX + "timeline.v1", label: "年表", domain: "timeline", scope: "user",
-      shape: "{ version: 1, entries: [{ id, date, title, body }] }",
-      note: "本丸の出来事を時系列で記録する機能。日誌(diary.v1)と同じ「配列を1つのオブジェクトに入れる」形を想定。" }
-  ];
+  // ("schedule" と "timeline" はどちらもここにあった予定だったが、実装時に STORES へ昇格済み。
+  //  現時点で計画中の新機能はないため空だが、配列自体は今後のために残してある。)
+  const PLANNED_STORES = [];
 
   function readRaw(key) {
     try { return global.localStorage.getItem(key); } catch (e) { return null; }
