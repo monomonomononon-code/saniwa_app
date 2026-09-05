@@ -9,7 +9,7 @@
 - `pages/master.html` / `assets/master.css` / `assets/master.js` — 刀剣男士
 - `pages/expcalc.html` / `assets/expcalc.css` / `assets/expcalc.js` — 経験値計算
 - `pages/rooms-menu.html` — 部屋割りメニュー(男士の配置 / 見取り図(3D))
-- `pages/honmaru3d.html` — 本丸建築エディタ(3D俯瞰図)。部屋タイプ・建築パーツは同ファイル冒頭の `TEMPLATE_META` / `PART_DEFS` / `PART_RENDERERS` で定義。時間帯は `TIME_PRESETS`、季節は `SEASON_PRESETS`(春のみ実装。夏・秋・冬は同じ形で足して `available: true` にする)。パーツごとの見た目オプション(池のかたち・桜の枝ぶり・石の置き方・樹形)は `PART_PROPS` に定義すると情報パネルの選択欄が自動で増え、値は `item.props` に入る。池や岩組みの「四角く見せない輪郭」は `blobPoints` / `blobShape` で作る。保存キーは `saniwa-tool.honmaru3d.v1`(version 2、`timeMode` / `seasonMode` を含む)
+- `pages/honmaru3d.html` — 本丸建築エディタ(3D俯瞰図)。部屋タイプ・建築パーツは同ファイル冒頭の `TEMPLATE_META` / `PART_DEFS` / `PART_RENDERERS` で定義。時間帯は `TIME_PRESETS`、季節は `SEASON_PRESETS`(春のみ実装。夏・秋・冬は同じ形で足して `available: true` にする)。パーツごとの見た目オプション(池のかたち・桜の樹形・石の置き方・樹形)は `PART_PROPS` に定義すると情報パネルの選択欄が自動で増え、値は `item.props` に入る。池や岩組みの「四角く見せない輪郭」は `blobPoints` / `blobShape`、桜の樹冠のように小さな塊を大量に束ねて1メッシュにするものは `mergedBlobs` を使う。桜の樹形は `SAKURA_FORMS` に1行足すと増やせる。保存キーは `saniwa-tool.honmaru3d.v1`(version 2、`timeMode` / `seasonMode` を含む)
 - `pages/journal.html` — 日報・日誌
 - `pages/backup.html` / `assets/backup.js` / `assets/backup.css` — 設定・バックアップ(全データのJSON書き出し / 復元)
 - `pages/schedule.html` / `assets/schedule.js` / `assets/schedule.css` — 計画表(月表示カレンダー、予定とToDo)。保存は `assets/storage-registry.js` の `load`/`save` 経由(`saniwa-tool.schedule.v1`)のみで、独自の保存処理は持たない
