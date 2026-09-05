@@ -529,10 +529,10 @@
   //  季節・ライトアップ・行灯などをプリセットの上に重ねられる。
   // =====================================================================
   const TIME_PRESETS = {
-    morning: { label: "朝", clear: 0xF6EBD8, fog: [0xF6EBD8, 40, 90], hemi: [0xFFEFD6, 0x8E8868, 0.85], sun: [0xFFDDB0, 0.75, [-14, 9, 10]], ambient: [0xFFE9CF, 0.18], ground: 0xD9D2B8, grid: [0xC9BFA6, 0xE0D8C3] },
-    noon:    { label: "昼", clear: 0xF2EBDD, fog: [0xF2EBDD, 40, 90], hemi: [0xFFF8EA, 0x8A8466, 0.95], sun: [0xFFF4DE, 0.65, [8, 18, 10]],  ambient: [0xFFFFFF, 0.08], ground: 0xD9D2B8, grid: [0xC9BFA6, 0xE0D8C3] },
-    evening: { label: "夕", clear: 0xE9C7A0, fog: [0xE9C7A0, 36, 85], hemi: [0xFFC28E, 0x6E5A50, 0.72], sun: [0xFF9A5C, 0.85, [16, 5, -6]],  ambient: [0xFFB380, 0.22], ground: 0xCFBB9B, grid: [0xB8A48A, 0xD6C4A8] },
-    night:   { label: "夜", clear: 0x2B3446, fog: [0x2B3446, 45, 110], hemi: [0x8FA5CC, 0x2E3340, 0.62], sun: [0xBFD0F0, 0.42, [-8, 16, -10]], ambient: [0x54637F, 0.42], ground: 0x6E7284, grid: [0x5A6070, 0x4A5060] }
+    morning: { label: "朝", clear: 0xF6EBD8, fog: [0xF6EBD8, 40, 90], hemi: [0xFFEFD6, 0x8E8868, 0.85], sun: [0xFFDDB0, 0.75, [-14, 9, 10]], ambient: [0xFFE9CF, 0.18], ground: 0xFFF2DE, grid: [0xC9BFA6, 0xE0D8C3] },
+    noon:    { label: "昼", clear: 0xF2EBDD, fog: [0xF2EBDD, 40, 90], hemi: [0xFFF8EA, 0x8A8466, 0.95], sun: [0xFFF4DE, 0.65, [8, 18, 10]],  ambient: [0xFFFFFF, 0.08], ground: 0xFFFFFF, grid: [0xC9BFA6, 0xE0D8C3] },
+    evening: { label: "夕", clear: 0xE9C7A0, fog: [0xE9C7A0, 36, 85], hemi: [0xFFC28E, 0x6E5A50, 0.72], sun: [0xFF9A5C, 0.85, [16, 5, -6]],  ambient: [0xFFB380, 0.22], ground: 0xF8D6B6, grid: [0xB8A48A, 0xD6C4A8] },
+    night:   { label: "夜", clear: 0x2B3446, fog: [0x2B3446, 45, 110], hemi: [0x8FA5CC, 0x2E3340, 0.62], sun: [0xBFD0F0, 0.42, [-8, 16, -10]], ambient: [0x54637F, 0.42], ground: 0x7C86A2, grid: [0x5A6070, 0x4A5060] }
   };
   const TIME_ORDER = ["morning", "noon", "evening", "night"];
   const environment = { time: "noon", season: "spring", modifiers: [] };
@@ -559,6 +559,10 @@
       environment: { tint: 0xFFD9E2, amount: 0.12, nightAmount: 0.04 },
       palette: {
         lawn: 0x8DB26A, lawnEdge: 0x5E7E45,
+        // 地面: 中心の土 / 外周の草地 / 小石。季節ごとに差し替えられる
+        groundEarth: 0xBBA179, groundEarthDeep: 0x9E875F, groundEarthLight: 0xD0BA94,
+        groundGrass: 0x77A052, groundGrassDeep: 0x59853B, groundGrassLight: 0x94B968,
+        pebble: 0x9C907C,
         canopy: 0x6FAB4E, canopyDeep: 0x4C8A3E, canopyLight: 0x9BCE5E,
         trunk: 0x9A6E48, trunkDark: 0x7A5334,
         pine: 0x40704A, pineDark: 0x2C5537, pineLight: 0x5D8E52,
@@ -582,6 +586,8 @@
       environment: { tint: 0xD3F0B4, amount: 0.1, nightAmount: 0.04 },
       palette: {
         lawn: 0x6FA34A, lawnEdge: 0x4A7A34,
+        groundEarth: 0xC4AF89, groundEarthDeep: 0xA8926C, groundEarthLight: 0xD6C3A0,
+        groundGrass: 0x6FA349, groundGrassDeep: 0x4F8232, groundGrassLight: 0x8CBA5E,
         canopy: 0x4E8F3C, canopyDeep: 0x35702B, canopyLight: 0x78B448,
         pine: 0x36663F, pineDark: 0x254A2E, pineLight: 0x53844A,
         bamboo: 0x86BC46, bambooNode: 0x5C8A2E, bambooLeaf: 0x6CA33E,
@@ -598,6 +604,9 @@
       environment: { tint: 0xFFD09A, amount: 0.14, nightAmount: 0.05 },
       palette: {
         lawn: 0x9CA85E, lawnEdge: 0x6E7A3E,
+        groundEarth: 0xC0A87C, groundEarthDeep: 0xA08960, groundEarthLight: 0xD6C094,
+        groundGrass: 0x8C9A4E, groundGrassDeep: 0x6B7838, groundGrassLight: 0xA8B062,
+        pebble: 0xA0947E,
         canopy: 0xD2872F, canopyDeep: 0xA85720, canopyLight: 0xE6B242,
         pine: 0x496B3E, pineDark: 0x33512C, pineLight: 0x6A8A4C,
         bamboo: 0xB6C255, bambooNode: 0x87923A, bambooLeaf: 0x9CAA45,
@@ -615,6 +624,9 @@
       environment: { tint: 0xDCEAF7, amount: 0.16, nightAmount: 0.06 },
       palette: {
         lawn: 0x8FA98A, lawnEdge: 0x6C8468,
+        groundEarth: 0xC6C3B6, groundEarthDeep: 0xACA99C, groundEarthLight: 0xDEDCD2,
+        groundGrass: 0x8FA98A, groundGrassDeep: 0x718A6E, groundGrassLight: 0xAEC2A6,
+        pebble: 0xB0ACA0,
         canopy: 0x4A7644, canopyDeep: 0x365B34, canopyLight: 0x6A945C,
         pine: 0x35603C, pineDark: 0x24462B, pineLight: 0x527C4A,
         bamboo: 0x7FA352, bambooNode: 0x5C7A38, bambooLeaf: 0x6E8F45,
@@ -991,17 +1003,144 @@
   const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.08);
   scene.add(ambientLight);
 
-  // 地面(庭)
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0xD9D2B8 });
+  // 本丸の広がりと季節。地面の見た目がこれらを参照するので、ここで用意しておく
+  let extent = { w: 10, d: 8 };
+  let seasonCtx = activeSeason(); // rebuild ごとに更新される季節コンテキスト
+
+  // =====================================================================
+  //  地面。2枚の平面を重ねる(起伏はなし)。
+  //    外周 = まだらな草地のタイル(広い平面に繰り返し)
+  //    中心 = 乾いた土。ふちを透明にぼかして草地となじませる。物を置くあたりを覆う
+  //  どちらもテクスチャなので、草が立体で生えることはなく、置いた物を突き抜けない。
+  //  色は季節パレット(groundEarth / groundGrass / pebble)から作るので、
+  //  季節を足すときはその色を書き換えるだけでよい。
+  // =====================================================================
+  const groundTexCache = {};
+  function grassTexture(P) {
+    const key = `grass-${P.groundGrass}-${P.groundGrassDeep}-${P.groundEarth}`;
+    if (!groundTexCache[key]) {
+      const S = 256;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const x = c.getContext("2d");
+      const rnd = seededRandom(key);
+      const hex = v => "#" + v.toString(16).padStart(6, "0");
+      x.fillStyle = hex(P.groundGrass);
+      x.fillRect(0, 0, S, S);
+      // まだらな濃淡
+      const patches = [[P.groundGrassDeep, 60, 20], [P.groundGrassLight, 34, 14], [P.groundEarth, 10, 8]];
+      patches.forEach(([color, n, r]) => {
+        x.fillStyle = hex(color);
+        for (let i = 0; i < n; i++) {
+          x.globalAlpha = .12 + rnd() * .2;
+          x.beginPath();
+          x.ellipse(rnd() * S, rnd() * S, r * (.5 + rnd()), r * (.4 + rnd() * .8), rnd() * Math.PI, 0, Math.PI * 2);
+          x.fill();
+        }
+      });
+      // 細かい草の筋(立体ではなく模様として)
+      x.globalAlpha = .35;
+      for (let i = 0; i < 260; i++) {
+        x.strokeStyle = hex(rnd() < .5 ? P.groundGrassDeep : P.groundGrassLight);
+        x.lineWidth = 1;
+        const px = rnd() * S, py = rnd() * S, len = 2 + rnd() * 4, ang = rnd() * Math.PI;
+        x.beginPath();
+        x.moveTo(px, py);
+        x.lineTo(px + Math.cos(ang) * len, py + Math.sin(ang) * len);
+        x.stroke();
+      }
+      x.globalAlpha = 1;
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(34, 34);
+      tex.anisotropy = 4;
+      groundTexCache[key] = tex;
+    }
+    return groundTexCache[key];
+  }
+  function earthTexture(P) {
+    const key = `earth-${P.groundEarth}-${P.groundEarthDeep}-${P.pebble}`;
+    if (!groundTexCache[key]) {
+      const S = 512, C = S / 2;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const x = c.getContext("2d");
+      const rnd = seededRandom(key);
+      const hex = v => "#" + v.toString(16).padStart(6, "0");
+      x.fillStyle = hex(P.groundEarth);
+      x.fillRect(0, 0, S, S);
+      // まだらな土の濃淡
+      [[P.groundEarthDeep, 80, 26], [P.groundEarthLight, 46, 20]].forEach(([color, n, r]) => {
+        x.fillStyle = hex(color);
+        for (let i = 0; i < n; i++) {
+          x.globalAlpha = .14 + rnd() * .2;
+          x.beginPath();
+          x.ellipse(rnd() * S, rnd() * S, r * (.5 + rnd()), r * (.4 + rnd() * .9), rnd() * Math.PI, 0, Math.PI * 2);
+          x.fill();
+        }
+      });
+      // 小石(凹凸ではなく模様として薄く散らす)
+      x.globalAlpha = .5;
+      for (let i = 0; i < 150; i++) {
+        x.fillStyle = hex(rnd() < .6 ? P.pebble : P.groundEarthDeep);
+        x.beginPath();
+        x.ellipse(rnd() * S, rnd() * S, 1.5 + rnd() * 3, 1.2 + rnd() * 2.2, rnd() * Math.PI, 0, Math.PI * 2);
+        x.fill();
+      }
+      // ふちを透明にして草地へなじませる(境界がくっきり分断されないように)
+      x.globalAlpha = 1;
+      x.globalCompositeOperation = "destination-out";
+      const fade = x.createRadialGradient(C, C, S * .26, C, C, S * .5);
+      fade.addColorStop(0, "rgba(0,0,0,0)");
+      fade.addColorStop(.6, "rgba(0,0,0,0.45)");
+      fade.addColorStop(1, "rgba(0,0,0,1)");
+      x.fillStyle = fade;
+      x.fillRect(0, 0, S, S);
+      // ふちをぎざつかせて、円がそのまま出ないようにする
+      for (let i = 0; i < 90; i++) {
+        const a = rnd() * Math.PI * 2, rr = S * (.3 + rnd() * .22);
+        x.beginPath();
+        x.arc(C + Math.cos(a) * rr, C + Math.sin(a) * rr, 10 + rnd() * 26, 0, Math.PI * 2);
+        x.globalAlpha = .1 + rnd() * .25;
+        x.fill();
+      }
+      x.globalCompositeOperation = "source-over";
+      x.globalAlpha = 1;
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 4;
+      groundTexCache[key] = tex;
+    }
+    return groundTexCache[key];
+  }
+
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.3;
   scene.add(ground);
+  const earthMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, transparent: true, depthWrite: false });
+  const earthPatch = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), earthMat);
+  earthPatch.rotation.x = -Math.PI / 2;
+  earthPatch.position.y = -0.295; // 草地のすぐ上。物より下なので突き抜けない
+  scene.add(earthPatch);
+  // 土のエリアは本丸の広がりに合わせて広げる(rebuild のたびに更新)
+  function updateGroundPatch() {
+    const size = Math.max(18, Math.max(extent.w, extent.d) * 1.5 + 10);
+    earthPatch.scale.set(size, size, 1);
+  }
+  function applyGroundTextures(P) {
+    groundMat.map = grassTexture(P);
+    groundMat.needsUpdate = true;
+    earthMat.map = earthTexture(P);
+    earthMat.needsUpdate = true;
+  }
+
   let grid = null;
   function rebuildGrid(colors) {
     if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
     grid = new THREE.GridHelper(120, 60, colors[0], colors[1]);
-    grid.position.y = -0.29;
+    grid.position.y = -0.28;
+    grid.visible = editMode; // スナップ確認用。閲覧時は出さない
     scene.add(grid);
   }
 
@@ -1020,7 +1159,10 @@
     hemiLight.color.setHex(env.hemi[0]); hemiLight.groundColor.setHex(env.hemi[1]); hemiLight.intensity = env.hemi[2];
     sun.color.setHex(env.sun[0]); sun.intensity = env.sun[1]; sun.position.set(env.sun[2][0], env.sun[2][1], env.sun[2][2]);
     ambientLight.color.setHex(env.ambient[0]); ambientLight.intensity = env.ambient[1];
+    // 地面はテクスチャなので、時間帯は「色をかける」形で反映する
     groundMat.color.setHex(env.ground);
+    earthMat.color.setHex(env.ground);
+    applyGroundTextures(seasonCtx.palette);
     rebuildGrid(env.grid);
     app.classList.toggle("night", environment.time === "night");
     app.dataset.season = activeSeason().key;
@@ -1078,8 +1220,6 @@
   let pickables = [];        // レイキャスト対象
   let draggableGroups = new Map();
   let layoutCache = [];      // { room, meta, w, d, x, z, rotation, wingId }
-  let extent = { w: 10, d: 8 };
-  let seasonCtx = activeSeason(); // rebuild ごとに更新される季節コンテキスト
   const floorTextureCache = {};
 
   // =====================================================================
@@ -1475,6 +1615,8 @@
     layoutCache.forEach(item => honmaruGroup.add(buildRoom(item)));
     buildingState.buildingObjects.forEach(item => honmaruGroup.add(buildStructure(item)));
     scene.add(honmaruGroup);
+    applyGroundTextures(seasonCtx.palette); // 季節が変わったら地面の絵柄も差し替える
+    updateGroundPatch();
     rebuildSeasonEffects();
 
     // 統計
@@ -3283,6 +3425,7 @@
     const button = document.getElementById("btn-mode");
     button.classList.toggle("active", editMode);
     button.textContent = editMode ? "編集を終了" : "建築編集";
+    if (grid) grid.visible = editMode; // グリッドは編集中のスナップ確認用
     setSelection(null);
     if (editMode) {
       renderPalette();
