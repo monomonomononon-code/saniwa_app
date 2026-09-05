@@ -32,12 +32,44 @@
   };
 
 
+  // 同じ刀剣男士(charId)が、配置待ちと部屋、または複数の部屋に同時に載っている場合の保険。
+  // 通常のドラッグ操作では起こらないが、過去のバージョンの同期処理の不具合で
+  // 既に重複したデータを持っているユーザーがいる可能性があるため、読み込み時に必ず正規化する。
+  // 優先順位: 先に登場した部屋の occupants > 後の部屋 > 配置待ち(unplaced は最後に扱う)。
+  function normalizeLoadedState(raw) {
+    const rooms = Array.isArray(raw.rooms) ? raw.rooms.map(r => ({
+      id: r && r.id, name: r && r.name, template: r && r.template, note: (r && r.note) || "",
+      occupants: Array.isArray(r && r.occupants) ? r.occupants.slice() : []
+    })).filter(r => r.id) : [];
+    const unplaced = Array.isArray(raw.unplaced) ? raw.unplaced.slice() : [];
+    const seen = new Set();
+    let duplicateFound = false;
+    rooms.forEach(room => {
+      room.occupants = room.occupants.filter(o => {
+        if (!o || !o.charId || seen.has(o.charId)) { if (o && o.charId) duplicateFound = true; return false; }
+        seen.add(o.charId);
+        return true;
+      });
+    });
+    const normalizedUnplaced = unplaced.filter(c => {
+      if (!c || !c.id || seen.has(c.id)) { if (c && c.id) duplicateFound = true; return false; }
+      seen.add(c.id);
+      return true;
+    });
+    return { rooms, unplaced: normalizedUnplaced, duplicateFound };
+  }
+
   const ROOM_STORAGE_KEY = "saniwa-tool.rooms.v1";
   try {
     const saved = JSON.parse(localStorage.getItem(ROOM_STORAGE_KEY));
     if (saved && Array.isArray(saved.unplaced) && Array.isArray(saved.rooms)) {
-      state.unplaced = saved.unplaced;
-      state.rooms = saved.rooms;
+      const normalized = normalizeLoadedState(saved);
+      state.unplaced = normalized.unplaced;
+      state.rooms = normalized.rooms;
+      // 重複が見つかった場合は、その場でクリーンな状態を保存し直す(表示上だけの補正で終わらせない)。
+      if (normalized.duplicateFound) {
+        try { localStorage.setItem(ROOM_STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+      }
     }
   } catch (e) {}
   function saveState() {
@@ -173,7 +205,7 @@
     const key = TEMPLATE_META[template] ? template : "a";
     const finalName = (name || "").trim() || meta.label;
     const room = { id: "r" + Date.now() + Math.random().toString(16).slice(2, 6), name: finalName, template: key, note: (note || "").trim(), occupants: [] };
-    state.rooms.push(room);
+    state.rooms.unshift(room); // 新規部屋は一覧の先頭へ(配置待ちトレイに近く、ドラッグ距離が短くなる)
     notify(`部屋「${finalName}」(${meta.label})を追加`);
     render();
     return room;
@@ -189,7 +221,13 @@
       if (!c) {
         c = { id: sc.id, name: sc.name };
         characters.push(c);
-        state.unplaced.push({ id: sc.id, name: sc.name });
+        // このページの再読み込み後は characters がハードコードの初期10振りだけに戻るため、
+        // 追加済みの刀剣男士は毎回「未登場」として検出される。だが state(配置待ち・部屋)は
+        // localStorageから復元済みなので、既にどこかに配置されている場合はここで
+        // unplaced へ二重に追加しない(でないと部屋の中とトレイの両方に表示されてしまう)。
+        const alreadyPlaced = state.unplaced.some(u => u.id === sc.id) ||
+          state.rooms.some(r => r.occupants.some(o => o.charId === sc.id));
+        if (!alreadyPlaced) state.unplaced.push({ id: sc.id, name: sc.name });
       }
       c.name = sc.name;
       c.swordType = sc.swordType || "";
@@ -318,7 +356,7 @@
     confirmBtn.onclick = () => {
       const meta = TEMPLATE_META[addRoomDraft.template];
       const finalName = addRoomDraft.name.trim() || meta.label;
-      state.rooms.push({
+      state.rooms.unshift({ // 新規部屋は一覧の先頭へ(配置待ちトレイに近く、ドラッグ距離が短くなる)
         id: "r" + Date.now(),
         name: finalName,
         template: addRoomDraft.template,
@@ -469,6 +507,7 @@
       const up = ev => {
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", cancel);
         if (moved) {
           clearHighlights();
           handleDrop(ev.clientX, ev.clientY, charId);
@@ -479,8 +518,21 @@
           openProfile(charId);
         }
       };
+      // ブラウザ側のジェスチャー(スクロール等)でドラッグが中断されると pointerup が来ず
+      // pointercancel だけが来ることがある。ここで確実に後始末しないと、document に
+      // 貼りっぱなしの move/up リスナーが残り、後の無関係な操作で誤発火して
+      // 別の刀剣男士が意図しない場所へ移動する原因になる。
+      const cancel = () => {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", cancel);
+        clearHighlights();
+        if (ghost) ghost.remove();
+        dragging = null;
+      };
       document.addEventListener("pointermove", move);
       document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", cancel);
     });
   }
 
