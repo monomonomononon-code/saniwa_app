@@ -654,10 +654,21 @@
   // 新しい見た目を足すときは options に1行足すだけでよい。
   const PART_PROPS = {
     tree:   [{ key: "shape", label: "樹形",        options: [["round", "丸い樹冠"], ["cone", "円錐の樹冠"]] }],
-    sakura: [{ key: "form",  label: "枝ぶり",      options: [["standard", "大きく広がる"], ["young", "若木(小ぶり)"]] }],
+    sakura: [{ key: "form",  label: "樹形",        options: [["round", "丸い木"], ["spread", "横に広い木"], ["tall", "背の高い木"]] }],
     pond:   [{ key: "style", label: "池のかたち",  options: [["round", "丸い池"], ["stream", "流れの池(橋を架けやすい)"]] }],
     stone:  [{ key: "style", label: "石の置き方",  options: [["cluster", "庭石(石組み)"], ["steps", "飛び石"]] }]
   };
+  // 桜の樹形。trunk = 幹の高さ / crown = 樹冠の半径(x,y,z) / clumps = 花の塊の数
+  // arms = 主枝の本数 / droop = 枝垂れの房の数。いずれもパーツのサイズ倍率が掛かる。
+  // 樹形を足すときはここに1行増やし、PART_PROPS.sakura の options にも足す。
+  const SAKURA_FORMS = {
+    round:  { trunk: 1.35, crown: { x: 1.16, y: 1.00, z: 1.12 }, clumps: 88, arms: 4, droop: 5 },
+    spread: { trunk: 1.10, crown: { x: 1.54, y: .76,  z: 1.46 }, clumps: 108, arms: 5, droop: 6 },
+    tall:   { trunk: 1.80, crown: { x: .92,  y: 1.04, z: .90  }, clumps: 76, arms: 4, droop: 4 }
+  };
+  // 旧データ(standard / young)も読めるようにする
+  const SAKURA_FORM_ALIAS = { round: "round", spread: "spread", tall: "tall", standard: "spread", young: "round" };
+
   function propOf(item, key, fallback) {
     const v = item && item.props ? item.props[key] : null;
     return v == null || v === "" ? fallback : v;
@@ -1235,6 +1246,9 @@
     plane:  () => sharedGeo("plane",  () => new THREE.PlaneGeometry(1, 1)),
     cube:   () => sharedGeo("cube",   () => new THREE.BoxGeometry(1, 1, 1)),
     // 細長い葉(竹・草用)。+X方向へ伸びる木の葉形
+    // 花や葉の「小さな塊」1個ぶん。これを何十個も束ねて樹冠を作る(mergedBlobs)。
+    // 小さく使うので低ポリ(36面)で十分。角ばりは花の粒立ちとして見える。
+    clump:  () => sharedGeo("clump", () => new THREE.DodecahedronGeometry(1, 0)),
     leaf:   () => sharedGeo("leaf", () => {
       const sh = new THREE.Shape();
       sh.moveTo(0, 0);
@@ -1591,6 +1605,45 @@
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.y = y;
     return mesh;
+  }
+
+  // ---------------------------------------------------------------
+  //  小さな塊をたくさん束ねて1つのジオメトリにする。
+  //  樹冠のように「多数の塊で1つのまとまり」を作るときに使う。
+  //  メッシュを分けないので描画は1回で済み、塊ごとの色は頂点カラーで持たせる。
+  //  clumps: [{ position, scale, quaternion, color(THREE.Color) }]
+  // ---------------------------------------------------------------
+  function mergedBlobs(clumps) {
+    const base = GEO.clump();
+    const src = base.attributes.position.array;
+    const srcN = base.attributes.normal.array;
+    const vCount = src.length / 3;
+    const total = vCount * clumps.length;
+    const pos = new Float32Array(total * 3);
+    const nor = new Float32Array(total * 3);
+    const col = new Float32Array(total * 3);
+    const m = new THREE.Matrix4(), nm = new THREE.Matrix3();
+    const v = new THREE.Vector3(), n = new THREE.Vector3();
+    const noRot = new THREE.Quaternion();
+    let o = 0;
+    clumps.forEach(cl => {
+      m.compose(cl.position, cl.quaternion || noRot, cl.scale);
+      nm.getNormalMatrix(m);
+      const c = cl.color;
+      for (let i = 0; i < vCount; i++) {
+        v.set(src[i * 3], src[i * 3 + 1], src[i * 3 + 2]).applyMatrix4(m);
+        n.set(srcN[i * 3], srcN[i * 3 + 1], srcN[i * 3 + 2]).applyMatrix3(nm).normalize();
+        pos[o] = v.x; pos[o + 1] = v.y; pos[o + 2] = v.z;
+        nor[o] = n.x; nor[o + 1] = n.y; nor[o + 2] = n.z;
+        col[o] = c.r; col[o + 1] = c.g; col[o + 2] = c.b;
+        o += 3;
+      }
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    return geo;
   }
 
   // 2点を結ぶ枝・幹。from→to へ円柱を向ける(桜や松の枝分かれ用)
@@ -2055,90 +2108,126 @@
     },
     // ---- 植栽(春): デフォルメした低ポリ表現。球・円柱は共有ジオメトリを拡縮して使う ----
     sakura(item, g, ctx) {
-      // 桜: 「幹 → 主枝 → 小枝 → 花房」の順に組み、幹と枝が花の下から見えるようにする。
-      // 花はひとつの球で覆わず、小枝の先の房に分けて高さと大きさを散らす(塊に見えないように)。
-      // props.form: "standard"(大きく広がる) / "young"(若木。細く小さい)
+      // 桜: 「茶色の幹 → 外へ広がる主枝 → 樹冠」の順に組む。
+      // 樹冠は大きな球を並べず、小さな花の塊を何十個もドーム状に散らして1メッシュに束ねる
+      // (mergedBlobs)。輪郭が不規則になり、球の集合には見えない。描画は1回で軽い。
+      // 形は SAKURA_FORMS の3種類。新しい樹形を足すときはそこに1行増やすだけでよい。
       const P = ctx.season.palette;
-      const young = propOf(item, "form", "standard") === "young";
-      const s = Math.max(.5, ctx.w / 2) * (young ? .78 : 1);
+      const form = SAKURA_FORMS[SAKURA_FORM_ALIAS[propOf(item, "form", "round")] || "round"];
+      const s = Math.max(.5, ctx.w / 2);
       const bark = ctx.mat(P.trunk), barkDark = ctx.mat(P.trunkDark);
       const V = (x, y, z) => new THREE.Vector3(x * s, y * s, z * s);
+      const trunkH = form.trunk;
+      const baseR = .165 * s;
+      const Rx = form.crown.x * s, Ry = form.crown.y * s, Rz = form.crown.z * s;
 
-      // --- 根張り(幹の足元を太らせて、地面から生えている感じを出す) ---
-      [[.16, 0, .1], [-.14, 0, -.12], [0, 0, .18]].forEach(([x, y, z], i) => {
-        const root = new THREE.Mesh(GEO.puff(), barkDark);
-        root.scale.set(.16 * s, .1 * s, .16 * s);
+      // --- 根張り: 幹の足元を太らせて地面から生えている感じを出す ---
+      [[.15, .11], [-.14, -.09], [.02, -.17], [-.16, .13]].forEach(([x, z], i) => {
+        const root = new THREE.Mesh(GEO.clump(), barkDark);
+        root.scale.set(.14 * s, .09 * s, .14 * s);
         root.position.set(x * s, .05 * s, z * s);
+        root.rotation.y = i * 1.3;
         g.add(root);
       });
 
-      // --- 幹: 下から又の位置まで。太めにして花の下に見えるようにする ---
-      const trunkR = (young ? .13 : .19) * s;
-      const forkY = young ? .95 : 1.15;
-      const fork = V(.05, forkY, -.02);
-      ctx.pick(limb(g, barkDark, V(0, 0, 0), fork, trunkR, 1));
+      // --- 幹: 途中で少し曲げた2段。木としての高さを出す ---
+      const bend = V(.09, trunkH * .55, -.06);
+      const fork = V(.02, trunkH, .05);
+      ctx.pick(limb(g, barkDark, V(0, 0, 0), bend, baseR, 1));
+      ctx.pick(limb(g, barkDark, bend, fork, baseR * .74, 1));
 
-      // --- 主枝3本(先を花房より少し外に出して枝先が覗くようにする) ---
-      const armDefs = young
-        ? [[-.5, .55, .2], [.55, .6, -.15], [.02, .78, .3]]
-        : [[-.78, .62, .28], [.82, .58, -.2], [.05, .85, .35]];
-      const arms = armDefs.map(([dx, dy, dz]) => {
-        const to = V(fork.x / s + dx, forkY + dy, fork.z / s + dz);
-        ctx.pick(limb(g, bark, fork, to, trunkR * .55));
-        return to;
-      });
+      // --- 主枝: 又から外へ広がる。樹冠の下から見えるように少し長めに出す ---
+      const arms = [];
+      for (let i = 0; i < form.arms; i++) {
+        const a = (i / form.arms) * Math.PI * 2 + .5 + ctx.rand() * .35;
+        const reach = form.crown.x * (.5 + ctx.rand() * .22);
+        const rise = form.crown.y * (.42 + ctx.rand() * .3);
+        const to = V(fork.x / s + Math.cos(a) * reach, trunkH + rise, fork.z / s + Math.sin(a) * reach);
+        ctx.pick(limb(g, bark, fork, to, baseR * .4));
+        arms.push(to);
+        // 枝先の小枝(樹冠の中へ差し込む)
+        const twig = to.clone().add(V(Math.cos(a) * .2, .22, Math.sin(a) * .2));
+        limb(g, bark, to, twig, baseR * .2);
+      }
 
-      // --- 小枝と花房: 主枝1本につき2房。高さ・大きさ・色をばらして輪郭を凸凹させる ---
-      const clusterR = young ? .42 : .55;
-      arms.forEach((arm, ai) => {
-        for (let k = 0; k < 2; k++) {
-          const spread = (k ? 1 : -1) * (.42 + ctx.rand() * .2);
-          const tip = new THREE.Vector3(
-            arm.x + spread * s * (ai === 2 ? .7 : 1),
-            arm.y + (.24 + ctx.rand() * .28) * s,
-            arm.z + (k ? .32 : -.3) * s * (.6 + ctx.rand() * .8)
-          );
-          ctx.pick(limb(g, bark, arm, tip, trunkR * .3));
-          const r = clusterR * (.82 + ctx.rand() * .38);
-          const color = [P.sakura, P.sakuraDeep, P.sakuraLight][(ai + k) % 3];
-          const main = new THREE.Mesh(GEO.puff(), ctx.mat(color));
-          main.scale.set(r * s, r * s * .74, r * s * .94);
-          main.position.copy(tip);
-          ctx.pick(main);
-          // 房の縁をぎざつかせる小さな塊(スマホでは1つに減らす)
-          for (let j = 0; j < (ctx.lod ? 2 : 1); j++) {
-            const sub = new THREE.Mesh(GEO.puff(), ctx.mat(j ? P.sakuraLight : color));
-            const sr = r * (.48 + ctx.rand() * .22);
-            sub.scale.set(sr * s, sr * s * .68, sr * s * .88);
-            sub.position.set(
-              tip.x + (ctx.rand() - .5) * r * s * 1.6,
-              tip.y + (ctx.rand() - .45) * r * s * .9,
-              tip.z + (ctx.rand() - .5) * r * s * 1.6
-            );
-            ctx.pick(sub);
-          }
+      // --- 樹冠: ドーム状に散らした小さな花の塊 ---
+      // 樹冠は幹の上にしっかり乗せる(下げすぎると幹が隠れて塊に見えてしまう)
+      const center = new THREE.Vector3(fork.x, (trunkH + form.crown.y * .92) * s, fork.z);
+      const cLow = new THREE.Color(P.sakuraDeep);
+      const cMid = new THREE.Color(P.sakura);
+      const cTop = new THREE.Color(P.sakuraLight);
+      const clumps = [];
+      const count = Math.round(form.clumps * (ctx.lod ? 1 : .62));
+      const golden = Math.PI * (3 - Math.sqrt(5));
+      for (let i = 0; i < count; i++) {
+        // 上半球を厚めにサンプリングして、下は少し平らなドームにする
+        const t = (i + .5) / count;
+        const cosT = 1 - 1.52 * t;
+        const sinT = Math.sqrt(Math.max(0, 1 - cosT * cosT));
+        const phi = i * golden + ctx.rand() * .5;
+        const dir = new THREE.Vector3(Math.cos(phi) * sinT, cosT, Math.sin(phi) * sinT);
+        const shell = .78 + ctx.rand() * .26;  // 内側/外側にばらけさせて輪郭を崩す
+        const pos = new THREE.Vector3(
+          center.x + dir.x * Rx * shell,
+          center.y + dir.y * Ry * shell,
+          center.z + dir.z * Rz * shell
+        );
+        // 塊は小さめ。大きくすると1粒ずつが目立って「球の集合」に見えてしまう
+        const r = (.18 + ctx.rand() * .1) * Math.min(Rx, Rz);
+        // 上ほど淡く、下ほど濃いピンクにして、のっぺりしないようにする
+        const h = (dir.y + .52) / 1.52;
+        const color = (h > .5 ? cMid.clone().lerp(cTop, (h - .5) * 1.1) : cLow.clone().lerp(cMid, h * 2))
+          .lerp(cTop, ctx.rand() * .1);
+        clumps.push({
+          position: pos,
+          scale: new THREE.Vector3(r * (.9 + ctx.rand() * .4), r * (.66 + ctx.rand() * .3), r * (.9 + ctx.rand() * .4)),
+          quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(ctx.rand() * 3, ctx.rand() * 3, ctx.rand() * 3)),
+          color
+        });
+      }
+      // 樹冠の芯: 内側にも少し入れて、隙間から地面が透けないようにする
+      for (let i = 0; i < 6; i++) {
+        const a = i * 1.05, up = .1 + ctx.rand() * .5;
+        const cr = .3 * Math.min(Rx, Rz);
+        clumps.push({
+          position: new THREE.Vector3(
+            center.x + Math.cos(a) * Rx * .34,
+            center.y + up * Ry * .5,
+            center.z + Math.sin(a) * Rz * .34
+          ),
+          scale: new THREE.Vector3(cr, cr * .8, cr),
+          quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(ctx.rand() * 3, ctx.rand() * 3, ctx.rand() * 3)),
+          color: cMid.clone().lerp(cLow, .35)
+        });
+      }
+      // 枝垂れ: 樹冠のふちから下へ垂れる房。桜らしさが一番出る部分
+      const strands = Math.round(form.droop * (ctx.lod ? 1 : .5));
+      for (let k = 0; k < strands; k++) {
+        const a = (k / Math.max(1, strands)) * Math.PI * 2 + ctx.rand() * .6;
+        const len = 4 + Math.floor(ctx.rand() * 3);
+        for (let j = 0; j < len; j++) {
+          const drop = (j + 1) / len;
+          const r = (.17 - drop * .08) * Math.min(Rx, Rz);
+          clumps.push({
+            position: new THREE.Vector3(
+              center.x + Math.cos(a) * Rx * (.86 + drop * .1),
+              center.y - Ry * (.34 + drop * .62),
+              center.z + Math.sin(a) * Rz * (.86 + drop * .1)
+            ),
+            scale: new THREE.Vector3(r, r * .78, r),
+            quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(ctx.rand() * 3, ctx.rand() * 3, ctx.rand() * 3)),
+            color: cMid.clone().lerp(cLow, drop * .6)
+          });
         }
-      });
-      // 横に垂れる房(桜らしく樹冠を横に広げ、下側の輪郭を作る)
-      arms.slice(0, 2).forEach((arm, ai) => {
-        const side = ai ? 1 : -1;
-        const skirt = new THREE.Mesh(GEO.puff(), ctx.mat(ai ? P.sakuraDeep : P.sakura));
-        const r = clusterR * (.7 + ctx.rand() * .2);
-        skirt.scale.set(r * s * 1.15, r * s * .6, r * s * .95);
-        skirt.position.set(arm.x + side * .34 * s, arm.y - .2 * s, arm.z + (ctx.rand() - .5) * .4 * s);
-        ctx.pick(skirt);
-      });
-      // 天辺の房(樹冠のてっぺんを丸くまとめる)
-      const crown = new THREE.Mesh(GEO.puff(), ctx.mat(P.sakuraLight));
-      const cr = clusterR * .8;
-      crown.scale.set(cr * s, cr * s * .66, cr * s * .9);
-      crown.position.set(fork.x, (forkY + (young ? 1.05 : 1.3)) * s, fork.z);
-      ctx.pick(crown);
+      }
+      const canopy = new THREE.Mesh(mergedBlobs(clumps), ctx.mat(0xFFFFFF, { vertexColors: true }));
+      ctx.pick(canopy);
 
       // --- 根元に散った花びら(均一にせず風下へ寄せる) ---
       if (ctx.season.effects.petals) {
         scatterDiscs(g, ctx, {
-          count: ctx.lod ? 12 : 6, y: .012, radius: .075, w: 2.6 * s, d: 2.6 * s, cluster: .35,
+          count: ctx.lod ? 14 : 7, y: .012, radius: .08,
+          w: Rx * 2.3, d: Rz * 2.3, cluster: .35,
           bias: { x: WIND.x * .5 * s, z: WIND.z * .5 * s },
           colors: [P.petal, P.petalDeep, P.sakuraLight]
         });
