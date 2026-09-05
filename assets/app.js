@@ -323,6 +323,14 @@
         e.source.postMessage({ type: "characters_sync", characters: sharedCharacters }, "*");
         sendRoomsToHonmaru3d();
       }
+      if (data.type === "add_room" && data.template) {
+        // 建築エディタからの部屋追加は、部屋データの正本である部屋割りページに委ねる
+        try {
+          roomsSub.iframe.contentWindow && roomsSub.iframe.contentWindow.postMessage(
+            { type: "room_add", template: data.template, name: data.name || "", note: data.note || "" }, "*"
+          );
+        } catch (err) {}
+      }
       return;
     }
     if (data.source !== "rooms" && data.source !== "network" && data.source !== "master" && data.source !== "expcalc") return;
@@ -414,7 +422,7 @@
         roomsLoaded = true;
       }
       if (!honmaru3dLoaded) {
-        honmaru3dSub.iframe.src = "pages/honmaru3d.html?v=build-editor-1";
+        honmaru3dSub.iframe.src = "pages/honmaru3d.html?v=build-editor-2";
         honmaru3dLoaded = true;
       } else {
         sendRoomsToHonmaru3d();
