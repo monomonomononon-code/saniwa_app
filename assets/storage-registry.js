@@ -32,16 +32,16 @@
   const SNAPSHOT_KEY = PREFIX + "snapshot-before-import.v1";
   const LAST_IMPORT_KEY = PREFIX + "last-import.v1";
 
-  // 機能ごとのグループ名(表示用ラベル)。timeline / schedule は PLANNED_STORES(下記)向けの予約。
+  // 機能ごとのグループ名(表示用ラベル)。timeline はまだ PLANNED_STORES(下記)向けの予約のみ。
   const DOMAIN_LABELS = {
     characters: "刀剣男士",
     rooms: "部屋割り",
     buildingObjects: "3D建築(棟・パーツ・家具)",
     relationships: "相関図",
     journal: "日報・日誌",
+    schedule: "予定",
     home: "ホーム(端末ローカル)",
-    timeline: "年表(準備中)",
-    schedule: "予定(準備中)"
+    timeline: "年表(準備中)"
   };
 
   const count = (n, unit) => `${n}${unit}`;
@@ -70,6 +70,11 @@
     { id: "diary", key: PREFIX + "diary.v1", label: "日誌", owner: "assets/diary.js",
       domain: "journal", scope: "user",
       summary: d => d && Array.isArray(d.works) ? `${count(d.works.length, "作品")} / ${count(d.works.reduce((n, w) => n + (w.chapters || []).length, 0), "章")}` : "" },
+    // 1件 = 1つの予定(開始日〜終了日 + ToDo)。日付キーにせず配列で持つのは、複数日にまたがる
+    // 予定を「日付ごとに複製」せず1件のまま扱えるようにするため(編集・削除・カレンダー描画すべてが単純になる)。
+    { id: "schedule", key: PREFIX + "schedule.v1", label: "予定", owner: "assets/schedule.js",
+      domain: "schedule", scope: "user",
+      summary: d => d && Array.isArray(d.events) ? `${count(d.events.length, "件")} / ToDo${count(d.events.reduce((n, e) => n + (Array.isArray(e.todos) ? e.todos.length : 0), 0), "件")}` : "" },
     // activityLog(更新履歴)は端末のフィード、sharedCharacters は master.v1 の写し(キャッシュ)。
     // どちらも「ユーザーの正データ」ではないため scope は device 扱い(詳細は docs/DATA-STORAGE.md)。
     { id: "app", key: PREFIX + "app.v1", label: "ホーム(更新履歴・共有キャラ一覧)", owner: "assets/app.js",
@@ -80,13 +85,11 @@
 
   // 今後追加予定の機能の設計メモ(コードとしては未使用・未登録)。
   // 実装するときは、この情報を元に1件 STORES へ足すだけで一覧・バックアップ・取り込みに乗る。
+  // ("schedule" はここにあった予定だったが、実装時に STORES へ昇格済み。上の schedule エントリを参照)
   const PLANNED_STORES = [
     { id: "timeline", key: PREFIX + "timeline.v1", label: "年表", domain: "timeline", scope: "user",
       shape: "{ version: 1, entries: [{ id, date, title, body }] }",
-      note: "本丸の出来事を時系列で記録する機能。日誌(diary.v1)と同じ「配列を1つのオブジェクトに入れる」形を想定。" },
-    { id: "schedule", key: PREFIX + "schedule.v1", label: "予定", domain: "schedule", scope: "user",
-      shape: "{ version: 1, entries: { \"YYYY-MM-DD\": [{ id, title, memo }] } }",
-      note: "遠征・イベントなどの予定を記録する機能。日報(report.v1)と同じ「日付をキーにしたオブジェクト」を想定。" }
+      note: "本丸の出来事を時系列で記録する機能。日誌(diary.v1)と同じ「配列を1つのオブジェクトに入れる」形を想定。" }
   ];
 
   function readRaw(key) {
