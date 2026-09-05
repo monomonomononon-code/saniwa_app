@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F2EBDD">
+  <title>計画表 | 審神者管理ツール</title>
+  <link rel="stylesheet" href="../assets/schedule.css?v=2">
+</head>
+<body>
+  <main id="app">
+    <div class="header">
+      <h1><span class="seal">計</span>計画表</h1>
+      <p>予定にToDoを紐づけて管理できます。日付をタップすると、その日の予定を確認・追加できます。</p>
+    </div>
+
+    <section class="sched-month-nav" aria-label="月の切り替え">
+      <button id="sched-prev" type="button" aria-label="前の月">‹</button>
+      <div class="sched-month-mid">
+        <h2 id="sched-month-title" aria-live="polite"></h2>
+        <button id="sched-today" type="button">今日</button>
+      </div>
+      <button id="sched-next" type="button" aria-label="次の月">›</button>
+    </section>
+
+    <div class="sched-weekdays" aria-hidden="true"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+    <div id="sched-grid" class="sched-grid" role="grid" aria-label="月表示カレンダー"></div>
+
+    <section class="sched-day-panel" aria-labelledby="sched-day-title">
+      <div class="sched-day-panel-head">
+        <h2 id="sched-day-title"></h2>
+        <button id="sched-add-btn" class="sched-add-btn" type="button">＋ 予定を追加</button>
+      </div>
+      <div id="sched-day-list" class="sched-day-list"></div>
+    </section>
+  </main>
+
+  <div id="sched-editor-overlay" class="modal-overlay" hidden>
+    <section id="sched-editor" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="sched-editor-title">
+      <div class="m-eyebrow" id="sched-editor-eyebrow">予定</div>
+      <h2 id="sched-editor-title">新しい予定</h2>
+      <p id="sched-editor-error" class="sched-error" role="alert"></p>
+
+      <div class="m-field-label">タイトル</div>
+      <input id="sched-field-title" class="m-input" type="text" placeholder="例：大阪城">
+
+      <div class="sched-date-row">
+        <div>
+          <div class="m-field-label">開始日</div>
+          <input id="sched-field-start" class="m-input" type="date">
+        </div>
+        <div>
+          <div class="m-field-label">終了日</div>
+          <input id="sched-field-end" class="m-input" type="date">
+        </div>
+      </div>
+
+      <div class="m-field-label">メモ</div>
+      <textarea id="sched-field-memo" class="m-textarea" placeholder="自由に書いてください"></textarea>
+
+      <div class="m-field-label">ToDo</div>
+      <div id="sched-todo-list" class="sched-todo-list"></div>
+      <div class="sched-todo-add-row">
+        <input id="sched-todo-input" class="m-input" type="text" placeholder="例：山姥切国広をLv199にする">
+        <button id="sched-todo-add" type="button">＋ 追加</button>
+      </div>
+
+      <button id="sched-save" class="modal-close" type="button">保存</button>
+      <button id="sched-delete" class="modal-danger" type="button" hidden>この予定を削除</button>
+      <button id="sched-close" class="modal-cancel" type="button">閉じる</button>
+    </section>
+  </div>
+
+  <script src="../assets/storage-registry.js?v=domains-1"></script>
+  <script src="../assets/schedule.js?v=1"></script>
+</body>
+</html>
