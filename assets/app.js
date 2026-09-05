@@ -481,7 +481,7 @@
         roomsLoaded = true;
       }
       if (!honmaru3dLoaded) {
-        honmaru3dSub.iframe.src = "pages/honmaru3d.html?v=season-spring-6";
+        honmaru3dSub.iframe.src = "pages/honmaru3d.html?v=season-all-1";
         honmaru3dLoaded = true;
       } else {
         sendRoomsToHonmaru3d();
