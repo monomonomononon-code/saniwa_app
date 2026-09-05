@@ -60,7 +60,7 @@
     // timeMode(時間帯)だけは本来「端末の設定」に近いが、今回は既存の保存形式を変えないためこのまま残す。
     { id: "honmaru3d", key: PREFIX + "honmaru3d.v1", label: "本丸建築(3D)", owner: "pages/honmaru3d.html",
       domain: "buildingObjects", scope: "user",
-      summary: d => d ? `棟${(d.wings || []).length} / パーツ${count((d.buildingObjects || []).length, "件")} / 時間帯:${d.timeMode || "-"}` : "" },
+      summary: d => d ? `棟${(d.wings || []).length} / パーツ${count((d.buildingObjects || []).length, "件")} / 時間帯:${d.timeMode || "-"} / 季節:${d.seasonMode || "-"}` : "" },
     { id: "network", key: PREFIX + "network.v1", label: "相関図", owner: "assets/network.js",
       domain: "relationships", scope: "user",
       summary: d => d && Array.isArray(d.tabs) ? `${count(d.tabs.length, "タブ")} / 関係${count(d.tabs.reduce((n, t) => n + (t.relationships || []).length, 0), "件")}` : "" },
