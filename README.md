@@ -13,6 +13,7 @@
 - `pages/journal.html` — 日報・日誌
 - `pages/backup.html` / `assets/backup.js` / `assets/backup.css` — 設定・バックアップ(全データのJSON書き出し / 復元)
 - `pages/schedule.html` / `assets/schedule.js` / `assets/schedule.css` — 計画表(月表示カレンダー、予定とToDo)。保存は `assets/storage-registry.js` の `load`/`save` 経由(`saniwa-tool.schedule.v1`)のみで、独自の保存処理は持たない
+- `pages/timeline.html` / `assets/timeline.js` / `assets/timeline.css` — 年表(縦タイムライン、手動の出来事 + 刀剣男士の顕現を自動反映)。保存は `saniwa-tool.timeline.v1` のみで、手動項目だけを持つ。顕現イベントは `master.v1` を都度参照して仮想的に表示するだけで、年表側には保存しない(二重管理を避けるため)
 - `assets/storage-registry.js` — 保存キーの台帳とバックアップ処理。保存構造の解説は `docs/DATA-STORAGE.md`
 
 新しい機能を追加するときは、`localStorage` を直接触らず `assets/storage-registry.js` の `load`/`save`/`remove`/`storeKey` を使い、保存先を `STORES` 配列に登録してください(そうするだけでバックアップ・復元に自動的に乗ります)。
