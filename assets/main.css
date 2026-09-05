@@ -14,6 +14,7 @@ html, body {
     --indigo: #3F5A70;
     --teal: #2F6B5E;
     --kurenai: #7A2E3D;
+    --kawara: #A8703F;
     --ink: #2B2621;
     --ink-soft: #5C544A;
     --tag-border: #C9BFA6;
@@ -307,9 +308,11 @@ html, body {
   .app-icon-glyph.journal { background: linear-gradient(160deg, #8A7084, #594253); }
   .app-icon-glyph.schedule { background: linear-gradient(160deg, #3F8574, #1F4A40); }
   .app-icon-glyph.timeline { background: linear-gradient(160deg, #8B3A46, #521E29); }
+  .app-icon-glyph.kawaraban { background: linear-gradient(160deg, #B98244, #6E4D28); }
   #open-journal:focus-visible { outline: 2px solid #70536B; outline-offset: 5px; border-radius: 5px; }
   #open-schedule:focus-visible { outline: 2px solid var(--teal); outline-offset: 5px; border-radius: 5px; }
   #open-timeline:focus-visible { outline: 2px solid var(--kurenai); outline-offset: 5px; border-radius: 5px; }
+  #open-kawaraban:focus-visible { outline: 2px solid var(--kawara); outline-offset: 5px; border-radius: 5px; }
   .app-icon-glyph.soon {
     background: linear-gradient(160deg, #D8CDB4, var(--tag-border));
     color: var(--ink-soft);
