@@ -208,7 +208,7 @@
   .add-room-row {
     display: flex;
     gap: 8px;
-    margin-top: 14px;
+    margin-bottom: 16px;
   }
   .add-room-btn {
     flex: 1;
