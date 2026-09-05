@@ -1,0 +1,67 @@
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #F2EBDD;
+}
+body {
+  color: #2B2621;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+* { box-sizing: border-box; }
+.menu-page { padding: 22px 16px 40px; }
+.menu-header { margin: 0 auto 18px; max-width: 620px; }
+.menu-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 7px;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 22px;
+  letter-spacing: .05em;
+}
+.menu-header p { margin: 0; color: #5C544A; font-size: 12px; }
+.seal, .choice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #FBF6EA;
+  background: #7A4B32;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+.seal { width: 25px; height: 25px; border-radius: 6px; font-size: 13px; }
+.choice-list {
+  display: grid;
+  gap: 12px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+.choice {
+  width: 100%;
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px 16px;
+  border: 1px solid #C9BFA6;
+  border-radius: 14px;
+  background: #FFFDF6;
+  color: #2B2621;
+  text-align: left;
+  font: inherit;
+  box-shadow: 0 1px 2px rgba(43, 38, 33, .05);
+}
+.choice:active { background: #E8DFC9; transform: translateY(1px); }
+.choice-icon { width: 48px; height: 48px; border-radius: 11px; font-size: 23px; }
+.choice-icon.view3d { background: #3F5A70; }
+.choice-copy { min-width: 0; display: grid; gap: 5px; }
+.choice-copy strong {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+.choice-copy small { color: #5C544A; font-size: 11.5px; line-height: 1.5; }
+@media (min-width: 700px) {
+  .menu-page { padding-top: 32px; }
+}
