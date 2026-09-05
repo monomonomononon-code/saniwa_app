@@ -275,11 +275,8 @@
     tray.appendChild(trayChips);
     el.appendChild(tray);
 
-    const grid = document.createElement("div");
-    grid.className = "rooms-grid";
-    state.rooms.forEach(room => grid.appendChild(renderRoom(room)));
-    el.appendChild(grid);
-
+    // 「＋部屋を追加」は配置待ちトレイのすぐ下、部屋一覧の上に置く(部屋を増やしてすぐ
+    // 上のトレイからドラッグしやすいように)。
     const addRow = document.createElement("div");
     addRow.className = "add-room-row";
 
@@ -293,6 +290,11 @@
     };
     addRow.appendChild(addBtn);
     el.appendChild(addRow);
+
+    const grid = document.createElement("div");
+    grid.className = "rooms-grid";
+    state.rooms.forEach(room => grid.appendChild(renderRoom(room)));
+    el.appendChild(grid);
 
     if (openProfileId) {
       el.appendChild(renderProfileModal(openProfileId));
