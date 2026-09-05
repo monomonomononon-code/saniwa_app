@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F2EBDD">
+  <title>本丸 俯瞰図</title>
+  <style>html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #F2EBDD; }</style>
+</head>
+<body>
+<div id="app"></div>
+<style>
+  #app {
+    --paper: #F2EBDD;
+    --paper-deep: #E8DFC9;
+    --wood: #7A4B32;
+    --wood-dark: #5C3722;
+    --hanko: #A8382C;
+    --ink: #2B2621;
+    --ink-soft: #5C544A;
+    --tag-bg: #FFFDF6;
+    --tag-border: #C9BFA6;
+    --tatami: #9AA179;
+    --tatami-wide: #8E9A6E;
+    --floor-wood: #BE955F;
+    --indigo: #3F5A70;
+
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app * { box-sizing: border-box; }
+
+  #stage { position: absolute; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+  .topbar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 10px 12px 14px;
+    pointer-events: none;
+    background: linear-gradient(rgba(242,235,221,0.96) 55%, rgba(242,235,221,0));
+  }
+  .topbar h1 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .topbar h1 .seal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 3px;
+    background: var(--indigo);
+    color: #fff;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .stats { font-size: 11px; color: var(--ink-soft); margin: 0 0 6px; }
+  .legend { display: flex; gap: 6px; flex-wrap: wrap; }
+  .legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    padding: 3px 8px 3px 5px;
+  }
+  .legend-chip .sw { width: 12px; height: 12px; border-radius: 3px; }
+
+  .hud {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hud button {
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-size: 11.5px;
+    font-family: inherit;
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .hud button:active { background: var(--paper-deep); }
+
+  .hint {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    background: rgba(242,235,221,0.85);
+    border-radius: 6px;
+    padding: 4px 8px;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .hint.hidden { opacity: 0; }
+
+  .info-panel {
+    position: absolute;
+    left: 10px; right: 10px; bottom: 10px;
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 12px;
+    padding: 12px 14px 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+    max-height: 46%;
+    overflow-y: auto;
+    transform: translateY(130%);
+    transition: transform 0.28s ease;
+  }
+  .info-panel.open { transform: none; }
+  .ip-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .ip-eyebrow { font-size: 10.5px; color: var(--ink-soft); }
+  .ip-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--ink-soft);
+    font-family: inherit;
+    padding: 2px 4px;
+  }
+  .ip-title {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 19px;
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ip-type {
+    font-size: 10px;
+    color: #FBF6EA;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  }
+  .ip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12px;
+    padding: 6px 0;
+    border-top: 1px solid var(--tag-border);
+  }
+  .ip-row span:first-child { color: var(--ink-soft); flex-shrink: 0; }
+  .ip-row span:last-child { text-align: right; }
+  .ip-note {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    background: var(--paper-deep);
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin: 4px 0 8px;
+    line-height: 1.5;
+  }
+  .ip-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
+  .ip-chip {
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .ip-chip.captain { background: #F6E9C9; border-color: var(--hanko); }
+  .ip-chip:active { background: var(--paper-deep); }
+  .ip-empty { font-size: 11.5px; color: var(--ink-soft); padding: 6px 0; }
+  .ip-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .ip-btn {
+    flex: 1;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 6px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: #FBF6EA;
+    background: var(--wood);
+  }
+  .ip-btn:active { background: var(--wood-dark); }
+  .ip-btn.secondary { background: var(--indigo); }
+
+  .overlay-msg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    pointer-events: none;
+  }
+  .overlay-msg .box {
+    background: var(--paper-deep);
+    border: 1px dashed var(--tag-border);
+    border-radius: 10px;
+    padding: 18px 16px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.7;
+    max-width: 280px;
+  }
+  .overlay-msg.error .box { border-style: solid; border-color: var(--hanko); color: var(--hanko); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+  // ---- 部屋割り側と同じ template キー(a/b/c)に対する3D用メタ ----
+  const UNIT_W = 4;     // 1マス分の幅
+  const DEPTH = 3;      // 部屋の奥行
+  const GAP = 1.2;      // 部屋間の隙間
+  const COLS = 3;       // 1行あたりのマス数(広間は2マス消費)
+  const FLOOR_H = 0.3;  // 床の厚み
+  const WALL_H = 1.5;
+
+  const TEMPLATE_META = {
+    a: { label: "六畳", units: 1, base: "#9AA179", plate: "#6E7452" },
+    b: { label: "広間", units: 2, base: "#8E9A6E", plate: "#59653F" },
+    c: { label: "洋間", units: 1, base: "#BE955F", plate: "#8C6239" }
+  };
+  const SANS = '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif';
+  const MINCHO = '"Hiragino Mincho ProN", "Yu Mincho", serif';
+
+  function metaOf(tpl) { return TEMPLATE_META[tpl] || TEMPLATE_META.a; }
+  function roomWidth(meta) { return meta.units * UNIT_W + (meta.units - 1) * GAP; }
+
+  // ---- 親から同期されるデータ ----
+  let characters = [];
+  let rooms = [];
+  let unplaced = [];
+  let selected = null; // { kind: "room" | "char", id }
+
+  function nameOf(charId) {
+    const c = characters.find(x => x.id === charId);
+    return c ? c.name : "?";
+  }
+  function charOf(charId) { return characters.find(x => x.id === charId) || null; }
+  function roomOfChar(charId) {
+    return rooms.find(r => (r.occupants || []).some(o => o.charId === charId)) || null;
+  }
+
+  function notify(text) {
+    try { window.parent && window.parent.postMessage({ source: "honmaru3d", text: text }, "*"); } catch (e) {}
+  }
+
+  window.addEventListener("message", e => {
+    const data = e.data;
+    if (!data) return;
+    if (data.type === "characters_sync" && Array.isArray(data.characters)) {
+      characters = data.characters.map(c => Object.assign({}, c));
+      scheduleRebuild();
+    }
+    if (data.type === "rooms_sync" && Array.isArray(data.rooms)) {
+      rooms = data.rooms;
+      unplaced = Array.isArray(data.unplaced) ? data.unplaced : [];
+      scheduleRebuild();
+    }
+  });
+
+  // ---- DOM ----
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div id="stage"></div>
+    <div class="topbar">
+      <h1><span class="seal">俯</span>本丸 俯瞰図</h1>
+      <div class="stats" id="stats"></div>
+      <div class="legend">
+        <span class="legend-chip"><span class="sw" style="background:${TEMPLATE_META.a.base}"></span>六畳</span>
+        <span class="legend-chip"><span class="sw" style="background:${TEMPLATE_META.b.base}"></span>広間</span>
+        <span class="legend-chip"><span class="sw" style="background:${TEMPLATE_META.c.base}"></span>洋間</span>
+      </div>
+    </div>
+    <div class="hud">
+      <button id="btn-reset">視点を戻す</button>
+      <button id="btn-top">真上から</button>
+    </div>
+    <div class="hint" id="hint">ドラッグで回転 / ピンチでズーム / 2本指でパン</div>
+    <div class="info-panel" id="info-panel"></div>
+    <div class="overlay-msg" id="overlay" style="display:none"><div class="box" id="overlay-text"></div></div>
+  `;
+  const stage = document.getElementById("stage");
+  const statsEl = document.getElementById("stats");
+  const panelEl = document.getElementById("info-panel");
+  const overlayEl = document.getElementById("overlay");
+  const overlayText = document.getElementById("overlay-text");
+
+  function showOverlay(text, isError) {
+    overlayEl.style.display = "flex";
+    overlayEl.classList.toggle("error", !!isError);
+    overlayText.textContent = text;
+  }
+  function hideOverlay() { overlayEl.style.display = "none"; }
+
+  if (typeof THREE === "undefined" || !THREE.OrbitControls) {
+    showOverlay("3D表示ライブラリ(three.js)を読み込めませんでした。通信状況を確認して、ホームから開き直してください。", true);
+    return;
+  }
+
+  // ---- three.js セットアップ ----
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0xF2EBDD, 1);
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0xF2EBDD, 40, 90);
+
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+  camera.position.set(0, 14, 16);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.screenSpacePanning = false; // 地面に沿ってパン
+  controls.minDistance = 4;
+  controls.maxDistance = 70;
+  controls.maxPolarAngle = Math.PI / 2 - 0.06;
+  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+  scene.add(new THREE.HemisphereLight(0xFFF8EA, 0x8A8466, 0.95));
+  const sun = new THREE.DirectionalLight(0xFFF4DE, 0.65);
+  sun.position.set(8, 18, 10);
+  scene.add(sun);
+
+  // 地面(庭)
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200),
+    new THREE.MeshLambertMaterial({ color: 0xD9D2B8 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.3;
+  scene.add(ground);
+  const grid = new THREE.GridHelper(120, 60, 0xC9BFA6, 0xE0D8C3);
+  grid.position.y = -0.29;
+  scene.add(grid);
+
+  let honmaruGroup = null;   // 部屋一式
+  let highlightGroup = null; // 選択ハイライト
+  let pickables = [];        // レイキャスト対象
+  let layoutCache = [];      // { room, meta, w, d, x, z }
+  let extent = { w: 10, d: 8 };
+  const floorTextureCache = {};
+
+  // ---- 床テクスチャ(部屋割りビューのSVGと同じ図柄) ----
+  function makeFloorTexture(tpl) {
+    if (floorTextureCache[tpl]) return floorTextureCache[tpl];
+    const meta = metaOf(tpl);
+    const W = tpl === "b" ? 768 : 512, H = 384;
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.fillStyle = meta.base;
+    g.fillRect(0, 0, W, H);
+
+    if (tpl === "c") {
+      // 洋間: 板張り + 絨毯
+      g.strokeStyle = "rgba(140,98,57,0.5)";
+      g.lineWidth = 2;
+      for (let x = 64; x < W; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+      g.strokeStyle = "rgba(140,98,57,0.25)";
+      g.lineWidth = 1;
+      for (let y = 48; y < H; y += 96) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+      g.fillStyle = "rgba(124,74,45,0.32)";
+      roundRect(g, W * 0.28, H * 0.27, W * 0.44, H * 0.46, 10);
+      g.fill();
+    } else {
+      // 畳: 六畳は2x2、広間は縦3列
+      g.strokeStyle = "rgba(110,116,82,0.75)";
+      g.lineWidth = 4;
+      const mats = tpl === "b"
+        ? [[8, 8, W / 3 - 12, H - 16], [W / 3 + 4, 8, W / 3 - 12, H - 16], [2 * W / 3 + 4, 8, W / 3 - 12, H - 16]]
+        : [[8, 8, W / 2 - 12, H / 2 - 12], [W / 2 + 4, 8, W / 2 - 12, H / 2 - 12], [8, H / 2 + 4, W / 2 - 12, H / 2 - 12], [W / 2 + 4, H / 2 + 4, W / 2 - 12, H / 2 - 12]];
+      mats.forEach(m => g.strokeRect(m[0], m[1], m[2], m[3]));
+      g.strokeStyle = "rgba(110,116,82,0.3)";
+      g.lineWidth = 1;
+      mats.forEach(m => {
+        for (let y = m[1] + 22; y < m[1] + m[3]; y += 22) {
+          g.beginPath(); g.moveTo(m[0], y); g.lineTo(m[0] + m[2], y); g.stroke();
+        }
+      });
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+    floorTextureCache[tpl] = tex;
+    return tex;
+  }
+
+  function roundRect(g, x, y, w, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
+  }
+
+  // ---- 文字スプライト(名前札・部屋名札) ----
+  function makeLabelSprite(text, opt) {
+    opt = opt || {};
+    const fs = opt.fontSize || 34;
+    const pad = opt.pad || 20;
+    const font = opt.font || SANS;
+    const c = document.createElement("canvas");
+    const g = c.getContext("2d");
+    g.font = `${opt.weight || "500"} ${fs}px ${font}`;
+    const tw = Math.ceil(g.measureText(text).width);
+    let badgeW = 0;
+    if (opt.badge) {
+      g.font = `600 ${Math.round(fs * 0.66)}px ${SANS}`;
+      badgeW = Math.ceil(g.measureText(opt.badge).width) + 22;
+    }
+    const W = tw + pad * 2 + (opt.badge ? badgeW + 12 : 0);
+    const H = Math.round(fs * 1.9);
+    c.width = W; c.height = H;
+
+    roundRect(g, 2, 2, W - 4, H - 4, opt.radius != null ? opt.radius : H / 2);
+    g.fillStyle = opt.bg || "#FFFDF6";
+    g.fill();
+    g.lineWidth = opt.borderWidth || 3;
+    g.strokeStyle = opt.border || "#C9BFA6";
+    g.stroke();
+
+    let tx = pad;
+    if (opt.badge) {
+      g.font = `600 ${Math.round(fs * 0.66)}px ${SANS}`;
+      roundRect(g, pad * 0.55, H * 0.24, badgeW, H * 0.52, 8);
+      g.fillStyle = opt.badgeColor || "#7A4B32";
+      g.fill();
+      g.fillStyle = "#FBF6EA";
+      g.textBaseline = "middle";
+      g.textAlign = "center";
+      g.fillText(opt.badge, pad * 0.55 + badgeW / 2, H / 2 + 1);
+      tx = pad * 0.55 + badgeW + 12;
+    }
+    g.font = `${opt.weight || "500"} ${fs}px ${font}`;
+    g.fillStyle = opt.color || "#2B2621";
+    g.textBaseline = "middle";
+    g.textAlign = "left";
+    g.fillText(text, tx, H / 2 + 1);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearFilter;
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
+    const sp = new THREE.Sprite(mat);
+    const h = opt.worldHeight || 0.55;
+    sp.scale.set(h * W / H, h, 1);
+    sp.userData.baseScale = sp.scale.clone();
+    sp.renderOrder = 10;
+    return sp;
+  }
+
+  // ---- レイアウト: 登録順にグリッド配置(部屋割りの2列gridと同じ発想) ----
+  function layoutRooms() {
+    const out = [];
+    let col = 0, row = 0;
+    rooms.forEach(room => {
+      const meta = metaOf(room.template);
+      if (col > 0 && col + meta.units > COLS) { col = 0; row++; }
+      const w = roomWidth(meta), d = DEPTH;
+      const x = col * (UNIT_W + GAP) + w / 2;
+      const z = row * (DEPTH + GAP) + d / 2;
+      out.push({ room, meta, w, d, x, z });
+      col += meta.units;
+    });
+    if (out.length) {
+      const maxX = Math.max.apply(null, out.map(o => o.x + o.w / 2));
+      const maxZ = Math.max.apply(null, out.map(o => o.z + o.d / 2));
+      out.forEach(o => { o.x -= maxX / 2; o.z -= maxZ / 2; });
+      extent = { w: maxX, d: maxZ };
+    } else {
+      extent = { w: 10, d: 8 };
+    }
+    return out;
+  }
+
+  // ---- シーン構築 ----
+  function disposeGroup(group) {
+    if (!group) return;
+    group.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach(m => {
+          if (m.map && !Object.values(floorTextureCache).includes(m.map)) m.map.dispose();
+          m.dispose();
+        });
+      }
+    });
+    scene.remove(group);
+  }
+
+  let rebuildQueued = false;
+  let firstDataSeen = false;
+  function scheduleRebuild() {
+    if (rebuildQueued) return;
+    rebuildQueued = true;
+    requestAnimationFrame(() => {
+      rebuildQueued = false;
+      rebuild();
+      if (!firstDataSeen && rooms.length) {
+        firstDataSeen = true;
+        resetView(); // 初回だけ本丸全体が収まる視点に
+      }
+    });
+  }
+
+  function rebuild() {
+    disposeGroup(honmaruGroup);
+    honmaruGroup = new THREE.Group();
+    pickables = [];
+    layoutCache = layoutRooms();
+
+    layoutCache.forEach(item => honmaruGroup.add(buildRoom(item)));
+    scene.add(honmaruGroup);
+
+    // 統計
+    const placed = rooms.reduce((n, r) => n + (r.occupants || []).length, 0);
+    statsEl.textContent = `部屋 ${rooms.length}室 / 配置済 ${placed}振り / 配置待ち ${unplaced.length}振り`;
+
+    if (rooms.length === 0) {
+      showOverlay("まだ部屋がありません。「部屋割り」で部屋を追加すると、ここに立体表示されます。", false);
+    } else {
+      hideOverlay();
+    }
+
+    // 選択の維持(消えていたら解除)
+    if (selected) {
+      const stillThere = selected.kind === "room"
+        ? rooms.some(r => r.id === selected.id)
+        : !!roomOfChar(selected.id);
+      if (!stillThere) selected = null;
+    }
+    applySelection();
+  }
+
+  function buildRoom(item) {
+    const { room, meta, w, d, x, z } = item;
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+
+    // 土台(縁側っぽい木の枠)
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(w + 0.5, 0.26, d + 0.5),
+      new THREE.MeshLambertMaterial({ color: 0x5C3722 })
+    );
+    base.position.y = -0.13;
+    g.add(base);
+
+    // 床
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(w, FLOOR_H, d),
+      new THREE.MeshLambertMaterial({ map: makeFloorTexture(room.template), color: 0xffffff })
+    );
+    floor.position.y = FLOOR_H / 2;
+    floor.userData = { kind: "room", id: room.id };
+    g.add(floor);
+    pickables.push(floor);
+
+    // 壁(奥と左だけ。中が見えるように)
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0xEFE6D2 });
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0x7A4B32 });
+    const back = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, WALL_H, 0.12), wallMat);
+    back.position.set(0, FLOOR_H + WALL_H / 2, -d / 2 - 0.06);
+    back.userData = { kind: "room", id: room.id };
+    g.add(back); pickables.push(back);
+    const left = new THREE.Mesh(new THREE.BoxGeometry(0.12, WALL_H, d + 0.2), wallMat);
+    left.position.set(-w / 2 - 0.06, FLOOR_H + WALL_H / 2, 0);
+    left.userData = { kind: "room", id: room.id };
+    g.add(left); pickables.push(left);
+    // 鴨居(上の横木)
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, 0.1, 0.18), frameMat);
+    lintel.position.set(0, FLOOR_H + WALL_H + 0.05, -d / 2 - 0.06);
+    g.add(lintel);
+    const lintelL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.1, d + 0.3), frameMat);
+    lintelL.position.set(-w / 2 - 0.06, FLOOR_H + WALL_H + 0.05, 0);
+    g.add(lintelL);
+
+    // 部屋名札
+    const plate = makeLabelSprite(room.name || meta.label, {
+      font: MINCHO, weight: "600", fontSize: 38, worldHeight: 0.72, radius: 12,
+      badge: meta.label, badgeColor: meta.plate, bg: "#FBF6EA", border: "#7A4B32", borderWidth: 4
+    });
+    plate.position.set(0, FLOOR_H + WALL_H + 0.65, -d / 2);
+    plate.userData = { kind: "room", id: room.id };
+    g.add(plate);
+    pickables.push(plate);
+
+    // 刀剣男士の名前札
+    const occ = room.occupants || [];
+    occ.forEach(o => {
+      const c = charOf(o.charId);
+      const px = -w / 2 + (Number(o.x) || 50) / 100 * w;
+      const pz = -d / 2 + (Number(o.y) || 50) / 100 * d;
+      const isCaptain = !!(c && c.isCaptain);
+
+      const peg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.2, 0.55, 12),
+        new THREE.MeshLambertMaterial({ color: isCaptain ? 0xA8382C : 0x7A4B32 })
+      );
+      peg.position.set(px, FLOOR_H + 0.275, pz);
+      peg.userData = { kind: "char", id: o.charId };
+      g.add(peg);
+      pickables.push(peg);
+
+      const tag = makeLabelSprite(nameOf(o.charId), {
+        fontSize: 32, worldHeight: 0.5,
+        bg: isCaptain ? "#F6E9C9" : "#FFFDF6",
+        border: isCaptain ? "#A8382C" : "#C9BFA6",
+        borderWidth: isCaptain ? 4 : 3
+      });
+      tag.position.set(px, FLOOR_H + 0.55 + 0.42, pz);
+      tag.userData = { kind: "char", id: o.charId };
+      g.add(tag);
+      pickables.push(tag);
+    });
+
+    if (occ.length === 0) {
+      const empty = makeLabelSprite("空室", {
+        fontSize: 28, worldHeight: 0.4, bg: "rgba(255,253,246,0.55)", border: "rgba(201,191,166,0.6)", color: "#5C544A"
+      });
+      empty.position.set(0, FLOOR_H + 0.45, 0);
+      empty.userData = { kind: "room", id: room.id };
+      g.add(empty);
+      pickables.push(empty);
+    }
+    return g;
+  }
+
+  // ---- 選択 ----
+  function applySelection() {
+    disposeGroup(highlightGroup);
+    highlightGroup = null;
+    // スプライト拡大を戻す
+    if (honmaruGroup) honmaruGroup.traverse(obj => {
+      if (obj.isSprite && obj.userData.baseScale) obj.scale.copy(obj.userData.baseScale);
+    });
+
+    if (!selected) { renderPanel(null); return; }
+    highlightGroup = new THREE.Group();
+
+    if (selected.kind === "room") {
+      const item = layoutCache.find(o => o.room.id === selected.id);
+      if (item) {
+        const ring = new THREE.Mesh(
+          new THREE.BoxGeometry(item.w + 0.9, 0.08, item.d + 0.9),
+          new THREE.MeshBasicMaterial({ color: 0xA8382C, transparent: true, opacity: 0.32 })
+        );
+        ring.position.set(item.x, 0.02, item.z);
+        highlightGroup.add(ring);
+      }
+    } else {
+      const pos = charWorldPos(selected.id);
+      if (pos) {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.32, 0.5, 32),
+          new THREE.MeshBasicMaterial({ color: 0xA8382C, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(pos.x, FLOOR_H + 0.03, pos.z);
+        highlightGroup.add(ring);
+      }
+      if (honmaruGroup) honmaruGroup.traverse(obj => {
+        if (obj.isSprite && obj.userData.kind === "char" && obj.userData.id === selected.id) {
+          obj.scale.copy(obj.userData.baseScale).multiplyScalar(1.22);
+        }
+      });
+    }
+    scene.add(highlightGroup);
+    renderPanel(selected);
+  }
+
+  function charWorldPos(charId) {
+    for (const item of layoutCache) {
+      const o = (item.room.occupants || []).find(x => x.charId === charId);
+      if (o) {
+        return {
+          x: item.x - item.w / 2 + (Number(o.x) || 50) / 100 * item.w,
+          z: item.z - item.d / 2 + (Number(o.y) || 50) / 100 * item.d,
+          item
+        };
+      }
+    }
+    return null;
+  }
+
+  function setSelection(sel) {
+    selected = sel;
+    applySelection();
+    document.getElementById("hint").classList.toggle("hidden", !!sel);
+  }
+
+  // ---- 情報パネル ----
+  function renderPanel(sel) {
+    if (!sel) { panelEl.classList.remove("open"); return; }
+    panelEl.innerHTML = "";
+    const head = document.createElement("div");
+    head.className = "ip-head";
+    const eyebrow = document.createElement("span");
+    eyebrow.className = "ip-eyebrow";
+    const close = document.createElement("button");
+    close.className = "ip-close";
+    close.textContent = "×";
+    close.onclick = () => setSelection(null);
+    head.appendChild(eyebrow);
+    head.appendChild(close);
+    panelEl.appendChild(head);
+
+    if (sel.kind === "room") {
+      const room = rooms.find(r => r.id === sel.id);
+      if (!room) { panelEl.classList.remove("open"); return; }
+      const meta = metaOf(room.template);
+      eyebrow.textContent = "部屋";
+      const title = document.createElement("div");
+      title.className = "ip-title";
+      title.innerHTML = `<span></span><span class="ip-type" style="background:${meta.plate}">${meta.label}</span>`;
+      title.firstChild.textContent = room.name || meta.label;
+      panelEl.appendChild(title);
+      if (room.note) {
+        const note = document.createElement("div");
+        note.className = "ip-note";
+        note.textContent = room.note;
+        panelEl.appendChild(note);
+      }
+      const occ = room.occupants || [];
+      const row = document.createElement("div");
+      row.className = "ip-row";
+      row.innerHTML = `<span>住人</span><span>${occ.length}振り</span>`;
+      panelEl.appendChild(row);
+      const chips = document.createElement("div");
+      chips.className = "ip-chips";
+      if (occ.length === 0) {
+        chips.innerHTML = `<div class="ip-empty">まだ誰もいません。部屋割りでタグをドロップすると表示されます。</div>`;
+      }
+      occ.forEach(o => {
+        const c = charOf(o.charId);
+        const chip = document.createElement("button");
+        chip.className = "ip-chip" + (c && c.isCaptain ? " captain" : "");
+        chip.textContent = nameOf(o.charId);
+        chip.onclick = () => { setSelection({ kind: "char", id: o.charId }); };
+        chips.appendChild(chip);
+      });
+      panelEl.appendChild(chips);
+
+      const actions = document.createElement("div");
+      actions.className = "ip-actions";
+      const focusBtn = document.createElement("button");
+      focusBtn.className = "ip-btn secondary";
+      focusBtn.textContent = "この部屋に寄る";
+      focusBtn.onclick = () => {
+        const item = layoutCache.find(x => x.room.id === room.id);
+        if (item) focusOn(new THREE.Vector3(item.x, 0.5, item.z), Math.max(item.w, item.d) * 1.6 + 3);
+      };
+      actions.appendChild(focusBtn);
+      panelEl.appendChild(actions);
+    } else {
+      const c = charOf(sel.id) || { name: nameOf(sel.id) };
+      const room = roomOfChar(sel.id);
+      eyebrow.textContent = "刀剣男士";
+      const title = document.createElement("div");
+      title.className = "ip-title";
+      const nm = document.createElement("span");
+      nm.textContent = c.name;
+      title.appendChild(nm);
+      if (c.isCaptain) {
+        const cap = document.createElement("span");
+        cap.className = "ip-type";
+        cap.style.background = "var(--hanko)";
+        cap.textContent = "隊長";
+        title.appendChild(cap);
+      }
+      panelEl.appendChild(title);
+      const rows = [
+        ["いる部屋", room ? (room.name || metaOf(room.template).label) : "不明"],
+        ["刀種", c.swordType || "ー(未入力)"],
+        ["配属部隊", c.unit || "ー(未入力)"],
+        ["顕現した年月日", c.activationDate || "ー(未入力)"]
+      ];
+      rows.forEach(([k, v]) => {
+        const row = document.createElement("div");
+        row.className = "ip-row";
+        const a = document.createElement("span"); a.textContent = k;
+        const b = document.createElement("span"); b.textContent = v;
+        row.appendChild(a); row.appendChild(b);
+        panelEl.appendChild(row);
+      });
+      const actions = document.createElement("div");
+      actions.className = "ip-actions";
+      const focusBtn = document.createElement("button");
+      focusBtn.className = "ip-btn secondary";
+      focusBtn.textContent = "この子に寄る";
+      focusBtn.onclick = () => {
+        const p = charWorldPos(sel.id);
+        if (p) focusOn(new THREE.Vector3(p.x, 0.6, p.z), 5.5);
+      };
+      actions.appendChild(focusBtn);
+      if (room) {
+        const roomBtn = document.createElement("button");
+        roomBtn.className = "ip-btn";
+        roomBtn.textContent = "部屋を見る";
+        roomBtn.onclick = () => setSelection({ kind: "room", id: room.id });
+        actions.appendChild(roomBtn);
+      }
+      panelEl.appendChild(actions);
+    }
+    panelEl.classList.add("open");
+  }
+
+  // ---- ピッキング(ドラッグと区別してタップだけ拾う) ----
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  let downPos = null;
+  let activePointers = 0;
+  const el = renderer.domElement;
+  el.addEventListener("pointerdown", e => {
+    activePointers++;
+    downPos = { x: e.clientX, y: e.clientY, multi: activePointers > 1 };
+  });
+  el.addEventListener("pointerup", e => {
+    activePointers = Math.max(0, activePointers - 1);
+    if (!downPos) return;
+    const moved = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 8;
+    const multi = downPos.multi;
+    downPos = null;
+    if (moved || multi) return;
+    pick(e.clientX, e.clientY);
+  });
+  el.addEventListener("pointercancel", () => { activePointers = 0; downPos = null; });
+
+  function pick(cx, cy) {
+    const r = el.getBoundingClientRect();
+    ndc.x = ((cx - r.left) / r.width) * 2 - 1;
+    ndc.y = -((cy - r.top) / r.height) * 2 + 1;
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects(pickables, false);
+    if (!hits.length) { setSelection(null); return; }
+    const ud = hits[0].object.userData;
+    if (!ud || !ud.kind) { setSelection(null); return; }
+    setSelection({ kind: ud.kind, id: ud.id });
+  }
+
+  // ---- カメラ ----
+  let tween = null;
+  function focusOn(target, dist) {
+    const dir = camera.position.clone().sub(controls.target);
+    if (dir.lengthSq() < 0.001) dir.set(0, 1, 1);
+    dir.normalize();
+    tween = {
+      fromT: controls.target.clone(), fromC: camera.position.clone(),
+      toT: target.clone(), toC: target.clone().add(dir.multiplyScalar(dist)),
+      start: performance.now(), dur: 520
+    };
+  }
+  function resetView() {
+    const dist = Math.max(extent.w, extent.d) * 1.35 + 8;
+    focusOn(new THREE.Vector3(0, 0, 0), dist);
+    // 斜め上からの定番アングルに戻す
+    const t = tween;
+    t.toC = new THREE.Vector3(0, dist * 0.72, dist * 0.7);
+  }
+  function topView() {
+    const dist = Math.max(extent.w, extent.d) * 1.25 + 6;
+    focusOn(new THREE.Vector3(0, 0, 0), dist);
+    tween.toC = new THREE.Vector3(0, dist, 0.4);
+  }
+  document.getElementById("btn-reset").onclick = resetView;
+  document.getElementById("btn-top").onclick = topView;
+
+  function easeOut(k) { return 1 - Math.pow(1 - k, 3); }
+
+  function resize() {
+    const w = stage.clientWidth || 1, h = stage.clientHeight || 1;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function loop() {
+    requestAnimationFrame(loop);
+    if (tween) {
+      const k = Math.min(1, (performance.now() - tween.start) / tween.dur);
+      const e = easeOut(k);
+      controls.target.lerpVectors(tween.fromT, tween.toT, e);
+      camera.position.lerpVectors(tween.fromC, tween.toC, e);
+      if (k >= 1) tween = null;
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  loop();
+
+  // 初期表示(データ到着前)
+  rebuild();
+
+  try { window.parent && window.parent.postMessage({ source: "honmaru3d", type: "ready" }, "*"); } catch (e) {}
+})();
+</script>
+</body>
+</html>
