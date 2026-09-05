@@ -649,6 +649,20 @@
   const PART_BY_TYPE = Object.fromEntries(PART_DEFS.map(d => [d.type, d]));
   function partDef(type) { return PART_BY_TYPE[type] || null; }
 
+  // パーツごとの見た目オプション。情報パネルの選択欄はここから自動生成され、
+  // 選んだ値は item.props[key] に入る(描画側は item.props を見て形を変える)。
+  // 新しい見た目を足すときは options に1行足すだけでよい。
+  const PART_PROPS = {
+    tree:   [{ key: "shape", label: "樹形",        options: [["round", "丸い樹冠"], ["cone", "円錐の樹冠"]] }],
+    sakura: [{ key: "form",  label: "枝ぶり",      options: [["standard", "大きく広がる"], ["young", "若木(小ぶり)"]] }],
+    pond:   [{ key: "style", label: "池のかたち",  options: [["round", "丸い池"], ["stream", "流れの池(橋を架けやすい)"]] }],
+    stone:  [{ key: "style", label: "石の置き方",  options: [["cluster", "庭石(石組み)"], ["steps", "飛び石"]] }]
+  };
+  function propOf(item, key, fallback) {
+    const v = item && item.props ? item.props[key] : null;
+    return v == null || v === "" ? fallback : v;
+  }
+
   // =====================================================================
   //  親から同期されるデータ・状態
   // =====================================================================
@@ -1534,6 +1548,51 @@
   const box = (w, h, d, mat) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   // 風向き(花びらが流れる向き)。散った花びらの偏りと舞い散る演出で共有する
   const WIND = { x: .82, z: .57 };
+  // ---------------------------------------------------------------
+  //  自然な輪郭(いびつな丸)を作るヘルパー。池・岩組みなど「四角く見せたくない」もの用。
+  //  points: 楕円の周りに半径を揺らした点を並べる(配置ごとの乱数なので毎回同じ形になる)
+  //  shape : その点を通る滑らかな閉曲線(THREE.Shape / Path)
+  //  style : "round" = 丸い / "stream" = 中央がくびれた細長い形(橋を架けやすい)
+  //  季節や新しい形を足すときは、ここに style を1つ増やすだけでよい。
+  // ---------------------------------------------------------------
+  function blobPoints(W, D, rand, style, count) {
+    const n = count || 14;
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      let rx = W / 2, rz = D / 2;
+      if (style === "stream") {
+        const t = Math.cos(a);
+        rx *= 1.12;
+        rz *= .5 + .5 * t * t; // 中央(x≒0)で細くなる = くびれ
+      }
+      const jitter = .87 + rand() * .26;
+      pts.push(new THREE.Vector2(Math.cos(a) * rx * jitter, Math.sin(a) * rz * jitter));
+    }
+    return pts;
+  }
+  function blobPath(pts, target) {
+    const n = pts.length;
+    const mid = (a, b) => [(a.x + b.x) / 2, (a.y + b.y) / 2];
+    const start = mid(pts[n - 1], pts[0]);
+    target.moveTo(start[0], start[1]);
+    for (let i = 0; i < n; i++) {
+      const m = mid(pts[i], pts[(i + 1) % n]);
+      target.quadraticCurveTo(pts[i].x, pts[i].y, m[0], m[1]);
+    }
+    target.closePath();
+    return target;
+  }
+  const blobShape = pts => blobPath(pts, new THREE.Shape());
+  // 平らな面(水面・池底など)を作る。XZ 平面に寝かせて返す
+  function flatBlob(pts, mat, y, segments) {
+    const geo = new THREE.ShapeGeometry(blobShape(pts), segments || 3);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = y;
+    return mesh;
+  }
+
   // 2点を結ぶ枝・幹。from→to へ円柱を向ける(桜や松の枝分かれ用)
   const UP = new THREE.Vector3(0, 1, 0);
   function limb(g, mat, from, to, r, rTop) {
@@ -1715,89 +1774,102 @@
       g.add(border);
     },
     pond(item, g, ctx) {
-      // 池: 砂の岸 + 一段低い水面 + 岸辺に岩と草。庭(芝の上面 -.07)より岸を高くして埋もれないようにする
+      // 池: 四角いプールに見えないよう、輪郭をいびつな丸(blobPoints)で作る。
+      //   ・岸 = 内側をくり抜いた輪(上面は芝、側面は土の色)を押し出した1メッシュ
+      //   ・水面 = 岸より一段低い平らな面。反射は強くせず、淡い明るさを少し足すだけ
+      //   ・ふちに庭石・草・睡蓮を置いて角と継ぎ目をなじませる
+      // props.style: "round"(丸い池) / "stream"(中央がくびれた細長い池。橋を架けやすい)
       const P = ctx.season.palette;
-      const W = ctx.w, D = ctx.d;
-      // 岸は「縁取り」(4本の枠)にする。塗りつぶしの箱にすると水面を覆ってしまう
-      const t = .22, bankMat = ctx.mat(P.waterRim);
-      [[0, D / 2 + t / 2, W + t * 2, t], [0, -(D / 2 + t / 2), W + t * 2, t],
-       [W / 2 + t / 2, 0, t, D], [-(W / 2 + t / 2), 0, t, D]].forEach(([bx, bz, bw, bd]) => {
-        const bar = box(bw, .3, bd, bankMat);
-        bar.position.set(bx, -.09, bz); // 上面 +.06
-        ctx.pick(bar);
+      const style = propOf(item, "style", "round");
+      const inner = blobPoints(ctx.w, ctx.d, ctx.rand, style);
+      const rim = .16 + Math.min(ctx.w, ctx.d) * .06;      // 岸の幅
+      const outer = inner.map(p => {
+        const len = p.length() || 1;
+        return p.clone().multiplyScalar((len + rim) / len);
       });
-      // 池底(地面が透けないように敷く)
-      const bottom = box(W, .16, D, ctx.mat(P.waterDeep));
-      bottom.position.y = -.14;
-      g.add(bottom);
-      // 水は岸より一段低く、少し透ける。Phong の弱いハイライトで水面の照り返しを出す
-      const water = new THREE.Mesh(GEO.cube(), new THREE.MeshPhongMaterial({
-        color: P.water, transparent: true, opacity: .82,
-        shininess: 80, specular: P.waterSpec
-      }));
-      water.scale.set(W, .14, D);
-      water.position.y = -.045; // 上面 +.025(岸の上面 +.06 より低い = 窪んで見える)
-      ctx.pick(water);
-      // 空の映り込み: 薄い明るい楕円を水面すれすれに数枚置く
-      for (let i = 0; i < (ctx.lod ? 3 : 2); i++) {
-        const glint = new THREE.Mesh(GEO.disc(), ctx.mat(P.waterSpec, { transparent: true, opacity: .18, depthWrite: false }));
-        glint.rotation.x = -Math.PI / 2;
-        glint.rotation.z = ctx.rand() * Math.PI;
-        glint.scale.set(W * (.08 + ctx.rand() * .06), D * (.035 + ctx.rand() * .03), 1);
-        glint.position.set((ctx.rand() - .5) * W * .6, .028, (ctx.rand() - .5) * D * .6);
-        g.add(glint);
-      }
-      // 岸のふち(長方形の周)の上に岩と草を並べる。円で計算すると水の中に落ちてしまう
-      const edgePoint = u => {
-        const per = 2 * (W + D);
-        let s = (u % 1) * per;
-        if (s < W) return { x: -W / 2 + s, z: -(D / 2 + t * .45) };
-        s -= W;
-        if (s < D) return { x: W / 2 + t * .45, z: -D / 2 + s };
-        s -= D;
-        if (s < W) return { x: W / 2 - s, z: D / 2 + t * .45 };
-        s -= W;
-        return { x: -(W / 2 + t * .45), z: D / 2 - s };
+
+      // --- 岸(二重の輪) ---
+      // 内側の輪は側面が水に面するので土の色、外側の輪は芝に面するので芝の色にする。
+      // ExtrudeGeometry の側面は1マテリアルなので、内外を2つの輪に分けて塗り分けている。
+      const mid = inner.map(p => {
+        const len = p.length() || 1;
+        return p.clone().multiplyScalar((len + rim * .45) / len);
+      });
+      const makeRing = (outLine, inLine, capColor, sideColor) => {
+        const shape = blobShape(outLine);
+        shape.holes.push(blobPath(inLine, new THREE.Path()));
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: .3, bevelEnabled: false, curveSegments: 3 });
+        const mesh = new THREE.Mesh(geo, [ctx.mat(capColor), ctx.mat(sideColor)]);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.y = -.24; // 上面 +.06
+        ctx.pick(mesh);
       };
-      const rocks = Math.max(4, Math.min(ctx.lod ? 9 : 6, Math.round((W + D) * .8)));
-      for (let i = 0; i < rocks; i++) {
-        const p = edgePoint((i + .3 + ctx.rand() * .4) / rocks);
+      makeRing(mid, inner, P.waterRim, P.waterRim); // 水際(土の岸)
+      makeRing(outer, mid, P.lawn, P.lawn);         // 芝側のふち
+
+      // --- 池底と水面 ---
+      const bottom = flatBlob(inner, ctx.mat(P.waterDeep), -.13);
+      g.add(bottom);
+      // 鏡のような反射は避け、Lambert の淡い水色 + わずかな明るい部分だけにする
+      const water = flatBlob(inner.map(p => p.clone().multiplyScalar(.99)), ctx.mat(P.water, { transparent: true, opacity: .8 }), -.02);
+      ctx.pick(water);
+      for (let i = 0; i < (ctx.lod ? 2 : 1); i++) {
+        const shallow = flatBlob(
+          inner.map(p => p.clone().multiplyScalar(.34 + i * .16)),
+          ctx.mat(P.waterSpec, { transparent: true, opacity: .16, depthWrite: false }),
+          -.014 + i * .002
+        );
+        shallow.position.x += (ctx.rand() - .5) * ctx.w * .25;
+        shallow.position.z += (ctx.rand() - .5) * ctx.d * .25;
+        g.add(shallow);
+      }
+
+      // --- ふちの庭石(輪郭の点に沿って外へ少し出す) ---
+      const every = ctx.lod ? 2 : 3;
+      inner.forEach((p, i) => {
+        if (i % every) return;
+        const len = p.length() || 1;
+        const out = p.clone().multiplyScalar((len + rim * .55) / len);
         const rock = new THREE.Mesh(GEO.rock(i), ctx.mat(i % 3 ? P.stone : P.stoneDark));
-        const rs = .15 + ctx.rand() * .15;
-        rock.scale.set(rs * 1.3, rs * (.6 + ctx.rand() * .4), rs * 1.1);
-        rock.position.set(p.x, .05 + rs * .3, p.z);
+        const rs = .17 + ctx.rand() * .16;
+        rock.scale.set(rs * 1.35, rs * (.55 + ctx.rand() * .4), rs * 1.15);
+        rock.position.set(out.x, .05 + rs * .25, -out.y);
         rock.rotation.set(ctx.rand() * .4, ctx.rand() * Math.PI, ctx.rand() * .4);
         g.add(rock);
-      }
-      // 岸の草(葉を数枚立てた小さな株)
+      });
+
+      // --- 岸の草(角を隠して自然になじませる) ---
       const tufts = ctx.lod ? 3 : 2;
       for (let i = 0; i < tufts; i++) {
-        const p = edgePoint(i / tufts + .12);
-        const cx = p.x, cz = p.z;
+        const p = inner[Math.floor((i + .5) / tufts * inner.length) % inner.length];
+        const len = p.length() || 1;
+        const out = p.clone().multiplyScalar((len + rim * .8) / len);
         for (let k = 0; k < (ctx.lod ? 4 : 3); k++) {
           const blade = new THREE.Mesh(GEO.leaf(), ctx.mat(k % 2 ? P.lily : P.shrub, { side: THREE.DoubleSide }));
           blade.scale.set(.34, .3, 1);
-          blade.position.set(cx, .07, cz);
+          blade.position.set(out.x, .07, -out.y);
           // 葉は +X 方向へ伸びる板。YXZ 順で (ひねり, 向き, 立ち上がり) を指定する
           blade.rotation.order = "YXZ";
           blade.rotation.set(-.55, k * 1.6 + ctx.rand(), 1.0 + ctx.rand() * .3);
           g.add(blade);
         }
       }
-      // 睡蓮の葉と、水面に浮く花びら
-      for (let i = 0; i < Math.min(4, Math.round(W * D * .35)); i++) {
+
+      // --- 睡蓮の葉と、水面に浮く花びら ---
+      for (let i = 0; i < Math.min(ctx.lod ? 5 : 3, Math.round(ctx.w * ctx.d * .35)); i++) {
         const pad = new THREE.Mesh(GEO.disc(), ctx.mat(P.lily));
-        const pr = .16 + ctx.rand() * .1;
+        const pr = .15 + ctx.rand() * .1;
         pad.rotation.x = -Math.PI / 2;
-        pad.scale.set(pr, pr, 1);
-        pad.position.set((ctx.rand() - .5) * W * .7, .035, (ctx.rand() - .5) * D * .7);
+        pad.rotation.z = ctx.rand() * Math.PI;
+        pad.scale.set(pr, pr * .92, 1);
+        pad.position.set((ctx.rand() - .5) * ctx.w * .5, -.008, (ctx.rand() - .5) * ctx.d * .5);
         g.add(pad);
       }
       if (ctx.season.effects.petals) {
         scatterDiscs(g, ctx, {
-          count: Math.min(12, Math.round(W * D * .9)), y: .038, radius: .075,
-          w: W * .85, d: D * .85, cluster: .45,
-          bias: { x: WIND.x * W * .18, z: WIND.z * D * .18 },
+          count: Math.min(ctx.lod ? 12 : 6, Math.round(ctx.w * ctx.d * .9)), y: -.004, radius: .075,
+          w: ctx.w * .6, d: ctx.d * .6, cluster: .45,
+          bias: { x: WIND.x * ctx.w * .14, z: WIND.z * ctx.d * .14 },
           colors: [P.petal, P.petalDeep]
         });
       }
@@ -1877,8 +1949,25 @@
       });
     },
     stone(item, g, ctx) {
-      // 石: 頂点をずらした不規則な低ポリ岩を大小 3〜4個。丸くならないよう軸ごとに違う倍率をかける
+      // 石: 頂点をずらした不規則な低ポリ岩。props.style で「庭石(石組み)」と「飛び石」を切り替える
       const P = ctx.season.palette;
+      if (propOf(item, "style", "cluster") === "steps") {
+        // 飛び石: 平たい石を少しずらしながら一列に並べる(庭の動線に置く)
+        const count = Math.max(3, Math.min(7, Math.round(ctx.w / .55)));
+        for (let i = 0; i < count; i++) {
+          const slab = new THREE.Mesh(GEO.rock(i), ctx.mat(i % 2 ? P.stone : P.stoneDark));
+          const sw = Math.min(.46, ctx.w / count * .78) * (.85 + ctx.rand() * .3);
+          slab.scale.set(sw, .055 + ctx.rand() * .02, Math.min(.42, ctx.d * .45) * (.85 + ctx.rand() * .3));
+          slab.position.set(
+            -ctx.w / 2 + (i + .5) * (ctx.w / count),
+            .03,
+            (ctx.rand() - .5) * ctx.d * .32
+          );
+          slab.rotation.y = ctx.rand() * Math.PI;
+          ctx.pick(slab);
+        }
+        return;
+      }
       const n = ctx.w * ctx.d > 1.1 ? 4 : 3;
       const spots = [[-.16, .02, 1], [.24, -.2, .62], [.1, .28, .5], [-.3, -.28, .38]];
       for (let i = 0; i < n; i++) {
@@ -1966,51 +2055,87 @@
     },
     // ---- 植栽(春): デフォルメした低ポリ表現。球・円柱は共有ジオメトリを拡縮して使う ----
     sakura(item, g, ctx) {
-      // 桜: 根元から二又に分かれる幹 + 4本の枝 + 枝先ごとの花房。
-      // 1つの球で覆わず房を分けることで、輪郭がぼこぼこした「あつ森風」の桜になる
+      // 桜: 「幹 → 主枝 → 小枝 → 花房」の順に組み、幹と枝が花の下から見えるようにする。
+      // 花はひとつの球で覆わず、小枝の先の房に分けて高さと大きさを散らす(塊に見えないように)。
+      // props.form: "standard"(大きく広がる) / "young"(若木。細く小さい)
       const P = ctx.season.palette;
-      const s = Math.max(.5, ctx.w / 2);
+      const young = propOf(item, "form", "standard") === "young";
+      const s = Math.max(.5, ctx.w / 2) * (young ? .78 : 1);
       const bark = ctx.mat(P.trunk), barkDark = ctx.mat(P.trunkDark);
       const V = (x, y, z) => new THREE.Vector3(x * s, y * s, z * s);
-      // 幹(下は太く、途中で少し傾ぐ)
-      const forkAt = V(.06, .95, -.02);
-      ctx.pick(limb(g, barkDark, V(0, 0, 0), forkAt, .17 * s, 1));
-      // 二又の主枝
-      const armA = V(-.5, 1.62, .12), armB = V(.62, 1.5, -.16);
-      ctx.pick(limb(g, bark, forkAt, armA, .1 * s));
-      ctx.pick(limb(g, bark, forkAt, armB, .11 * s));
-      ctx.pick(limb(g, bark, forkAt, V(.05, 1.85, .1), .09 * s));
-      // 枝先(花房の中心)。位置・大きさ・色を散らして房を分ける
-      const clusters = [
-        { at: V(-.78, 1.95, .2),  r: .62, c: P.sakura },
-        { at: V(-.3, 2.25, -.35), r: .55, c: P.sakuraLight },
-        { at: V(.85, 1.92, -.3),  r: .6,  c: P.sakuraDeep },
-        { at: V(.45, 2.3, .42),   r: .58, c: P.sakura },
-        { at: V(.02, 2.55, -.05), r: .5,  c: P.sakuraLight },
-        { at: V(-.15, 1.75, .6),  r: .45, c: P.sakuraDeep }
-      ];
-      clusters.forEach((cl, i) => {
-        // 枝を花房まで伸ばす
-        const from = i % 2 ? armB : armA;
-        limb(g, bark, from, cl.at, .05 * s);
-        // 1房 = 大きい球 + 小さい球2つ(輪郭に凹凸を作る)
-        const main = new THREE.Mesh(GEO.puff(), ctx.mat(cl.c));
-        main.scale.set(cl.r * s, cl.r * s * .78, cl.r * s * .95);
-        main.position.copy(cl.at);
-        ctx.pick(main);
-        for (let k = 0; k < (ctx.lod ? 2 : 1); k++) {
-          const sub = new THREE.Mesh(GEO.puff(), ctx.mat(k ? P.sakuraLight : cl.c));
-          const sr = cl.r * (.5 + ctx.rand() * .22);
-          sub.scale.set(sr * s, sr * s * .72, sr * s * .9);
-          sub.position.set(
-            cl.at.x + (ctx.rand() - .5) * cl.r * s * 1.5,
-            cl.at.y + (ctx.rand() - .35) * cl.r * s * .8,
-            cl.at.z + (ctx.rand() - .5) * cl.r * s * 1.5
+
+      // --- 根張り(幹の足元を太らせて、地面から生えている感じを出す) ---
+      [[.16, 0, .1], [-.14, 0, -.12], [0, 0, .18]].forEach(([x, y, z], i) => {
+        const root = new THREE.Mesh(GEO.puff(), barkDark);
+        root.scale.set(.16 * s, .1 * s, .16 * s);
+        root.position.set(x * s, .05 * s, z * s);
+        g.add(root);
+      });
+
+      // --- 幹: 下から又の位置まで。太めにして花の下に見えるようにする ---
+      const trunkR = (young ? .13 : .19) * s;
+      const forkY = young ? .95 : 1.15;
+      const fork = V(.05, forkY, -.02);
+      ctx.pick(limb(g, barkDark, V(0, 0, 0), fork, trunkR, 1));
+
+      // --- 主枝3本(先を花房より少し外に出して枝先が覗くようにする) ---
+      const armDefs = young
+        ? [[-.5, .55, .2], [.55, .6, -.15], [.02, .78, .3]]
+        : [[-.78, .62, .28], [.82, .58, -.2], [.05, .85, .35]];
+      const arms = armDefs.map(([dx, dy, dz]) => {
+        const to = V(fork.x / s + dx, forkY + dy, fork.z / s + dz);
+        ctx.pick(limb(g, bark, fork, to, trunkR * .55));
+        return to;
+      });
+
+      // --- 小枝と花房: 主枝1本につき2房。高さ・大きさ・色をばらして輪郭を凸凹させる ---
+      const clusterR = young ? .42 : .55;
+      arms.forEach((arm, ai) => {
+        for (let k = 0; k < 2; k++) {
+          const spread = (k ? 1 : -1) * (.42 + ctx.rand() * .2);
+          const tip = new THREE.Vector3(
+            arm.x + spread * s * (ai === 2 ? .7 : 1),
+            arm.y + (.24 + ctx.rand() * .28) * s,
+            arm.z + (k ? .32 : -.3) * s * (.6 + ctx.rand() * .8)
           );
-          ctx.pick(sub);
+          ctx.pick(limb(g, bark, arm, tip, trunkR * .3));
+          const r = clusterR * (.82 + ctx.rand() * .38);
+          const color = [P.sakura, P.sakuraDeep, P.sakuraLight][(ai + k) % 3];
+          const main = new THREE.Mesh(GEO.puff(), ctx.mat(color));
+          main.scale.set(r * s, r * s * .74, r * s * .94);
+          main.position.copy(tip);
+          ctx.pick(main);
+          // 房の縁をぎざつかせる小さな塊(スマホでは1つに減らす)
+          for (let j = 0; j < (ctx.lod ? 2 : 1); j++) {
+            const sub = new THREE.Mesh(GEO.puff(), ctx.mat(j ? P.sakuraLight : color));
+            const sr = r * (.48 + ctx.rand() * .22);
+            sub.scale.set(sr * s, sr * s * .68, sr * s * .88);
+            sub.position.set(
+              tip.x + (ctx.rand() - .5) * r * s * 1.6,
+              tip.y + (ctx.rand() - .45) * r * s * .9,
+              tip.z + (ctx.rand() - .5) * r * s * 1.6
+            );
+            ctx.pick(sub);
+          }
         }
       });
-      // 根元に散った花びら(均一にせず風下へ寄せる)
+      // 横に垂れる房(桜らしく樹冠を横に広げ、下側の輪郭を作る)
+      arms.slice(0, 2).forEach((arm, ai) => {
+        const side = ai ? 1 : -1;
+        const skirt = new THREE.Mesh(GEO.puff(), ctx.mat(ai ? P.sakuraDeep : P.sakura));
+        const r = clusterR * (.7 + ctx.rand() * .2);
+        skirt.scale.set(r * s * 1.15, r * s * .6, r * s * .95);
+        skirt.position.set(arm.x + side * .34 * s, arm.y - .2 * s, arm.z + (ctx.rand() - .5) * .4 * s);
+        ctx.pick(skirt);
+      });
+      // 天辺の房(樹冠のてっぺんを丸くまとめる)
+      const crown = new THREE.Mesh(GEO.puff(), ctx.mat(P.sakuraLight));
+      const cr = clusterR * .8;
+      crown.scale.set(cr * s, cr * s * .66, cr * s * .9);
+      crown.position.set(fork.x, (forkY + (young ? 1.05 : 1.3)) * s, fork.z);
+      ctx.pick(crown);
+
+      // --- 根元に散った花びら(均一にせず風下へ寄せる) ---
       if (ctx.season.effects.petals) {
         scatterDiscs(g, ctx, {
           count: ctx.lod ? 12 : 6, y: .012, radius: .075, w: 2.6 * s, d: 2.6 * s, cluster: .35,
@@ -2512,16 +2637,20 @@
     wingRow.appendChild(wingSelect(item.wingId, true, next => { item.wingId = next; commitChange(); }));
     panelEl.appendChild(wingRow);
 
-    if (item.type === "tree") {
-      const shapeRow = el("div", "ip-row stack");
-      shapeRow.appendChild(el("span", null, "樹形"));
-      const shape = el("select", "ip-select");
-      [["round", "丸い樹冠"], ["cone", "円錐の樹冠"]].forEach(([v, l]) => { const o = el("option", null, l); o.value = v; shape.appendChild(o); });
-      shape.value = (item.props && item.props.shape) || "round";
-      shape.onchange = () => { item.props = Object.assign({}, item.props, { shape: shape.value }); commitChange(); };
-      shapeRow.appendChild(shape);
-      panelEl.appendChild(shapeRow);
-    }
+    // パーツごとの見た目オプション(PART_PROPS)から選択欄を自動生成する
+    (PART_PROPS[item.type] || []).forEach(prop => {
+      const row = el("div", "ip-row stack");
+      row.appendChild(el("span", null, prop.label));
+      const select = el("select", "ip-select");
+      prop.options.forEach(([v, l]) => { const o = el("option", null, l); o.value = v; select.appendChild(o); });
+      select.value = (item.props && item.props[prop.key]) || prop.options[0][0];
+      select.onchange = () => {
+        item.props = Object.assign({}, item.props, { [prop.key]: select.value });
+        commitChange();
+      };
+      row.appendChild(select);
+      panelEl.appendChild(row);
+    });
 
     const step = def.sizeStep || .75;
     const editActions = el("div", "ip-mini-actions");
