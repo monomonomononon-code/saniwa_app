@@ -15,7 +15,7 @@
   ];
   const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
   const CATEGORY_IDS = CATEGORIES.map(c => c.id);
-  const SOURCE_TYPES = ["manual", "character", "journal", "system"];
+  const SOURCE_TYPES = ["manual", "character", "report", "journal", "system"];
 
   const $ = id => document.getElementById(id);
   const timelineEl = $("tl-timeline");
@@ -140,19 +140,99 @@
 
   function renderItem(entry) {
     const cat = CATEGORY_BY_ID[entry.category] || CATEGORY_BY_ID.other;
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "tl-item" + (entry.virtual ? " virtual" : "");
-    item.style.setProperty("--tl-color", cat.color);
-    item.appendChild(el("span", "tl-item-date", formatMD(entry.date)));
+    const container = document.createElement("div");
+    container.className = "tl-item" + (entry.virtual ? " virtual" : "");
+    container.style.setProperty("--tl-color", cat.color);
+
+    // タップ対象。手動項目=編集モーダル / 顕現=参照モーダル / 日報=その場で開閉、の3通り
+    const head = document.createElement("button");
+    head.type = "button";
+    head.className = "tl-item-head";
+    head.appendChild(el("span", "tl-item-date", formatMD(entry.date)));
     const titleRow = el("div", "tl-item-title-row");
     titleRow.appendChild(el("span", "tl-item-title", entry.title || "(無題の出来事)"));
     titleRow.appendChild(el("span", "tl-item-cat", cat.label));
-    if (entry.virtual) titleRow.appendChild(el("span", "tl-item-auto-badge", "刀剣男士データより自動反映"));
-    item.appendChild(titleRow);
-    if (entry.description) item.appendChild(el("p", "tl-item-desc", entry.description));
-    item.onclick = () => (entry.virtual ? openViewer(entry) : openEditor(entry.id));
-    return item;
+    if (entry.sourceType === "character") titleRow.appendChild(el("span", "tl-item-auto-badge", "刀剣男士データより自動反映"));
+    if (entry.sourceType === "report") {
+      titleRow.appendChild(el("span", "tl-item-auto-badge", "日報より"));
+      titleRow.appendChild(el("span", "tl-item-chevron", "▾"));
+    }
+    head.appendChild(titleRow);
+    container.appendChild(head);
+
+    if (entry.sourceType === "report") {
+      const expand = el("div", "tl-item-expand");
+      expand.hidden = true;
+      container.appendChild(expand);
+      let built = false;
+      head.onclick = () => {
+        expand.hidden = !expand.hidden;
+        head.querySelector(".tl-item-chevron").textContent = expand.hidden ? "▾" : "▴";
+        if (!expand.hidden && !built) {
+          built = true;
+          expand.appendChild(renderReportSummary(entry.date));
+          const unlink = document.createElement("button");
+          unlink.type = "button";
+          unlink.className = "tl-unlink-btn";
+          unlink.textContent = "史から外す";
+          unlink.onclick = ev => { ev.stopPropagation(); unlinkReport(entry.id); };
+          expand.appendChild(unlink);
+        }
+      };
+    } else {
+      if (entry.description) container.appendChild(el("p", "tl-item-desc", entry.description));
+      head.onclick = () => (entry.virtual ? openViewer(entry) : openEditor(entry.id));
+    }
+    return container;
+  }
+
+  // ---- 日報連携(参照のみ。日報本文は report.v1 のまま。ここでは複製しない) ----
+  function formatSigned(n) {
+    const num = Number(n) || 0;
+    return `${num > 0 ? "+" : ""}${new Intl.NumberFormat("ja-JP").format(num)}`;
+  }
+  function renderReportSummary(dateKey) {
+    const wrap = el("div", "tl-report-summary");
+    const RS = window.SaniwaReportStore;
+    const raw = store.load("report"); // storage-registry 経由で report.v1 を読む(直接 localStorage は触らない)
+    const rawEntry = raw && raw.entries ? raw.entries[dateKey] : null;
+    if (!rawEntry) {
+      wrap.appendChild(el("p", "tl-report-missing", "元の日報が見つかりません(削除された可能性があります)。下の「史から外す」で参照を外せます。"));
+      return wrap;
+    }
+    if (!RS) {
+      wrap.appendChild(el("p", "tl-report-missing", "日報データを読み込めませんでした。"));
+      return wrap;
+    }
+    const entry = RS.normalizeEntry(rawEntry, dateKey);
+    if (!RS.hasContent(entry)) {
+      wrap.appendChild(el("p", "tl-report-missing", "この日の日報にはまだ記録がありません。"));
+      return wrap;
+    }
+    const rows = [];
+    const doneTasks = RS.DAILY_TASKS.filter(t => entry.dailyTasks[t.id]).map(t => t.label);
+    rows.push(["日課", doneTasks.length ? doneTasks.join("・") : "達成記録なし"]);
+    if (entry.obtainedSwords.length) rows.push(["入手した刀剣男士", entry.obtainedSwords.map(i => `${i.name}×${i.count}`).join("、")]);
+    const totals = RS.getTotals(entry);
+    const resourceParts = RS.RESOURCE_KEYS.map(k => [k.label, totals.resources[k.id].total]).filter(([, v]) => v !== 0);
+    if (resourceParts.length) rows.push(["資材・札", resourceParts.map(([l, v]) => `${l} ${formatSigned(v)}`).join("　")]);
+    if (totals.koban.total !== 0) rows.push(["小判", formatSigned(totals.koban.total)]);
+    if (entry.eventRuns.length) rows.push(["イベント周回", entry.eventRuns.map(r => `${r.label} ${r.rounds}周`).join("、")]);
+    if (entry.normalMapRuns.length) rows.push(["通常マップ周回", entry.normalMapRuns.map(r => `${r.label} ${r.rounds}周`).join("、")]);
+    if (entry.expRecords.length) rows.push(["経験値記録", `${entry.expRecords.length}件`]);
+    rows.forEach(([label, value]) => {
+      const row = el("div", "tl-report-row");
+      row.appendChild(el("span", "tl-report-row-label", label));
+      row.appendChild(el("span", "tl-report-row-value", value));
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+  function unlinkReport(entryId) {
+    if (!window.confirm("この日報を年表から外しますか？(日報自体は削除されません)")) return;
+    state.entries = state.entries.filter(e => e.id !== entryId);
+    if (!persist()) return;
+    renderTimeline();
   }
 
   function renderYearJump(years) {
