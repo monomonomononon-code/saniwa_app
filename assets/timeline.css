@@ -124,11 +124,6 @@
   }
   .tl-item {
     position: relative;
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: transparent;
-    border: none;
     padding: 4px 6px 16px 14px;
     margin-left: -1px;
   }
@@ -144,7 +139,19 @@
     border: 2px solid var(--paper);
     box-shadow: 0 0 0 1px var(--tl-color, var(--kurenai));
   }
-  .tl-item:active { background: var(--paper-deep); border-radius: 8px; }
+  /* タップ対象は中の .tl-item-head(手動項目=編集モーダル/顕現=参照モーダル/日報=その場で開閉) */
+  .tl-item-head {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+  }
+  .tl-item-head:active { background: var(--paper-deep); border-radius: 8px; }
   .tl-item-date {
     display: block;
     font-size: 11.5px;
@@ -180,6 +187,7 @@
     padding: 1px 6px;
     border-radius: 999px;
   }
+  .tl-item-chevron { margin-left: auto; flex-shrink: 0; color: var(--ink-soft); font-size: 11px; }
   .tl-item-desc {
     margin: 4px 0 0;
     font-size: 12.5px;
@@ -189,6 +197,31 @@
     white-space: pre-wrap;
   }
   .tl-item.virtual .tl-item-title { color: var(--ink); }
+
+  /* ---- 日報の展開カード ---- */
+  .tl-item-expand {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--paper-deep);
+    border: 1px solid var(--tag-border);
+  }
+  .tl-report-summary { display: grid; gap: 6px; margin-bottom: 10px; }
+  .tl-report-row { display: flex; gap: 8px; font-size: 12px; line-height: 1.6; }
+  .tl-report-row-label { flex-shrink: 0; min-width: 84px; color: var(--ink-soft); }
+  .tl-report-row-value { overflow-wrap: anywhere; }
+  .tl-report-missing { margin: 0 0 10px; font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
+  .tl-unlink-btn {
+    width: 100%;
+    border: 1px solid var(--hanko-soft);
+    background: transparent;
+    color: var(--hanko);
+    border-radius: 7px;
+    padding: 8px;
+    font-size: 11.5px;
+    font-family: inherit;
+  }
+  .tl-unlink-btn:active { background: rgba(168, 56, 44, 0.08); }
 
   /* ---- 追加・編集モーダル ---- */
   .modal-overlay {
