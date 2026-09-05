@@ -542,8 +542,8 @@
   //  「時間帯」と「季節」は独立した2軸で、同時に効く。
   //    時間帯 = 光(空・霧・ライト・地面)   ← TIME_PRESETS
   //    季節   = 色と飾り(植栽の色、季節演出) ← SEASON_PRESETS
-  //  夏・秋・冬を追加するときは、下の spring と同じ形のオブジェクトを書いて
-  //  available: true にするだけ(UIボタン・保存・描画はすべてここから拾う)。
+  //  季節を足す・差し替えるときは、下と同じ形のオブジェクトを書いて available: true に
+  //  するだけ(UIボタン・保存・描画はすべてここから拾う)。
   //    label       : ボタン表示
   //    environment : 時間帯の環境(env)に重ねる色味。tint に amount だけ寄せる(夜は nightAmount)
   //    palette     : 季節で色が変わる部品の色。描画関数は ctx.season.palette 経由で参照する。
@@ -565,6 +565,7 @@
         bamboo: 0x9CC95B, bambooNode: 0x6D993A, bambooLeaf: 0x7FB34E,
         shrub: 0x74AC4E, shrubDeep: 0x4E8A3C, shrubLight: 0x9DCB60, shrubBloom: 0xF7C9D6,
         sakura: 0xF7B0C8, sakuraDeep: 0xE98BAE, sakuraLight: 0xFCD5E2,
+        sakuraLeaf: 0x63A343, sakuraLeafDeep: 0x46803A, sakuraLeafLight: 0x8FC455,
         flowers: [0xF4A7BB, 0xFFD966, 0xFFFFFF, 0xD9A0E0, 0xFF8FA3],
         petal: 0xF9BAD0, petalDeep: 0xEC9AB8,
         water: 0x74B4D8, waterDeep: 0x437FA6, waterRim: 0xCDB183, waterSpec: 0xEAF6FF,
@@ -572,11 +573,60 @@
         stone: 0x9C978A, stoneDark: 0x77726A,
         bridge: 0xC0392B, bridgeDeck: 0xC49A67, bridgeCap: 0x2F3640
       },
+      // 樹冠(花か葉か)・雪・地面の花びら・低木の花。木の幹と枝ぶりは季節に関係なく共通。
+      foliage: { canopy: "blossom", snow: false, ground: "petals", bloom: true },
       effects: { petals: { count: 140, mobileCount: 70, color: 0xFFC9D9, speed: .55 } }
     },
-    summer: { label: "夏", available: false },
-    autumn: { label: "秋", available: false },
-    winter: { label: "冬", available: false }
+    summer: {
+      label: "夏", available: true,
+      environment: { tint: 0xD3F0B4, amount: 0.1, nightAmount: 0.04 },
+      palette: {
+        lawn: 0x6FA34A, lawnEdge: 0x4A7A34,
+        canopy: 0x4E8F3C, canopyDeep: 0x35702B, canopyLight: 0x78B448,
+        pine: 0x36663F, pineDark: 0x254A2E, pineLight: 0x53844A,
+        bamboo: 0x86BC46, bambooNode: 0x5C8A2E, bambooLeaf: 0x6CA33E,
+        shrub: 0x53923E, shrubDeep: 0x386F2C, shrubLight: 0x7CB44C,
+        sakuraLeaf: 0x4E8F3C, sakuraLeafDeep: 0x35702B, sakuraLeafLight: 0x78B448,
+        water: 0x5FA6CE, waterDeep: 0x37749C,
+        lily: 0x548C42,
+        petal: 0xB8CE84, petalDeep: 0x9BB668  // 地面の「花びらの絨毯」は季節ごとの落ち葉になる
+      },
+      foliage: { canopy: "leaf", snow: false, ground: null, bloom: false }
+    },
+    autumn: {
+      label: "秋", available: true,
+      environment: { tint: 0xFFD09A, amount: 0.14, nightAmount: 0.05 },
+      palette: {
+        lawn: 0x9CA85E, lawnEdge: 0x6E7A3E,
+        canopy: 0xD2872F, canopyDeep: 0xA85720, canopyLight: 0xE6B242,
+        pine: 0x496B3E, pineDark: 0x33512C, pineLight: 0x6A8A4C,
+        bamboo: 0xB6C255, bambooNode: 0x87923A, bambooLeaf: 0x9CAA45,
+        shrub: 0xBC7430, shrubDeep: 0x8B4A20, shrubLight: 0xD99E40,
+        sakuraLeaf: 0xC9502C, sakuraLeafDeep: 0x9A3520, sakuraLeafLight: 0xE38A34,
+        water: 0x5A93B8, waterDeep: 0x3B6D90, waterRim: 0xC0A276,
+        lily: 0x9A8A3E,
+        stone: 0x998F80, stoneDark: 0x746B5E,
+        petal: 0xE08A3C, petalDeep: 0xBE5C28  // 落ち葉
+      },
+      foliage: { canopy: "leaf", snow: false, ground: null, bloom: false }
+    },
+    winter: {
+      label: "冬", available: true,
+      environment: { tint: 0xDCEAF7, amount: 0.16, nightAmount: 0.06 },
+      palette: {
+        lawn: 0x8FA98A, lawnEdge: 0x6C8468,
+        canopy: 0x4A7644, canopyDeep: 0x365B34, canopyLight: 0x6A945C,
+        pine: 0x35603C, pineDark: 0x24462B, pineLight: 0x527C4A,
+        bamboo: 0x7FA352, bambooNode: 0x5C7A38, bambooLeaf: 0x6E8F45,
+        shrub: 0x4E7A48, shrubDeep: 0x385C36, shrubLight: 0x6E9660,
+        sakuraLeaf: 0x4A7644, sakuraLeafDeep: 0x365B34, sakuraLeafLight: 0x6A945C,
+        water: 0x8FB6CC, waterDeep: 0x64879E, waterRim: 0xC7BFAE, waterSpec: 0xF4FAFF,
+        lily: 0x5C7F52,
+        stone: 0xAEA89A, stoneDark: 0x87806F,
+        petal: 0xF2F6FA, petalDeep: 0xDCE6F0  // 積もった雪
+      },
+      foliage: { canopy: "leaf", snow: true, ground: null, bloom: false }
+    }
   };
   function seasonPreset(key) {
     const p = SEASON_PRESETS[key];
@@ -588,7 +638,9 @@
     const preset = SEASON_PRESETS[key];
     return {
       key,
+      // 足りない色は春の値で補うので、季節ごとには差分だけ書けばよい
       palette: Object.assign({}, SEASON_PRESETS.spring.palette, preset.palette || {}),
+      foliage: Object.assign({}, SEASON_PRESETS.spring.foliage, preset.foliage || {}),
       effects: preset.effects || {}
     };
   }
@@ -1749,6 +1801,69 @@
     return leafMatCache[key];
   }
 
+  // 冬に樹冠へ乗せる雪。角ばらないよう、丸くぼかした白い塊を描いた板を使う。
+  let snowMat = null;
+  function snowMaterial() {
+    if (!snowMat) {
+      const S = 128, C = S / 2;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const x = c.getContext("2d");
+      const rnd = seededRandom("snow");
+      x.globalAlpha = .12;
+      x.fillStyle = "#FFFFFF";
+      x.fillRect(0, 0, S, S);
+      x.globalAlpha = 1;
+      // 丸い塊をいくつか重ねて、輪郭がもこもこした雪のかたまりにする
+      const blobs = [[C, C + 6, 34], [C - 26, C + 2, 24], [C + 26, C + 4, 23], [C - 8, C - 22, 22], [C + 14, C - 20, 20]];
+      blobs.forEach(([bx, by, br]) => {
+        const grd = x.createRadialGradient(bx, by - br * .3, br * .2, bx, by, br);
+        grd.addColorStop(0, "#FFFFFF");
+        grd.addColorStop(.72, "#FAFCFF");
+        grd.addColorStop(1, "#E4EEF8");
+        x.fillStyle = grd;
+        x.beginPath();
+        x.ellipse(bx + (rnd() - .5) * 4, by + (rnd() - .5) * 4, br, br * .82, 0, 0, Math.PI * 2);
+        x.fill();
+      });
+      // 下側をやわらかく消して、葉の上に乗っているように見せる
+      x.globalCompositeOperation = "destination-out";
+      const fade = x.createLinearGradient(0, C + 4, 0, S);
+      fade.addColorStop(0, "rgba(0,0,0,0)");
+      fade.addColorStop(1, "rgba(0,0,0,1)");
+      x.fillStyle = fade;
+      x.fillRect(0, C, S, S - C);
+      x.globalCompositeOperation = "source-over";
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 2;
+      snowMat = new THREE.MeshLambertMaterial({
+        map: tex, transparent: true, alphaTest: .28, side: THREE.FrontSide, vertexColors: true
+      });
+      snowMat.userData.shared = true;
+    }
+    return snowMat;
+  }
+  // 樹冠の上側の房に雪を乗せる。樹木・低木でもそのまま使える。
+  function addSnowCaps(ctx, g, clusters, center, pick) {
+    const caps = [];
+    clusters.forEach(cl => {
+      if (cl.position.y < center.y) return;            // 下向きの房には積もらせない
+      if (ctx.rand() > (ctx.lod ? .85 : .65)) return;
+      caps.push({
+        // 房の上に少し浮かせて置くと、葉に埋もれず「乗っている」ように見える
+        position: new THREE.Vector3(cl.position.x, cl.position.y + cl.size * .34, cl.position.z),
+        size: cl.size * 1.02,
+        aspect: .58,
+        spin: cl.spin,
+        tilt: 0,
+        color: new THREE.Color(1, 1, 1)
+      });
+    });
+    if (!caps.length) return;
+    const snow = new THREE.Mesh(foliageGeometry(caps, center, 1, true), snowMaterial());
+    if (pick) pick(snow); else g.add(snow);
+  }
+
   // 葉や花の房を、ドーム(または円錐)状に散らして clusters 配列に足す。
   // opt: { center, radii{x,y,z}, count, size, bottom(下をどこまで覆うか 0〜1),
   //        taper(上ほど細くする 0〜1), shell/shellVar(表面からのばらつき), shade[低,高] }
@@ -2102,7 +2217,7 @@
         pad.position.set((ctx.rand() - .5) * ctx.w * .5, -.008, (ctx.rand() - .5) * ctx.d * .5);
         g.add(pad);
       }
-      if (ctx.season.effects.petals) {
+      if (ctx.season.foliage.ground === "petals") {
         scatterDiscs(g, ctx, {
           count: Math.min(ctx.lod ? 12 : 6, Math.round(ctx.w * ctx.d * .9)), y: -.004, radius: .075,
           w: ctx.w * .6, d: ctx.d * .6, cluster: .45,
@@ -2319,6 +2434,7 @@
         leafMaterial(P.canopy, P.canopyDeep, P.canopyLight)
       );
       ctx.pick(canopy);
+      if (ctx.season.foliage.snow) addSnowCaps(ctx, g, clusters, center, ctx.pick);
     },
     sakura(item, g, ctx) {
       // 桜: 「幹 → 主枝 → 小枝 → 花房」。枝を先に組み、その先端と途中に花房を付ける。
@@ -2401,12 +2517,20 @@
       // 樹冠のてっぺん
       addCluster(new THREE.Vector3(center.x, (trunkH + form.crown.y * 1.24) * s, center.z), .95);
 
+      // --- 樹冠の見た目だけ季節で差し替える(幹・枝・房の位置は共通) ---
+      // 春=花 / 夏・秋・冬=葉。冬はさらに雪を乗せる。
+      const F = ctx.season.foliage;
+      const blossom = F.canopy === "blossom";
       const planes = ctx.lod ? 3 : 2; // スマホでは交差板を1枚減らす
-      const canopy = new THREE.Mesh(foliageGeometry(clusters, center, planes), blossomMaterial(P));
+      const canopy = new THREE.Mesh(
+        foliageGeometry(clusters, center, planes, !blossom),
+        blossom ? blossomMaterial(P) : leafMaterial(P.sakuraLeaf, P.sakuraLeafDeep, P.sakuraLeafLight)
+      );
       ctx.pick(canopy);
+      if (F.snow) addSnowCaps(ctx, g, clusters, center, ctx.pick);
 
       // --- 根元に散った花びら ---
-      if (ctx.season.effects.petals) {
+      if (F.ground === "petals") {
         scatterDiscs(g, ctx, {
           count: ctx.lod ? 14 : 7, y: .012, radius: .08,
           w: Rx * 2.3, d: Rz * 2.3, cluster: .35,
@@ -2526,14 +2650,16 @@
           shade: [.72, .95]
         });
       });
+      const bushCenter = new THREE.Vector3(0, unit * .3, 0);
       const bush = new THREE.Mesh(
-        foliageGeometry(clusters, new THREE.Vector3(0, unit * .3, 0), ctx.lod ? 2 : 1, true),
+        foliageGeometry(clusters, bushCenter, ctx.lod ? 2 : 1, true),
         leafMaterial(P.shrub, P.shrubDeep, P.shrubLight)
       );
       ctx.pick(bush);
+      if (ctx.season.foliage.snow) addSnowCaps(ctx, g, clusters, bushCenter, ctx.pick);
 
-      // 春の新芽・小さな花(季節の演出があるときだけ)
-      if (ctx.season.effects.petals) {
+      // 春の新芽・小さな花
+      if (ctx.season.foliage.bloom) {
         for (let i = 0; i < (ctx.lod ? 7 : 4); i++) {
           const bloom = new THREE.Mesh(GEO.clump(), ctx.mat(i % 3 ? P.shrubBloom : P.sakuraLight));
           const br = .05 + ctx.rand() * .025;
