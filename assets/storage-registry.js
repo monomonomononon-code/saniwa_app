@@ -75,9 +75,11 @@
     { id: "schedule", key: PREFIX + "schedule.v1", label: "予定", owner: "assets/schedule.js",
       domain: "schedule", scope: "user",
       summary: d => d && Array.isArray(d.events) ? `${count(d.events.length, "件")} / ToDo${count(d.events.reduce((n, e) => n + (Array.isArray(e.todos) ? e.todos.length : 0), 0), "件")}` : "" },
-    // 手動で追加した出来事(1件=配列の1要素)だけを保存する。刀剣男士の顕現イベントは
-    // master.v1 を正本として毎回動的に生成する「仮想の項目」であり、ここには保存しない
-    // (二重管理を避けるため)。詳しくは assets/timeline.js の characterEntries() を参照。
+    // 手動で追加した出来事と、日報への参照(sourceType:"report", sourceId:日報の日付キー)
+    // だけを保存する(1件=配列の1要素)。参照エントリは日報の内容を複製せず、表示のたびに
+    // report.v1 を読み直して展開する(assets/timeline.js の renderReportSummary())。
+    // 刀剣男士の顕現イベントは master.v1 を正本として毎回動的に生成する「仮想の項目」であり、
+    // そもそもここには保存しない(二重管理を避けるため)。詳しくは characterEntries() を参照。
     { id: "timeline", key: PREFIX + "timeline.v1", label: "年表", owner: "assets/timeline.js",
       domain: "timeline", scope: "user",
       summary: d => d && Array.isArray(d.entries) ? count(d.entries.length, "件") : "" },
