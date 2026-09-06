@@ -138,15 +138,25 @@
     return SWORD_SCHOOL_MAP[normalizeCharName(c.name)] || "";
   }
 
+  // グループ定義(名前・カテゴリ・所属する刀剣男士名)。後日、一覧をもらってここを埋める。
+  // members の表記は normalizeCharName() で比較するので、スペース有無は気にしなくてよい。
+  // 例: { name: "○○兄弟", category: "兄弟", members: ["○○", "△△"] }
+  const GROUP_CATEGORIES = ["兄弟", "かつての主や時代繋がり", "所蔵元繋がり", "回想繋がり", "絵師繋がり", "ゲーム内イベント繋がり", "その他"];
+  const GROUP_DEFS = [];
+  function groupsOf(c) {
+    return GROUP_DEFS.filter(g => g.members.some(m => normalizeCharName(m) === normalizeCharName(c.name)));
+  }
+
   // 絞り込み: カテゴリごとに選んだ値の配列。空配列 = 「すべて」。
   // 同じカテゴリ内は複数選択可(OR)、カテゴリ間はAND。
   const NO_SCHOOL = "__no_school__"; // 「流派なし」の絞り込み用の特別な値(実際の流派名と衝突しない)
-  let filters = { unit: [], swordType: [], school: [] };
+  let filters = { unit: [], swordType: [], school: [], group: [] };
   function matchesFilters(c) {
     const unitOk = filters.unit.length === 0 || filters.unit.includes(c.unit);
     const typeOk = filters.swordType.length === 0 || filters.swordType.includes(c.swordType);
     const schoolOk = filters.school.length === 0 || filters.school.some(s => s === NO_SCHOOL ? !schoolOf(c) : schoolOf(c) === s);
-    return unitOk && typeOk && schoolOk;
+    const groupOk = filters.group.length === 0 || groupsOf(c).some(g => filters.group.includes(g.name));
+    return unitOk && typeOk && schoolOk && groupOk;
   }
   // 選択肢は既存データに実在する値だけを出す(未使用の部隊・刀種は出さない)。{value, label} で統一する。
   function unitFilterOptions() {
@@ -165,6 +175,10 @@
     const opts = Array.from(set).sort((a, b) => a.localeCompare(b, "ja")).map(s => ({ value: s, label: s }));
     if (hasNoSchool) opts.push({ value: NO_SCHOOL, label: "流派なし" });
     return opts;
+  }
+  // グループは登録数が多くなる想定なので、現在のデータに実在するものだけを対象にする
+  function groupTagOptions() {
+    return GROUP_DEFS.filter(g => characters.some(c => groupsOf(c).includes(g)));
   }
 
   let characters = CHAR_NAMES.map((n, i) => ({
@@ -187,7 +201,9 @@
   let editingId = null;
   let bulkConfirmOpen = false;
   let filterPanelOpen = false;
-  let filterGroupsOpen = {}; // カテゴリごとの開閉状態(部隊/刀種/刀派、今後増える分もキーを足すだけでよい)。未登場のキーは閉じている扱い。
+  let filterGroupsOpen = {}; // カテゴリごとの開閉状態(部隊/刀種/刀派/グループ、今後増える分もキーを足すだけでよい)。未登場のキーは閉じている扱い。
+  let groupCategoryFilter = ""; // グループ内の2段階目: 選んでいるカテゴリ(絞り込み条件そのものではなく、タグ一覧を絞るための表示用)
+  let groupSearchText = ""; // グループ名の検索欄の入力値
   let addCharModalOpen = false;
   let duplicateConfirm = null; // 追加しようとした内容が重複していた時の確認待ち { name, swordType, level }
 
@@ -321,7 +337,7 @@
 
   // 絞込/並替の開閉ボタン(ツールバーに配置)
   function renderFilterToggle() {
-    const activeCount = filters.unit.length + filters.swordType.length + filters.school.length;
+    const activeCount = filters.unit.length + filters.swordType.length + filters.school.length + filters.group.length;
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "filter-toggle" + (filterPanelOpen ? " open" : "");
@@ -381,7 +397,95 @@
       }
       bar.appendChild(group);
     });
+    bar.appendChild(renderGroupFilterGroup());
     return bar;
+  }
+
+  // 「グループ」は件数が多くなる想定なので2段階選択にする:
+  // ①グループ全体の開閉 → ②7つのカテゴリから選ぶ(タグ一覧を絞るための表示用の選択、絞り込み条件そのものではない)
+  // → 該当するグループタグ(複数選択可・OR)を選ぶ。検索欄でも直接タグを絞れる。
+  function renderGroupFilterGroup() {
+    const group = document.createElement("div");
+    group.className = "filter-group";
+    const isOpen = !!filterGroupsOpen.group;
+    const count = filters.group.length;
+
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = "filter-group-header" + (isOpen ? " open" : "");
+    header.innerHTML = `<span>グループ</span>${count ? `<span class="filter-toggle-count">${count}</span>` : ""}<span class="filter-group-chev">${isOpen ? "▲" : "▼"}</span>`;
+    header.onclick = () => { filterGroupsOpen.group = !isOpen; render(); };
+    group.appendChild(header);
+    if (!isOpen) return group;
+
+    const catRow = document.createElement("div");
+    catRow.className = "filter-chips";
+    const allChip = document.createElement("button");
+    allChip.type = "button";
+    allChip.className = "filter-chip" + (filters.group.length === 0 ? " active" : "");
+    allChip.textContent = "すべて";
+    allChip.onclick = () => { filters.group = []; groupCategoryFilter = ""; groupSearchText = ""; render(); };
+    catRow.appendChild(allChip);
+    GROUP_CATEGORIES.forEach(cat => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "filter-chip" + (groupCategoryFilter === cat ? " active" : "");
+      chip.textContent = cat;
+      chip.onclick = () => { groupCategoryFilter = groupCategoryFilter === cat ? "" : cat; render(); };
+      catRow.appendChild(chip);
+    });
+    group.appendChild(catRow);
+
+    const searchWrap = document.createElement("div");
+    searchWrap.className = "group-search-wrap";
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.className = "group-search-input";
+    searchInput.placeholder = "グループ名で検索";
+    searchInput.value = groupSearchText;
+    searchWrap.appendChild(searchInput);
+    group.appendChild(searchWrap);
+
+    const tagsWrap = document.createElement("div");
+    tagsWrap.className = "filter-chips";
+    group.appendChild(tagsWrap);
+
+    // 検索欄の入力ではタグ一覧だけを差し替える(パネル全体をrender()し直すと入力中にフォーカスが外れるため)
+    searchInput.oninput = () => { groupSearchText = searchInput.value; renderGroupTagChips(tagsWrap); };
+    renderGroupTagChips(tagsWrap);
+
+    return group;
+  }
+
+  function renderGroupTagChips(container) {
+    container.innerHTML = "";
+    let opts = groupTagOptions();
+    if (groupCategoryFilter) opts = opts.filter(g => g.category === groupCategoryFilter);
+    const q = groupSearchText.trim();
+    if (q) opts = opts.filter(g => g.name.includes(q));
+
+    if (!opts.length) {
+      const empty = document.createElement("div");
+      empty.className = "group-tags-empty";
+      empty.textContent = (groupCategoryFilter || q)
+        ? "該当するグループがありません。"
+        : "カテゴリを選ぶか、グループ名で検索してください。";
+      container.appendChild(empty);
+      return;
+    }
+    opts.forEach(def => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "filter-chip" + (filters.group.includes(def.name) ? " active" : "");
+      chip.textContent = def.name;
+      chip.onclick = () => {
+        const list = filters.group;
+        const i = list.indexOf(def.name);
+        if (i === -1) list.push(def.name); else list.splice(i, 1);
+        render();
+      };
+      container.appendChild(chip);
+    });
   }
 
   function escapeHtml(s) {
