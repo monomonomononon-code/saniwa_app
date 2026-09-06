@@ -79,12 +79,9 @@
   .filter-group-label { font-size: 10px; color: var(--ink-soft); margin-bottom: 4px; }
   .filter-chips {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: none;
   }
-  .filter-chips::-webkit-scrollbar { display: none; }
   .filter-chip {
     flex: 0 0 auto;
     background: var(--tag-bg);
