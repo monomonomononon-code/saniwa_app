@@ -89,6 +89,23 @@
       c.unit = sc.unit || "";
       c.isCaptain = !!sc.isCaptain;
     });
+    // characters_sync は刀剣男士の正本(全件)なので、ここに無い = 削除された刀剣男士とみなし、
+    // 相関図のタグ・位置・線からも消す(そのままだと「?」タグとして残ってしまう)。
+    const validIds = new Set(data.characters.map(sc => sc.id));
+    characters = characters.filter(c => validIds.has(c.id));
+    let changed = false;
+    tabs.forEach(tab => {
+      const beforePlaced = tab.placedIds.length;
+      tab.placedIds = tab.placedIds.filter(id => validIds.has(id));
+      if (tab.placedIds.length !== beforePlaced) changed = true;
+      Object.keys(tab.positions).forEach(id => {
+        if (!validIds.has(id)) { delete tab.positions[id]; changed = true; }
+      });
+      const beforeRel = tab.relationships.length;
+      tab.relationships = tab.relationships.filter(r => validIds.has(r.from) && validIds.has(r.to));
+      if (tab.relationships.length !== beforeRel) changed = true;
+    });
+    if (changed) saveState();
     render();
   });
   try { window.parent && window.parent.postMessage({ source: "network", type: "ready" }, "*"); } catch (e) {}
