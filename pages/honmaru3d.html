@@ -2672,22 +2672,105 @@
       }
     },
     stable(item, g, ctx) {
-      const wood = lambert(0x7A4B32);
-      const dark = lambert(0x4F3020);
-      const base = box(ctx.w, .18, ctx.d, wood);
-      base.position.y = 0;
-      ctx.pick(base);
-      const back = box(ctx.w, 1.45, .16, wood);
-      back.position.set(0, .78, -ctx.d / 2 + .08);
-      ctx.pick(back);
-      [-ctx.w / 2 + .1, ctx.w / 2 - .1].forEach(x => {
-        const side = box(.18, 1.45, ctx.d, wood);
-        side.position.set(x, .78, 0);
-        ctx.pick(side);
-      });
-      const roof = box(ctx.w + .45, .22, ctx.d + .45, dark);
-      roof.position.y = 1.62;
-      ctx.pick(roof);
+      // 中央土間＋左右の馬房。既存の配置寸法内で構成し、馬房中央は空ける。
+      const W = ctx.w, D = ctx.d;
+      const s = Math.min(1, W / 4, D / 3), H = 1.95 * s;
+      const post = .13 * s, aisle = W * .27;
+      const stallW = (W - aisle) / 2 - post * 1.25;
+      const usableD = D - post * 2;
+      const rows = Math.max(1, Math.min(4, Math.floor((usableD + .25 * s) / (1.4 * s))));
+      const bayD = usableD / rows;
+      const wood = ctx.mat(0x70513B), plank = ctx.mat(0xAE875B), dark = ctx.mat(0x514035);
+      const add = (w, h, d, x, y, z, mat) => {
+        const mesh = box(w, h, d, mat); mesh.position.set(x, y, z); ctx.pick(mesh); return mesh;
+      };
+      contactShadow(g, W + .8 * s, D + .8 * s, -.274);
+      add(W, .18, D, 0, -.17, 0, ctx.mat(0x89877A));
+      add(aisle, .08, usableD, 0, -.04, 0, ctx.mat(0xB9AB8D));
+      // 漆喰の奥壁と板張りの腰壁。前面を開き、低い仕切り越しに中を見せる。
+      add(W - post, H * .76, post * .7, 0, H * .38, -D / 2 + post * .5, ctx.mat(0xE3D8BC));
+      add(W - post, .46 * s, post, 0, .23 * s, -D / 2 + post * .55, plank);
+      const frames = [], seams = [], stoneFeet = [];
+      for (const side of [-1, 1]) {
+        const outer = side * (W / 2 - post * .6), inner = side * aisle / 2;
+        const cx = side * (aisle / 2 + stallW / 2 + post * .35);
+        add(stallW, .08, usableD, cx, -.01, 0, ctx.mat(0x9D8058));
+        add(post * .7, .60 * s, usableD, outer, .30 * s, 0, plank);
+        // 柱、桁、低い馬房仕切り。通路に柱・飼い葉桶を張り出させない。
+        for (let j = 0; j <= rows; j++) {
+          const z = -usableD / 2 + j * bayD;
+          frames.push([outer, H / 2, z, post, H, post]);
+          frames.push([inner, .48 * s, z, post, .96 * s, post]);
+          stoneFeet.push([outer, -.015, z, post * 1.6, .18 * s, post * 1.6]);
+          for (const y of [.30, .67]) frames.push([cx, y * s, z, stallW, .085 * s, .075 * s]);
+          const slats = Math.max(2, Math.min(8, Math.round(stallW / (.28 * s))));
+          for (let k = 1; k < slats; k++) frames.push([inner + side * k * stallW / slats, .46 * s, z, .045 * s, .39 * s, .055 * s]);
+        }
+        frames.push([outer, H - .04 * s, 0, post * 1.35, .15 * s, D + .18 * s]);
+        for (let j = 0; j < rows; j++) {
+          const z = -usableD / 2 + (j + .5) * bayD;
+          // 通路側の半扉。腰板と上の木柵、控えめな閂で馬房を区切る。
+          add(.065 * s, .34 * s, bayD - post * 1.5, inner, .19 * s, z, plank);
+          for (const y of [.39, .73]) frames.push([inner, y * s, z, .085 * s, .07 * s, bayD - post]);
+          for (let k = 1; k <= 3; k++) frames.push([inner, .55 * s, z + (k - 2) * (bayD - post) / 4, .05 * s, .30 * s, .045 * s]);
+          add(.095 * s, .035 * s, .16 * s, inner - side * .015 * s, .39 * s, z + bayD * .25, dark);
+          // 飼い葉桶は外壁寄り。中央の空きは幅・奥行きとも馬房の約70%以上。
+          const tx = outer - side * .19 * s, tz = z - bayD * .26;
+          add(.29 * s, .20 * s, bayD * .24, tx, .13 * s, tz, wood);
+          add(.24 * s, .018 * s, bayD * .20, tx, .237 * s, tz, ctx.mat(0xC5B57B));
+          // 干し草は床の薄い敷き藁として表現する。
+          add(stallW * .61, .018 * s, bayD * .64, cx, .043, z, ctx.mat(0xC6B883));
+          for (let k = 0; k < 4; k++) seams.push([cx + (k - 1.5) * stallW * .12, .055, z + (k % 2 ? .08 : -.08) * s, .018 * s, .008 * s, bayD * .42]);
+        }
+        // 板目は少数の共有ボックスでまとめて描画。
+        const boardCount = Math.min(24, Math.ceil(D / (.32 * s)));
+        for (let i = 0; i < boardCount; i++) seams.push([outer - side * post * .4, .30 * s, -usableD / 2 + (i + .5) * usableD / boardCount, .015 * s, .55 * s, .018 * s]);
+      }
+      // 前後の梁と方杖で、通路を囲む木造の門型を見せる。
+      for (const z of [-usableD / 2, usableD / 2]) {
+        frames.push([0, H, z, W, .16 * s, post * 1.2]);
+        for (const side of [-1, 1]) {
+          const x = side * (W / 2 - post * .6);
+          const a = new THREE.Vector3(x, H - .38 * s, z);
+          const b = new THREE.Vector3(x - side * .38 * s, H - .03 * s, z);
+          ctx.pick(limb(g, wood, a, b, .045 * s));
+        }
+      }
+      detailBoxes(g, 0x70513B, frames);
+      detailBoxes(g, 0x8E794F, seams);
+      detailBoxes(g, 0x89877A, stoneFeet);
+      // 左右に残した瓦屋根の断面表現。通路と馬房の手前側を俯瞰でも隠さない。
+      const roofW = stallW * .58, roofD = D + .30 * s;
+      const ribs = [], edges = [];
+      for (const side of [-1, 1]) {
+        const innerX = side * (W / 2 - roofW), span = roofW + .20 * s;
+        for (let j = 0; j < 3; j++) {
+          const a = j / 3, b = (j + 1) / 3;
+          const profile = t => H + .27 * s * Math.pow(1 - t, 1.5) + .055 * s * Math.pow(t, 6);
+          const y0 = profile(a), y1 = profile(b), dx = span / 3;
+          const length = Math.hypot(dx, y1 - y0), angle = side * Math.atan2(y1 - y0, dx);
+          const x = innerX + side * span * (a + b) / 2, y = (y0 + y1) / 2;
+          const tile = add(length + .01 * s, .07 * s, roofD, x, y, 0, ctx.mat(j % 2 ? 0x4C5961 : 0x46535B));
+          tile.rotation.z = angle;
+          const count = Math.min(32, Math.max(4, Math.round(D / (.28 * s))));
+          for (let i = 0; i <= count; i++) ribs.push([x, y + .045 * s, -roofD / 2 + i * roofD / count, length + .015 * s, .025 * s, .035 * s, 0, angle]);
+          for (const end of [-1, 1]) edges.push([x, y - .025 * s, end * roofD / 2, length + .015 * s, .12 * s, .08 * s, 0, angle]);
+        }
+        edges.push([innerX, H + .29 * s, 0, .095 * s, .10 * s, roofD + .08 * s]);
+      }
+      detailBoxes(g, 0x657078, ribs); detailBoxes(g, 0x303E47, edges);
+      // 小さな木札は建物の一部。UIラベルを消しても厩舎と分かる。
+      if (!PART_RENDERERS.stable.signTexture) {
+        const c = document.createElement("canvas"); c.width = 128; c.height = 64;
+        const pen = c.getContext("2d"); pen.fillStyle = "#70513B"; pen.fillRect(0, 0, 128, 64);
+        pen.strokeStyle = "#BEA178"; pen.lineWidth = 3; pen.strokeRect(5, 5, 118, 54);
+        pen.fillStyle = "#F2EBDD"; pen.font = "bold 39px serif"; pen.textAlign = "center"; pen.textBaseline = "middle"; pen.fillText("御厩", 64, 34);
+        PART_RENDERERS.stable.signTexture = new THREE.CanvasTexture(c);
+      }
+      const signMat = ctx.mat(0xFFFDF8, { side: THREE.DoubleSide });
+      if (!signMat.map) { signMat.map = PART_RENDERERS.stable.signTexture; signMat.needsUpdate = true; }
+      const sign = new THREE.Mesh(GEO.plane(), signMat); sign.scale.set(.59 * s, .29 * s, 1);
+      sign.position.set(0, H - .025 * s, usableD / 2 + post * .65); ctx.pick(sign);
     },
     tree(item, g, ctx) {
       // 樹木: 根張りのある幹 → 枝分かれ → 葉の房でできた樹冠。
