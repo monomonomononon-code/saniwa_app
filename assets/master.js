@@ -564,17 +564,25 @@
 
   function renderGroupTagChips(container) {
     container.innerHTML = "";
-    let opts = groupTagOptions();
-    if (groupCategoryFilter) opts = opts.filter(g => g.category === groupCategoryFilter);
     const q = groupSearchText.trim();
+    // 「すべて」(カテゴリ未選択 かつ 検索なし)の間は92個ぶんのタグを出さない。
+    // 「すべて」は一覧を全部見せる意味ではなく、グループ条件で絞り込まないという意味にする。
+    if (!groupCategoryFilter && !q) {
+      const hint = document.createElement("div");
+      hint.className = "group-tags-empty";
+      hint.textContent = "カテゴリを選ぶか、グループ名で検索してください。";
+      container.appendChild(hint);
+      return;
+    }
+    let opts = groupTagOptions();
+    // 検索文字があれば、カテゴリの選択に関係なく全グループから探す
     if (q) opts = opts.filter(g => g.name.includes(q));
+    else opts = opts.filter(g => g.category === groupCategoryFilter);
 
     if (!opts.length) {
       const empty = document.createElement("div");
       empty.className = "group-tags-empty";
-      empty.textContent = (groupCategoryFilter || q)
-        ? "該当するグループがありません。"
-        : "カテゴリを選ぶか、グループ名で検索してください。";
+      empty.textContent = "該当するグループがありません。";
       container.appendChild(empty);
       return;
     }
