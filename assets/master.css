@@ -176,14 +176,20 @@
   .modal-overlay {
     position: fixed; inset: 0;
     background: rgba(20,16,12,0.55);
-    display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: flex-start; justify-content: center;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     z-index: 1000; padding: 24px;
   }
   .modal-card {
     background: var(--paper);
     border-radius: 12px;
     width: 100%; max-width: 340px;
-    max-height: 84vh; overflow-y: auto; overflow-x: hidden;
+    margin: auto 0; /* 縦は中央寄せしつつ、はみ出す時は上に寄せる(スマホでキーボードが出た時に隠れないように) */
+    /* dvh対応ブラウザではソフトキーボード表示中の実表示高さに追従して縮む */
+    max-height: 84vh;
+    max-height: 84dvh;
+    overflow-y: auto; overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     padding: 20px 18px;
