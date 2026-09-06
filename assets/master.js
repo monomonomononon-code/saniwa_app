@@ -35,6 +35,33 @@
     return String(name || "").replace(/[ 　]/g, "");
   }
 
+  // 刀派対応表(名前 → 刀派)。後日、対応表を反映してここを埋める。
+  // キーは normalizeCharName() を通した名前(スペース無視)にすること。
+  const SWORD_SCHOOL_MAP = {};
+  function schoolOf(c) {
+    return SWORD_SCHOOL_MAP[normalizeCharName(c.name)] || "";
+  }
+
+  // 絞り込み: 各カテゴリ「すべて」(= "all") か、その値そのもの
+  let filters = { unit: "all", swordType: "all", school: "all" };
+  function matchesFilters(c) {
+    return (filters.unit === "all" || c.unit === filters.unit)
+      && (filters.swordType === "all" || c.swordType === filters.swordType)
+      && (filters.school === "all" || schoolOf(c) === filters.school);
+  }
+  // 選択肢は既存データに実在する値だけを出す(未使用の部隊・刀種は出さない)
+  function unitFilterOptions() {
+    return UNITS.filter(u => characters.some(c => c.unit === u));
+  }
+  function swordTypeFilterOptions() {
+    return SWORD_TYPES.filter(t => characters.some(c => c.swordType === t));
+  }
+  function schoolFilterOptions() {
+    const set = new Set();
+    characters.forEach(c => { const s = schoolOf(c); if (s) set.add(s); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
+  }
+
   let characters = CHAR_NAMES.map((n, i) => ({
     id: "c" + i, name: n,
     swordType: "", height: "", hobby: "", formerOwner: "",
@@ -114,10 +141,19 @@
       <p>タップで各キャラの設定を編集できます。メモ欄は何でも自由に書けます。</p>
     `;
     el.appendChild(header);
+    el.appendChild(renderFilterBar());
+
+    const filtered = characters.filter(matchesFilters);
 
     const grid = document.createElement("div");
     grid.className = "char-grid";
-    characters.forEach(c => {
+    if (!filtered.length) {
+      const empty = document.createElement("div");
+      empty.className = "filter-empty";
+      empty.textContent = "この条件に当てはまる刀剣男士がいません。";
+      el.appendChild(empty);
+    }
+    filtered.forEach(c => {
       const card = document.createElement("button");
       card.className = "char-card";
       card.innerHTML = `
@@ -184,6 +220,47 @@
         render();
       };
     }
+  }
+
+  // 絞り込みバー: 部隊・刀種・刀派の3カテゴリ、各カテゴリは単一選択+「すべて」。
+  // 複数カテゴリを選ぶとAND条件になる(matchesFilters側で判定)。
+  function renderFilterBar() {
+    const bar = document.createElement("div");
+    bar.className = "filter-bar";
+    const groups = [
+      { key: "unit", label: "部隊", options: unitFilterOptions() },
+      { key: "swordType", label: "刀種", options: swordTypeFilterOptions() },
+      { key: "school", label: "刀派", options: schoolFilterOptions() }
+    ];
+    groups.forEach(g => {
+      const group = document.createElement("div");
+      group.className = "filter-group";
+      const label = document.createElement("div");
+      label.className = "filter-group-label";
+      label.textContent = g.label;
+      group.appendChild(label);
+
+      const chips = document.createElement("div");
+      chips.className = "filter-chips";
+      const allChip = document.createElement("button");
+      allChip.type = "button";
+      allChip.className = "filter-chip" + (filters[g.key] === "all" ? " active" : "");
+      allChip.textContent = "すべて";
+      allChip.onclick = () => { filters[g.key] = "all"; render(); };
+      chips.appendChild(allChip);
+
+      g.options.forEach(opt => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "filter-chip" + (filters[g.key] === opt ? " active" : "");
+        chip.textContent = opt;
+        chip.onclick = () => { filters[g.key] = opt; render(); };
+        chips.appendChild(chip);
+      });
+      group.appendChild(chips);
+      bar.appendChild(group);
+    });
+    return bar;
   }
 
   function escapeHtml(s) {
