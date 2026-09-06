@@ -2460,20 +2460,28 @@
         g.add(shallow);
       }
 
-      // 滑らかな岸の「弧長」で均等に石を並べる。細長い池でも隙間が開きにくい。
+      // 縁石だけの乱数を独立させ、水草・睡蓮・花びらの既存位置を維持する。
       const shoreline = blobShape(mid);
       const perimeter = shoreline.getLength();
       const stones = Math.max(14, Math.min(ctx.lod ? 64 : 48, Math.ceil(perimeter / .40)));
-      const stoneGeo = sharedGeo("pond-rounded-stone", () => new THREE.SphereGeometry(1, 7, 4));
+      const stoneRand = seededRandom(item.id + "-shore-stones");
+      const spans = Array.from({ length: stones }, () => .55 + stoneRand() * 1.05);
+      const spanTotal = spans.reduce((a, b) => a + b, 0);
+      let cursor = 0;
       for (let i = 0; i < stones; i++) {
-        const u = i / stones, p = shoreline.getPointAt(u);
+        // 以前の縁石処理と同じだけ共有乱数を進め、池の他の装飾は動かさない。
+        for (let k = 0; k < 5; k++) ctx.rand();
+        const span = spans[i] / spanTotal;
+        const u = cursor + span * .5, p = shoreline.getPointAt(u);
+        cursor += span;
         const tangent = shoreline.getTangentAt(u);
-        const prominent = i === Math.floor(stones * .32) || i === Math.floor(stones * .39);
-        const h = (prominent ? .30 : .15) * (.85 + ctx.rand() * .3);
-        const rock = new THREE.Mesh(stoneGeo, ctx.mat(i % 4 === 0 ? P.stoneDark : P.stone));
-        rock.scale.set(perimeter / stones * (.63 + ctx.rand() * .09), h, rim * (.83 + ctx.rand() * .15));
-        rock.position.set(p.x, .025 + h * .42, -p.y);
-        rock.rotation.set((ctx.rand() - .5) * .12, Math.atan2(tangent.y, tangent.x), (ctx.rand() - .5) * .1);
+        const prominent = i % 9 === 2;
+        const h = prominent ? .25 + stoneRand() * .16 : .08 + stoneRand() * .14;
+        const offset = (stoneRand() - .45) * rim * .55;
+        const rock = new THREE.Mesh(GEO.rock(i), ctx.mat(i % 4 === 0 ? P.stoneDark : P.stone));
+        rock.scale.set(perimeter * span * (.60 + stoneRand() * .17), h, rim * (.66 + stoneRand() * .46));
+        rock.position.set(p.x + tangent.y * offset, .02 + h * .35, -p.y + tangent.x * offset);
+        rock.rotation.set((stoneRand() - .5) * .42, Math.atan2(tangent.y, tangent.x) + (stoneRand() - .5) * .8, (stoneRand() - .5) * .32);
         ctx.pick(rock);
       }
 
@@ -2861,41 +2869,67 @@
         { from: spine[4], elbow: V(-.43, 2.12, -.38), to: V(-.66, 2.29, -.41), r: .42 },
         { from: spine[4], elbow: spine[5], to: V(.06, 2.53, -.02), r: .64 }
       ];
-      const foliageGeo = sharedGeo("pine-foliage-lobe", () => new THREE.SphereGeometry(1, 7, 5));
+      // 針葉は塊を一切使わず、細い針を描いた透過カードを薄く重ねる。
+      // 素材は松専用・1枚を共有。交差する葉と水平の葉を1メッシュにまとめる。
+      if (!PART_RENDERERS.pine.needleTexture) {
+        const canvas = document.createElement("canvas"); canvas.width = canvas.height = 128;
+        const pen = canvas.getContext("2d"), rand = seededRandom("pine-needle-spray-v1");
+        pen.lineCap = "round";
+        for (let i = 0; i < 48; i++) {
+          const a = i * 2.39996, r = Math.sqrt((i + .5) / 48);
+          const x = 64 + Math.cos(a) * r * 43, y = 64 + Math.sin(a) * r * 38;
+          const facing = a + (rand() - .5) * .7;
+          const length = 8 + rand() * 7;
+          for (let j = -3; j <= 3; j++) {
+            const angle = facing + j * .24;
+            const shade = Math.round(210 + rand() * 45);
+            pen.strokeStyle = `rgb(${shade},${shade},${shade})`;
+            pen.lineWidth = 1.7 + rand() * .65;
+            pen.beginPath(); pen.moveTo(x, y);
+            pen.quadraticCurveTo(x + Math.cos(angle) * length * .55, y + Math.sin(angle) * length * .55,
+              x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+            pen.stroke();
+          }
+        }
+        PART_RENDERERS.pine.needleTexture = new THREE.CanvasTexture(canvas);
+        PART_RENDERERS.pine.needleTexture.anisotropy = 2;
+      }
+      const needleColor = new THREE.Color(P.pine).lerp(new THREE.Color(P.pineLight), .30).getHex();
+      const needleMat = ctx.mat(needleColor, { alphaTest: .45, vertexColors: true, side: THREE.FrontSide });
+      if (!needleMat.map) {
+        needleMat.map = PART_RENDERERS.pine.needleTexture; needleMat.needsUpdate = true;
+      }
+      const clusters = [], snowClusters = [];
       tiers.forEach((t, tier) => {
         limb(g, bark, t.from, t.elbow, .075 * s, 1);
         limb(g, bark, t.elbow, t.to, .048 * s, 1);
         for (const side of [-1, 1]) {
           limb(g, bark, t.elbow, t.to.clone().add(V(side * t.r * .45, .045, side * .17)), .027 * s, 1);
         }
-        // 下側は一続きの葉座、上側は大小の小房で輪郭に凹凸を付ける。
-        const base = new THREE.Mesh(foliageGeo, ctx.mat(P.pineDark));
-        base.position.copy(t.to).add(V(0, .035, 0));
-        base.scale.set(t.r * s, .11 * s, t.r * .72 * s); ctx.pick(base);
-        const lobes = ctx.lod ? 8 : 6;
-        for (let i = 0; i < lobes; i++) {
-          const a = i * 2.399 + tier * .6, rr = i === 0 ? 0 : .47 + ctx.rand() * .11;
-          const f = i === 0 ? .51 : .35 + ctx.rand() * .1;
-          const pad = new THREE.Mesh(foliageGeo, ctx.mat(i % 4 === 0 ? P.pineLight : P.pine));
-          pad.position.copy(t.to).add(V(Math.cos(a) * t.r * rr, .12 + (i === 0 ? .09 : ctx.rand() * .04), Math.sin(a) * t.r * rr * .74));
-          pad.scale.set(t.r * f * s, (.11 + f * .09) * s, t.r * f * s * .80); ctx.pick(pad);
-          if (ctx.season.foliage.snow && i % 2 === 0) {
-            const snow = new THREE.Mesh(foliageGeo, ctx.mat(0xF2F3EB));
-            snow.scale.set(pad.scale.x * .85, pad.scale.y * .30, pad.scale.z * .82);
-            snow.position.copy(pad.position); snow.position.y += pad.scale.y * .85;
-            g.add(snow);
+        const count = ctx.lod ? 32 : 24;
+        for (let i = 0; i < count; i++) {
+          const a = i * 2.39996 + tier * .7, radius = Math.sqrt((i + .5) / count);
+          // 幅広く、奥行きと高さは薄い非対称な棚。中心にも丸い芯を置かない。
+          const dx = Math.cos(a) * radius * t.r * 1.12;
+          const dz = Math.sin(a) * radius * t.r * .48 + Math.sin(dx * 5) * .055;
+          const dy = .09 + .11 * (1 - radius) + (i % 3) * .03;
+          const shade = .83 + ctx.rand() * .35;
+          const cluster = {
+            position: t.to.clone().add(V(dx, dy, dz)),
+            size: (.30 + ctx.rand() * .10) * s,
+            aspect: .68 + ctx.rand() * .12, spin: a, tilt: .08,
+            color: new THREE.Color(shade, shade, shade * .97)
+          };
+          clusters.push(cluster);
+          if (ctx.season.foliage.snow && i % 5 === 0 && radius < .85) {
+            snowClusters.push({ ...cluster, position: cluster.position.clone().add(V(0, .085, 0)),
+              size: cluster.size * .70, color: new THREE.Color(1, 1, 1) });
           }
         }
-        // 針葉の房を小さく添え、球の寄せ集めに見えない細かな稜線を作る。
-        for (let i = 0; i < (ctx.lod ? 11 : 7); i++) {
-          const a = i * 2.399 + tier, r = Math.sqrt((i + .5) / 11) * t.r * .76;
-          const tuft = new THREE.Mesh(GEO.clump(), ctx.mat(i % 3 ? P.pine : P.pineLight));
-          const f = (.075 + ctx.rand() * .045) * s;
-          tuft.scale.set(f * 1.2, f * .65, f);
-          tuft.position.copy(t.to).add(V(Math.cos(a) * r, .24 + ctx.rand() * .025, Math.sin(a) * r * .74));
-          g.add(tuft);
-        }
       });
+      const center = V(0, 1.6, 0);
+      ctx.pick(new THREE.Mesh(foliageGeometry(clusters, center, 1, true), needleMat));
+      if (snowClusters.length) g.add(new THREE.Mesh(foliageGeometry(snowClusters, center, 1, true), snowMaterial()));
     },
     bamboo(item, g, ctx) {
       // 竹: 節で区切った稈 + 節ごとの輪 + 上部に細い葉。節と葉をはっきり見せる
