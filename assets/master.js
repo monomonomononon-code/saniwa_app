@@ -187,6 +187,7 @@
   let editingId = null;
   let bulkConfirmOpen = false;
   let filterPanelOpen = false;
+  let filterGroupsOpen = {}; // カテゴリごとの開閉状態(部隊/刀種/刀派、今後増える分もキーを足すだけでよい)。未登場のキーは閉じている扱い。
   let addCharModalOpen = false;
   let duplicateConfirm = null; // 追加しようとした内容が重複していた時の確認待ち { name, swordType, level }
 
@@ -329,7 +330,8 @@
     return toggle;
   }
 
-  // 絞り込みパネルの中身: 部隊・刀種・刀派の3カテゴリ。
+  // 絞り込みパネルの中身: 部隊・刀種・刀派の3カテゴリ(今後も同じ形でカテゴリを足せる)。
+  // カテゴリ見出しをタップすると、そのカテゴリだけ開閉する(他のカテゴリの開閉状態には影響しない)。
   // 同じカテゴリ内は複数選択可(OR、例: 粟田口+兼定)、カテゴリ間はAND(例: 第二部隊+脇差)。
   function renderFilterPanel() {
     const bar = document.createElement("div");
@@ -342,34 +344,41 @@
     groups.forEach(g => {
       const group = document.createElement("div");
       group.className = "filter-group";
-      const label = document.createElement("div");
-      label.className = "filter-group-label";
-      label.textContent = g.label;
-      group.appendChild(label);
+      const isOpen = !!filterGroupsOpen[g.key];
+      const count = filters[g.key].length;
 
-      const chips = document.createElement("div");
-      chips.className = "filter-chips";
-      const allChip = document.createElement("button");
-      allChip.type = "button";
-      allChip.className = "filter-chip" + (filters[g.key].length === 0 ? " active" : "");
-      allChip.textContent = "すべて";
-      allChip.onclick = () => { filters[g.key] = []; render(); };
-      chips.appendChild(allChip);
+      const header = document.createElement("button");
+      header.type = "button";
+      header.className = "filter-group-header" + (isOpen ? " open" : "");
+      header.innerHTML = `<span>${g.label}</span>${count ? `<span class="filter-toggle-count">${count}</span>` : ""}<span class="filter-group-chev">${isOpen ? "▲" : "▼"}</span>`;
+      header.onclick = () => { filterGroupsOpen[g.key] = !isOpen; render(); };
+      group.appendChild(header);
 
-      g.options.forEach(opt => {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "filter-chip" + (filters[g.key].includes(opt.value) ? " active" : "");
-        chip.textContent = opt.label;
-        chip.onclick = () => {
-          const list = filters[g.key];
-          const i = list.indexOf(opt.value);
-          if (i === -1) list.push(opt.value); else list.splice(i, 1);
-          render();
-        };
-        chips.appendChild(chip);
-      });
-      group.appendChild(chips);
+      if (isOpen) {
+        const chips = document.createElement("div");
+        chips.className = "filter-chips";
+        const allChip = document.createElement("button");
+        allChip.type = "button";
+        allChip.className = "filter-chip" + (filters[g.key].length === 0 ? " active" : "");
+        allChip.textContent = "すべて";
+        allChip.onclick = () => { filters[g.key] = []; render(); };
+        chips.appendChild(allChip);
+
+        g.options.forEach(opt => {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "filter-chip" + (filters[g.key].includes(opt.value) ? " active" : "");
+          chip.textContent = opt.label;
+          chip.onclick = () => {
+            const list = filters[g.key];
+            const i = list.indexOf(opt.value);
+            if (i === -1) list.push(opt.value); else list.splice(i, 1);
+            render();
+          };
+          chips.appendChild(chip);
+        });
+        group.appendChild(chips);
+      }
       bar.appendChild(group);
     });
     return bar;
