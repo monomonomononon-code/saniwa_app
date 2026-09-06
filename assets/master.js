@@ -83,31 +83,86 @@
     return ALL_TOUKEN_MASTER.filter(([name]) => name.includes(q)).slice(0, limit || 8);
   }
 
-  // 刀派対応表(名前 → 刀派)。後日、対応表を反映してここを埋める。
-  // キーは normalizeCharName() を通した名前(スペース無視)にすること。
-  const SWORD_SCHOOL_MAP = {};
+  // 刀派対応表(名前 → 刀派)。対応表に無い刀剣男士は「流派なし」として扱う(推測で埋めない)。
+  // キーは normalizeCharName() を通した名前(スペース無視)。
+  const SWORD_SCHOOL_MAP = {
+    "三日月宗近": "三条", "小狐丸": "三条", "石切丸": "三条", "岩融": "三条", "今剣": "三条",
+
+    "大典太光世": "三池", "ソハヤノツルキ": "三池",
+
+    "数珠丸恒次": "青江", "にっかり青江": "青江", "狐ヶ崎為次": "青江",
+
+    "鬼丸国綱": "粟田口", "鳴狐": "粟田口", "一期一振": "粟田口", "鯰尾藤四郎": "粟田口",
+    "骨喰藤四郎": "粟田口", "平野藤四郎": "粟田口", "厚藤四郎": "粟田口", "後藤藤四郎": "粟田口",
+    "信濃藤四郎": "粟田口", "前田藤四郎": "粟田口", "秋田藤四郎": "粟田口", "博多藤四郎": "粟田口",
+    "乱藤四郎": "粟田口", "五虎退": "粟田口", "薬研藤四郎": "粟田口", "包丁藤四郎": "粟田口",
+    "毛利藤四郎": "粟田口", "白山吉光": "粟田口",
+
+    "大包平": "古備前", "鶯丸": "古備前", "八丁念仏": "古備前", "古備前信房": "古備前",
+
+    "明石国行": "来", "蛍丸": "来", "愛染国俊": "来", "面影": "来",
+
+    "千子村正": "村正", "蜻蛉切": "村正",
+
+    "物吉貞宗": "貞宗", "太鼓鐘貞宗": "貞宗", "亀甲貞宗": "貞宗", "二筋樋貞宗": "貞宗",
+
+    "燭台切光忠": "長船", "大般若長光": "長船", "小竜景光": "長船", "謙信景光": "長船",
+    "小豆長光": "長船", "福島光忠": "長船", "実休光忠": "長船", "後家兼光": "長船", "安宅切": "長船",
+
+    "江雪左文字": "左文字", "宗三左文字": "左文字", "小夜左文字": "左文字", "太閤左文字": "左文字",
+
+    "歌仙兼定": "兼定", "和泉守兼定": "兼定", "人間無骨": "兼定",
+
+    "山姥切国広": "堀川", "山伏国広": "堀川", "堀川国広": "堀川",
+
+    "蜂須賀虎徹": "虎徹", "浦島虎徹": "虎徹",
+    "長曽祢虎徹": "虎徹…？", // ユーザー確認済み: 公式表記としてそのまま扱う(蜂須賀・浦島とは別区分)
+
+    "篭手切江": "江", "豊前江": "江", "桑名江": "江", "松井江": "江", "五月雨江": "江",
+    "村雲江": "江", "稲葉江": "江", "富田江": "江", "倶利伽羅江": "江",
+
+    "日向正宗": "正宗", "石田正宗": "正宗", "京極正宗": "正宗", "九鬼正宗": "正宗",
+
+    "南泉一文字": "福岡一文字", "山鳥毛": "福岡一文字", "日光一文字": "福岡一文字",
+    "一文字則宗": "福岡一文字", "姫鶴一文字": "福岡一文字", "道誉一文字": "福岡一文字",
+
+    "古今伝授の太刀": "豊後国行平", "地蔵行平": "豊後国行平",
+
+    "大倶利伽羅": "広光", "火車切": "広光",
+
+    "雲生": "鵜飼", "雲次": "鵜飼", "雲重": "鵜飼",
+
+    "笹貫": "波平", "波平行安": "波平"
+  };
   function schoolOf(c) {
     return SWORD_SCHOOL_MAP[normalizeCharName(c.name)] || "";
   }
 
   // 絞り込み: 各カテゴリ「すべて」(= "all") か、その値そのもの
+  const NO_SCHOOL = "__no_school__"; // 「流派なし」の絞り込み用の特別な値(実際の流派名と衝突しない)
   let filters = { unit: "all", swordType: "all", school: "all" };
   function matchesFilters(c) {
     return (filters.unit === "all" || c.unit === filters.unit)
       && (filters.swordType === "all" || c.swordType === filters.swordType)
-      && (filters.school === "all" || schoolOf(c) === filters.school);
+      && (filters.school === "all" || (filters.school === NO_SCHOOL ? !schoolOf(c) : schoolOf(c) === filters.school));
   }
-  // 選択肢は既存データに実在する値だけを出す(未使用の部隊・刀種は出さない)
+  // 選択肢は既存データに実在する値だけを出す(未使用の部隊・刀種は出さない)。{value, label} で統一する。
   function unitFilterOptions() {
-    return UNITS.filter(u => characters.some(c => c.unit === u));
+    return UNITS.filter(u => characters.some(c => c.unit === u)).map(u => ({ value: u, label: u }));
   }
   function swordTypeFilterOptions() {
-    return SWORD_TYPES.filter(t => characters.some(c => c.swordType === t));
+    return SWORD_TYPES.filter(t => characters.some(c => c.swordType === t)).map(t => ({ value: t, label: t }));
   }
   function schoolFilterOptions() {
     const set = new Set();
-    characters.forEach(c => { const s = schoolOf(c); if (s) set.add(s); });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
+    let hasNoSchool = false;
+    characters.forEach(c => {
+      const s = schoolOf(c);
+      if (s) set.add(s); else hasNoSchool = true;
+    });
+    const opts = Array.from(set).sort((a, b) => a.localeCompare(b, "ja")).map(s => ({ value: s, label: s }));
+    if (hasNoSchool) opts.push({ value: NO_SCHOOL, label: "流派なし" });
+    return opts;
   }
 
   let characters = CHAR_NAMES.map((n, i) => ({
@@ -302,9 +357,9 @@
       g.options.forEach(opt => {
         const chip = document.createElement("button");
         chip.type = "button";
-        chip.className = "filter-chip" + (filters[g.key] === opt ? " active" : "");
-        chip.textContent = opt;
-        chip.onclick = () => { filters[g.key] = opt; render(); };
+        chip.className = "filter-chip" + (filters[g.key] === opt.value ? " active" : "");
+        chip.textContent = opt.label;
+        chip.onclick = () => { filters[g.key] = opt.value; render(); };
         chips.appendChild(chip);
       });
       group.appendChild(chips);
