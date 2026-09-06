@@ -76,11 +76,32 @@
   }
   .filter-toggle-chev { margin-left: auto; font-size: 9px; color: var(--ink-soft); }
   .filter-bar { display: flex; flex-direction: column; gap: 8px; margin: -6px 0 14px; }
-  .filter-group-label { font-size: 10px; color: var(--ink-soft); margin-bottom: 4px; }
+  .filter-group {
+    border: 1px solid var(--tag-border);
+    border-radius: 9px;
+    background: var(--tag-bg);
+    overflow: hidden;
+  }
+  .filter-group-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 9px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--ink-soft);
+    text-align: left;
+  }
+  .filter-group-header.open { color: var(--ink); }
+  .filter-group-chev { margin-left: auto; font-size: 9px; color: var(--ink-soft); }
   .filter-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    padding: 0 12px 10px;
   }
   .filter-chip {
     flex: 0 0 auto;
