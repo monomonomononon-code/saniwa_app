@@ -236,13 +236,24 @@
     line-height: 1.6;
   }
 
+  .modal-bottom-actions {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-top: 18px;
+    position: sticky; bottom: 0; z-index: 1;
+    background: var(--paper);
+    box-shadow: 0 -8px 12px var(--paper);
+    padding-top: 2px;
+  }
   .modal-close {
     width: 100%; background: var(--moss); color: #FBF6EA; border: none;
-    border-radius: 8px; padding: 11px; font-size: 13px; font-family: inherit; margin-top: 18px;
-    position: sticky; bottom: 0; z-index: 1;
-    box-shadow: 0 -8px 12px var(--paper);
+    border-radius: 8px; padding: 11px; font-size: 13px; font-family: inherit;
   }
   .modal-close:active { background: var(--moss-dark); }
+  .modal-delete {
+    width: 100%; background: none; color: var(--hanko); border: 1px solid var(--hanko);
+    border-radius: 8px; padding: 10px; font-size: 12.5px; font-family: inherit;
+  }
+  .modal-delete:active { background: rgba(168,56,44,0.1); }
 
   .add-char-bulk {
     flex-shrink: 0;
