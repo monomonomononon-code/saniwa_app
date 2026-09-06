@@ -138,13 +138,15 @@
     return SWORD_SCHOOL_MAP[normalizeCharName(c.name)] || "";
   }
 
-  // 絞り込み: 各カテゴリ「すべて」(= "all") か、その値そのもの
+  // 絞り込み: カテゴリごとに選んだ値の配列。空配列 = 「すべて」。
+  // 同じカテゴリ内は複数選択可(OR)、カテゴリ間はAND。
   const NO_SCHOOL = "__no_school__"; // 「流派なし」の絞り込み用の特別な値(実際の流派名と衝突しない)
-  let filters = { unit: "all", swordType: "all", school: "all" };
+  let filters = { unit: [], swordType: [], school: [] };
   function matchesFilters(c) {
-    return (filters.unit === "all" || c.unit === filters.unit)
-      && (filters.swordType === "all" || c.swordType === filters.swordType)
-      && (filters.school === "all" || (filters.school === NO_SCHOOL ? !schoolOf(c) : schoolOf(c) === filters.school));
+    const unitOk = filters.unit.length === 0 || filters.unit.includes(c.unit);
+    const typeOk = filters.swordType.length === 0 || filters.swordType.includes(c.swordType);
+    const schoolOk = filters.school.length === 0 || filters.school.some(s => s === NO_SCHOOL ? !schoolOf(c) : schoolOf(c) === s);
+    return unitOk && typeOk && schoolOk;
   }
   // 選択肢は既存データに実在する値だけを出す(未使用の部隊・刀種は出さない)。{value, label} で統一する。
   function unitFilterOptions() {
@@ -318,7 +320,7 @@
 
   // 絞込/並替の開閉ボタン(ツールバーに配置)
   function renderFilterToggle() {
-    const activeCount = ["unit", "swordType", "school"].filter(k => filters[k] !== "all").length;
+    const activeCount = filters.unit.length + filters.swordType.length + filters.school.length;
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "filter-toggle" + (filterPanelOpen ? " open" : "");
@@ -327,8 +329,8 @@
     return toggle;
   }
 
-  // 絞り込みパネルの中身: 部隊・刀種・刀派の3カテゴリ、各カテゴリは単一選択+「すべて」。
-  // 複数カテゴリを選ぶとAND条件になる(matchesFilters側で判定)。
+  // 絞り込みパネルの中身: 部隊・刀種・刀派の3カテゴリ。
+  // 同じカテゴリ内は複数選択可(OR、例: 粟田口+兼定)、カテゴリ間はAND(例: 第二部隊+脇差)。
   function renderFilterPanel() {
     const bar = document.createElement("div");
     bar.className = "filter-bar";
@@ -349,17 +351,22 @@
       chips.className = "filter-chips";
       const allChip = document.createElement("button");
       allChip.type = "button";
-      allChip.className = "filter-chip" + (filters[g.key] === "all" ? " active" : "");
+      allChip.className = "filter-chip" + (filters[g.key].length === 0 ? " active" : "");
       allChip.textContent = "すべて";
-      allChip.onclick = () => { filters[g.key] = "all"; render(); };
+      allChip.onclick = () => { filters[g.key] = []; render(); };
       chips.appendChild(allChip);
 
       g.options.forEach(opt => {
         const chip = document.createElement("button");
         chip.type = "button";
-        chip.className = "filter-chip" + (filters[g.key] === opt.value ? " active" : "");
+        chip.className = "filter-chip" + (filters[g.key].includes(opt.value) ? " active" : "");
         chip.textContent = opt.label;
-        chip.onclick = () => { filters[g.key] = opt.value; render(); };
+        chip.onclick = () => {
+          const list = filters[g.key];
+          const i = list.indexOf(opt.value);
+          if (i === -1) list.push(opt.value); else list.splice(i, 1);
+          render();
+        };
         chips.appendChild(chip);
       });
       group.appendChild(chips);
