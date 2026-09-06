@@ -35,6 +35,54 @@
     return String(name || "").replace(/[ 　]/g, "");
   }
 
+  // 実装済み全刀剣男士マスターデータ(名前・刀種、128振り)。
+  // 「新入男士を追加」の名前入力オートコンプリートで使用する。
+  const ALL_TOUKEN_MASTER = [
+    // 短刀(24)
+    ["今剣", "短刀"], ["平野藤四郎", "短刀"], ["厚藤四郎", "短刀"], ["後藤藤四郎", "短刀"], ["信濃藤四郎", "短刀"],
+    ["前田藤四郎", "短刀"], ["秋田藤四郎", "短刀"], ["博多藤四郎", "短刀"], ["乱藤四郎", "短刀"], ["五虎退", "短刀"],
+    ["薬研藤四郎", "短刀"], ["包丁藤四郎", "短刀"], ["愛染国俊", "短刀"], ["太鼓鐘貞宗", "短刀"], ["小夜左文字", "短刀"],
+    ["不動行光", "短刀"], ["毛利藤四郎", "短刀"], ["謙信景光", "短刀"], ["日向正宗", "短刀"], ["北谷菜切", "短刀"],
+    ["太閤左文字", "短刀"], ["京極正宗", "短刀"], ["九鬼正宗", "短刀"], ["倶利伽羅江", "短刀"],
+    // 脇差(11)
+    ["にっかり青江", "脇差"], ["鯰尾藤四郎", "脇差"], ["骨喰藤四郎", "脇差"], ["物吉貞宗", "脇差"], ["堀川国広", "脇差"],
+    ["浦島虎徹", "脇差"], ["篭手切江", "脇差"], ["肥前忠広", "脇差"], ["治金丸", "脇差"], ["泛塵", "脇差"],
+    ["火車切", "脇差"],
+    // 打刀(35)
+    ["鳴狐", "打刀"], ["千子村正", "打刀"], ["亀甲貞宗", "打刀"], ["宗三左文字", "打刀"], ["加州清光", "打刀"],
+    ["大和守安定", "打刀"], ["歌仙兼定", "打刀"], ["和泉守兼定", "打刀"], ["陸奥守吉行", "打刀"], ["山姥切国広", "打刀"],
+    ["蜂須賀虎徹", "打刀"], ["長曽祢虎徹", "打刀"], ["大倶利伽羅", "打刀"], ["へし切長谷部", "打刀"], ["同田貫正国", "打刀"],
+    ["南泉一文字", "打刀"], ["山姥切長義", "打刀"], ["豊前江", "打刀"], ["南海太郎朝尊", "打刀"], ["桑名江", "打刀"],
+    ["水心子正秀", "打刀"], ["源清麿", "打刀"], ["松井江", "打刀"], ["地蔵行平", "打刀"], ["五月雨江", "打刀"],
+    ["村雲江", "打刀"], ["稲葉江", "打刀"], ["石田正宗", "打刀"], ["孫六兼元", "打刀"], ["後家兼光", "打刀"],
+    ["富田江", "打刀"], ["大慶直胤", "打刀"], ["安宅切", "打刀"], ["二筋樋貞宗", "打刀"], ["雲重", "打刀"],
+    // 太刀(41)
+    ["童子切安綱 剥落", "太刀"], ["三日月宗近", "太刀"], ["小狐丸", "太刀"], ["大典太光世", "太刀"], ["ソハヤノツルキ", "太刀"],
+    ["数珠丸恒次", "太刀"], ["鬼丸国綱", "太刀"], ["一期一振", "太刀"], ["大包平", "太刀"], ["鶯丸", "太刀"],
+    ["明石国行", "太刀"], ["燭台切光忠", "太刀"], ["大般若長光", "太刀"], ["小竜景光", "太刀"], ["江雪左文字", "太刀"],
+    ["山伏国広", "太刀"], ["髭切", "太刀"], ["膝丸", "太刀"], ["獅子王", "太刀"], ["小烏丸", "太刀"],
+    ["抜丸", "太刀"], ["鶴丸国永", "太刀"], ["小豆長光", "太刀"], ["千代金丸", "太刀"], ["山鳥毛", "太刀"],
+    ["古今伝授の太刀", "太刀"], ["日光一文字", "太刀"], ["一文字則宗", "太刀"], ["姫鶴一文字", "太刀"], ["福島光忠", "太刀"],
+    ["笹貫", "太刀"], ["八丁念仏", "太刀"], ["実休光忠", "太刀"], ["雲生", "太刀"], ["道誉一文字", "太刀"],
+    ["雲次", "太刀"], ["面影", "太刀"], ["古備前信房", "太刀"], ["三郎国宗", "太刀"], ["波平行安", "太刀"],
+    ["狐ヶ崎為次", "太刀"],
+    // 大太刀(6)
+    ["石切丸", "大太刀"], ["蛍丸", "大太刀"], ["太郎太刀", "大太刀"], ["次郎太刀", "大太刀"], ["祢々切丸", "大太刀"],
+    ["柏太刀", "大太刀"],
+    // 槍(5)
+    ["蜻蛉切", "槍"], ["日本号", "槍"], ["御手杵", "槍"], ["大千鳥十文字槍", "槍"], ["人間無骨", "槍"],
+    // 薙刀(3)
+    ["岩融", "薙刀"], ["巴形薙刀", "薙刀"], ["静形薙刀", "薙刀"],
+    // 剣(3)
+    ["白山吉光", "剣"], ["七星剣", "剣"], ["丙子椒林剣", "剣"]
+  ];
+  // 名前候補: クエリを含む名前を全件から探す
+  function findToukenSuggestions(query, limit) {
+    const q = String(query || "").trim();
+    if (!q) return [];
+    return ALL_TOUKEN_MASTER.filter(([name]) => name.includes(q)).slice(0, limit || 8);
+  }
+
   // 刀派対応表(名前 → 刀派)。後日、対応表を反映してここを埋める。
   // キーは normalizeCharName() を通した名前(スペース無視)にすること。
   const SWORD_SCHOOL_MAP = {};
@@ -184,7 +232,10 @@
     const addForm = document.createElement("div");
     addForm.className = "add-char-form";
     addForm.innerHTML = `
-      <input id="new-char-name" placeholder="名前(例：獅子王)" />
+      <div class="add-char-name-wrap">
+        <input id="new-char-name" placeholder="名前(例：獅子王)" autocomplete="off" />
+        <div class="add-char-suggest" id="new-char-suggest"></div>
+      </div>
       <select id="new-char-type">
         <option value="">刀種を選択</option>
         ${SWORD_TYPES.map(type => `<option value="${type}">${type}</option>`).join("")}
@@ -200,6 +251,37 @@
 
     if (editingId) el.appendChild(renderEditModal(editingId));
     if (bulkConfirmOpen) el.appendChild(renderBulkConfirmModal());
+
+    // 名前入力オートコンプリート: 実装済み全刀剣男士から部分一致で候補を出す。
+    // 候補を選ばず自由入力のまま追加することも引き続きできる。
+    const nameInput = document.getElementById("new-char-name");
+    const typeSelect = document.getElementById("new-char-type");
+    const suggestBox = document.getElementById("new-char-suggest");
+    if (nameInput && suggestBox) {
+      const hideSuggestions = () => { suggestBox.innerHTML = ""; suggestBox.classList.remove("open"); };
+      const showSuggestions = () => {
+        const matches = findToukenSuggestions(nameInput.value);
+        if (!matches.length) { hideSuggestions(); return; }
+        suggestBox.innerHTML = "";
+        matches.forEach(([name, type]) => {
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = "add-char-suggest-item";
+          item.innerHTML = `<span>${escapeHtml(name)}</span><span class="add-char-suggest-type">${type}</span>`;
+          item.onmousedown = e => {
+            e.preventDefault(); // input の blur より先に発火させ、候補を消さずに選択を確定する
+            nameInput.value = name;
+            if (typeSelect) typeSelect.value = type;
+            hideSuggestions();
+          };
+          suggestBox.appendChild(item);
+        });
+        suggestBox.classList.add("open");
+      };
+      nameInput.oninput = showSuggestions;
+      nameInput.onfocus = showSuggestions;
+      nameInput.onblur = hideSuggestions;
+    }
 
     const submitBtn = document.getElementById("new-char-submit");
     if (submitBtn) {
