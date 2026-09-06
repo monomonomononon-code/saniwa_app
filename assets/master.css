@@ -115,6 +115,24 @@
     white-space: nowrap;
   }
   .filter-chip.active { background: var(--moss); border-color: var(--moss); color: #FBF6EA; }
+  .group-search-wrap { padding: 0 12px 8px; }
+  .group-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid var(--tag-border);
+    border-radius: 7px;
+    padding: 7px 9px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .group-tags-empty {
+    padding: 0 12px 10px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
   .filter-empty {
     grid-column: 1 / -1;
     font-size: 12px;
