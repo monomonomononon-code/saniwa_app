@@ -130,6 +130,7 @@
   let editingId = null;
   let bulkConfirmOpen = false;
   let filterPanelOpen = false;
+  let addCharModalOpen = false;
 
   function notify(text) {
     saveState();
@@ -190,7 +191,27 @@
       <p>タップで各キャラの設定を編集できます。メモ欄は何でも自由に書けます。</p>
     `;
     el.appendChild(header);
-    el.appendChild(renderFilterBar());
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "list-toolbar";
+    toolbar.appendChild(renderFilterToggle());
+    const toolbarActions = document.createElement("div");
+    toolbarActions.className = "list-toolbar-actions";
+    const addToggle = document.createElement("button");
+    addToggle.type = "button";
+    addToggle.className = "add-char-toggle";
+    addToggle.textContent = "＋ 新入男士を追加";
+    addToggle.onclick = () => { addCharModalOpen = true; render(); };
+    const bulkToggle = document.createElement("button");
+    bulkToggle.type = "button";
+    bulkToggle.className = "add-char-bulk";
+    bulkToggle.textContent = "100振り追加";
+    bulkToggle.onclick = () => { bulkConfirmOpen = true; render(); };
+    toolbarActions.appendChild(addToggle);
+    toolbarActions.appendChild(bulkToggle);
+    toolbar.appendChild(toolbarActions);
+    el.appendChild(toolbar);
+    if (filterPanelOpen) el.appendChild(renderFilterPanel());
 
     const filtered = characters.filter(matchesFilters);
 
@@ -217,111 +238,25 @@
     });
     el.appendChild(grid);
 
-    const addRow = document.createElement("div");
-    addRow.className = "add-char-row";
-    const addTopRow = document.createElement("div");
-    addTopRow.className = "add-char-toprow";
-    const addToggle = document.createElement("button");
-    addToggle.className = "add-char-toggle";
-    addToggle.textContent = "＋ 新入男士を追加";
-    const bulkToggle = document.createElement("button");
-    bulkToggle.className = "add-char-bulk";
-    bulkToggle.type = "button";
-    bulkToggle.textContent = "100振り追加";
-    bulkToggle.onclick = () => { bulkConfirmOpen = true; render(); };
-    const addForm = document.createElement("div");
-    addForm.className = "add-char-form";
-    addForm.innerHTML = `
-      <div class="add-char-name-wrap">
-        <input id="new-char-name" placeholder="名前(例：獅子王)" autocomplete="off" />
-        <div class="add-char-suggest" id="new-char-suggest"></div>
-      </div>
-      <select id="new-char-type">
-        <option value="">刀種を選択</option>
-        ${SWORD_TYPES.map(type => `<option value="${type}">${type}</option>`).join("")}
-      </select>
-      <button class="add-char-submit" id="new-char-submit">この内容で追加</button>
-    `;
-    addToggle.onclick = () => addForm.classList.toggle("open");
-    addTopRow.appendChild(addToggle);
-    addTopRow.appendChild(bulkToggle);
-    addRow.appendChild(addTopRow);
-    addRow.appendChild(addForm);
-    el.appendChild(addRow);
-
     if (editingId) el.appendChild(renderEditModal(editingId));
     if (bulkConfirmOpen) el.appendChild(renderBulkConfirmModal());
-
-    // 名前入力オートコンプリート: 実装済み全刀剣男士から部分一致で候補を出す。
-    // 候補を選ばず自由入力のまま追加することも引き続きできる。
-    const nameInput = document.getElementById("new-char-name");
-    const typeSelect = document.getElementById("new-char-type");
-    const suggestBox = document.getElementById("new-char-suggest");
-    if (nameInput && suggestBox) {
-      const hideSuggestions = () => { suggestBox.innerHTML = ""; suggestBox.classList.remove("open"); };
-      const showSuggestions = () => {
-        const matches = findToukenSuggestions(nameInput.value);
-        if (!matches.length) { hideSuggestions(); return; }
-        suggestBox.innerHTML = "";
-        matches.forEach(([name, type]) => {
-          const item = document.createElement("button");
-          item.type = "button";
-          item.className = "add-char-suggest-item";
-          item.innerHTML = `<span>${escapeHtml(name)}</span><span class="add-char-suggest-type">${type}</span>`;
-          item.onmousedown = e => {
-            e.preventDefault(); // input の blur より先に発火させ、候補を消さずに選択を確定する
-            nameInput.value = name;
-            if (typeSelect) typeSelect.value = type;
-            hideSuggestions();
-          };
-          suggestBox.appendChild(item);
-        });
-        suggestBox.classList.add("open");
-      };
-      nameInput.oninput = showSuggestions;
-      nameInput.onfocus = showSuggestions;
-      nameInput.onblur = hideSuggestions;
-    }
-
-    const submitBtn = document.getElementById("new-char-submit");
-    if (submitBtn) {
-      submitBtn.onclick = () => {
-        const nameEl = document.getElementById("new-char-name");
-        const typeEl = document.getElementById("new-char-type");
-        const name = nameEl.value.trim();
-        if (!name) return;
-        const newChar = {
-          id: "c" + Date.now(),
-          name,
-          swordType: typeEl.value.trim(),
-          height: "", hobby: "", formerOwner: "", personality: "", memo: "", level: "",
-          activationDate: "", unit: "", isCaptain: false, isKiwame: false
-        };
-        characters.push(newChar);
-        notify(`新入り「${newChar.name}」を追加`);
-        syncCharacter(newChar);
-        render();
-      };
-    }
+    if (addCharModalOpen) el.appendChild(renderAddCharModal());
   }
 
-  // 絞り込み/並び替えパネル: 「絞込/並替」ボタンで開閉する。
-  // 中身は部隊・刀種・刀派の3カテゴリ、各カテゴリは単一選択+「すべて」。
-  // 複数カテゴリを選ぶとAND条件になる(matchesFilters側で判定)。
-  function renderFilterBar() {
-    const wrap = document.createElement("div");
-    wrap.className = "filter-wrap";
-
+  // 絞込/並替の開閉ボタン(ツールバーに配置)
+  function renderFilterToggle() {
     const activeCount = ["unit", "swordType", "school"].filter(k => filters[k] !== "all").length;
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "filter-toggle" + (filterPanelOpen ? " open" : "");
     toggle.innerHTML = `<span>絞込 / 並替</span>${activeCount ? `<span class="filter-toggle-count">${activeCount}</span>` : ""}<span class="filter-toggle-chev">${filterPanelOpen ? "▲" : "▼"}</span>`;
     toggle.onclick = () => { filterPanelOpen = !filterPanelOpen; render(); };
-    wrap.appendChild(toggle);
+    return toggle;
+  }
 
-    if (!filterPanelOpen) return wrap;
-
+  // 絞り込みパネルの中身: 部隊・刀種・刀派の3カテゴリ、各カテゴリは単一選択+「すべて」。
+  // 複数カテゴリを選ぶとAND条件になる(matchesFilters側で判定)。
+  function renderFilterPanel() {
     const bar = document.createElement("div");
     bar.className = "filter-bar";
     const groups = [
@@ -357,8 +292,7 @@
       group.appendChild(chips);
       bar.appendChild(group);
     });
-    wrap.appendChild(bar);
-    return wrap;
+    return bar;
   }
 
   function escapeHtml(s) {
@@ -392,6 +326,97 @@
     return overlay;
   }
 
+  // 新入男士を追加するポップアップ。名前入力は実装済み全刀剣男士からの
+  // オートコンプリート付き(候補を選ばない自由入力も可)。
+  // 名前が全刀剣男士マスターの表記と完全一致したら刀種を自動選択する。
+  // レベルは追加時点でデフォルト1を選択しておく。
+  function renderAddCharModal() {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.onclick = e => { if (e.target === overlay) { addCharModalOpen = false; render(); } };
+
+    const card = document.createElement("div");
+    card.className = "modal-card";
+    card.innerHTML = `
+      <div class="m-eyebrow">新入り登録</div>
+      <h2>新入男士を追加</h2>
+      <div class="m-field-label">名前</div>
+      <div class="add-char-name-wrap">
+        <input id="new-char-name" class="m-input" placeholder="名前(例：獅子王)" autocomplete="off" />
+        <div class="add-char-suggest" id="new-char-suggest"></div>
+      </div>
+      <div class="m-field-label">刀種</div>
+      <select id="new-char-type" class="m-input">
+        <option value="">刀種を選択</option>
+        ${SWORD_TYPES.map(type => `<option value="${type}">${type}</option>`).join("")}
+      </select>
+      <div class="m-field-label">レベル</div>
+      <select id="new-char-level" class="m-input">
+        ${Array.from({ length: 99 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("")}
+      </select>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn secondary" id="new-char-cancel">キャンセル</button>
+        <button type="button" class="confirm-btn primary" id="new-char-submit">この内容で追加</button>
+      </div>
+    `;
+    overlay.appendChild(card);
+
+    const nameInput = card.querySelector("#new-char-name");
+    const typeSelect = card.querySelector("#new-char-type");
+    const levelSelect = card.querySelector("#new-char-level");
+    const suggestBox = card.querySelector("#new-char-suggest");
+    levelSelect.value = "1"; // 追加時はレベル1をデフォルトで選択しておく
+
+    const hideSuggestions = () => { suggestBox.innerHTML = ""; suggestBox.classList.remove("open"); };
+    const applyExactMatch = () => {
+      const exact = ALL_TOUKEN_MASTER.find(([name]) => name === nameInput.value.trim());
+      if (exact) typeSelect.value = exact[1];
+    };
+    const showSuggestions = () => {
+      const matches = findToukenSuggestions(nameInput.value);
+      if (!matches.length) { hideSuggestions(); return; }
+      suggestBox.innerHTML = "";
+      matches.forEach(([name, type]) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "add-char-suggest-item";
+        item.innerHTML = `<span>${escapeHtml(name)}</span><span class="add-char-suggest-type">${type}</span>`;
+        item.onmousedown = e => {
+          e.preventDefault(); // input の blur より先に発火させ、候補を消さずに選択を確定する
+          nameInput.value = name;
+          typeSelect.value = type;
+          hideSuggestions();
+        };
+        suggestBox.appendChild(item);
+      });
+      suggestBox.classList.add("open");
+    };
+    nameInput.oninput = () => { showSuggestions(); applyExactMatch(); };
+    nameInput.onfocus = showSuggestions;
+    nameInput.onblur = hideSuggestions;
+
+    card.querySelector("#new-char-cancel").onclick = () => { addCharModalOpen = false; render(); };
+    card.querySelector("#new-char-submit").onclick = () => {
+      const name = nameInput.value.trim();
+      if (!name) return;
+      const newChar = {
+        id: "c" + Date.now(),
+        name,
+        swordType: typeSelect.value.trim(),
+        height: "", hobby: "", formerOwner: "", personality: "", memo: "",
+        level: Number(levelSelect.value) || 1,
+        activationDate: "", unit: "", isCaptain: false, isKiwame: false
+      };
+      characters.push(newChar);
+      notify(`新入り「${newChar.name}」を追加`);
+      syncCharacter(newChar);
+      addCharModalOpen = false;
+      render();
+    };
+
+    return overlay;
+  }
+
   function addBulkCharacters() {
     const existingNames = new Set(characters.map(c => normalizeCharName(c.name)));
     let added = 0, skipped = 0;
@@ -403,7 +428,7 @@
       const newChar = {
         id: "c" + Date.now() + "_" + i,
         name, swordType,
-        height: "", hobby: "", formerOwner: "", personality: "", memo: "", level: "",
+        height: "", hobby: "", formerOwner: "", personality: "", memo: "", level: 1,
         activationDate: "", unit: "", isCaptain: false, isKiwame: false
       };
       characters.push(newChar);
