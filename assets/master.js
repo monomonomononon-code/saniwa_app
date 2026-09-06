@@ -7,6 +7,34 @@
   const UNITS = ["第一部隊", "第二部隊", "第三部隊", "第四部隊", "第五部隊"];
   const UNIT_CAPACITY = 6;
 
+  // 「100振り追加」で一括登録する対象(名前・刀種)
+  const BULK_CHARACTERS = [
+    ["三日月宗近", "太刀"], ["小狐丸", "太刀"], ["石切丸", "大太刀"], ["岩融", "薙刀"], ["今剣", "短刀"],
+    ["大典太光世", "太刀"], ["ソハヤノツルキ", "太刀"], ["数珠丸恒次", "太刀"], ["にっかり青江", "脇差"], ["鬼丸国綱", "太刀"],
+    ["鳴狐", "打刀"], ["一期一振", "太刀"], ["鯰尾藤四郎", "脇差"], ["骨喰藤四郎", "脇差"], ["平野藤四郎", "短刀"],
+    ["厚藤四郎", "短刀"], ["後藤藤四郎", "短刀"], ["信濃藤四郎", "短刀"], ["前田藤四郎", "短刀"], ["秋田藤四郎", "短刀"],
+    ["博多藤四郎", "短刀"], ["乱藤四郎", "短刀"], ["五虎退", "短刀"], ["薬研藤四郎", "短刀"], ["包丁藤四郎", "短刀"],
+    ["大包平", "太刀"], ["鶯丸", "太刀"], ["明石国行", "太刀"], ["蛍丸", "大太刀"], ["愛染国俊", "短刀"],
+    ["千子村正", "打刀"], ["蜻蛉切", "槍"], ["物吉貞宗", "脇差"], ["太鼓鐘貞宗", "短刀"], ["亀甲貞宗", "打刀"],
+    ["燭台切光忠", "太刀"], ["大般若長光", "太刀"], ["小竜景光", "太刀"], ["江雪左文字", "太刀"], ["宗三左文字", "打刀"],
+    ["小夜左文字", "短刀"], ["加州清光", "打刀"], ["大和守安定", "打刀"], ["歌仙兼定", "打刀"], ["和泉守兼定", "打刀"],
+    ["陸奥守吉行", "打刀"], ["山姥切国広", "打刀"], ["山伏国広", "太刀"], ["堀川国広", "脇差"], ["蜂須賀虎徹", "打刀"],
+    ["浦島虎徹", "脇差"], ["長曽祢虎徹", "打刀"], ["髭切", "太刀"], ["膝丸", "太刀"], ["大倶利伽羅", "打刀"],
+    ["へし切長谷部", "打刀"], ["不動行光", "短刀"], ["獅子王", "太刀"], ["小烏丸", "太刀"], ["同田貫正国", "打刀"],
+    ["鶴丸国永", "太刀"], ["太郎太刀", "大太刀"], ["次郎太刀", "大太刀"], ["日本号", "槍"], ["御手杵", "槍"],
+    ["巴形薙刀", "薙刀"], ["毛利藤四郎", "短刀"], ["篭手切江", "脇差"], ["謙信景光", "短刀"], ["小豆長光", "太刀"],
+    ["日向正宗", "短刀"], ["静形薙刀", "薙刀"], ["南泉一文字", "打刀"], ["千代金丸", "太刀"], ["山姥切長義", "打刀"],
+    ["豊前江", "打刀"], ["祢々切丸", "大太刀"], ["白山吉光", "剣"], ["南海太郎朝尊", "打刀"], ["肥前忠広", "脇差"],
+    ["北谷菜切", "短刀"], ["桑名江", "打刀"], ["水心子正秀", "打刀"], ["源清麿", "打刀"], ["松井江", "打刀"],
+    ["山鳥毛", "太刀"], ["古今伝授の太刀", "太刀"], ["地蔵行平", "打刀"], ["治金丸", "脇差"], ["日光一文字", "太刀"],
+    ["太閤左文字", "短刀"], ["五月雨江", "打刀"], ["大千鳥十文字槍", "槍"], ["泛塵", "脇差"], ["一文字則宗", "太刀"],
+    ["村雲江", "打刀"], ["姫鶴一文字", "太刀"], ["福島光忠", "太刀"], ["七星剣", "剣"], ["稲葉江", "打刀"]
+  ];
+  // 重複判定用: 半角/全角スペースを無視して比較する
+  function normalizeCharName(name) {
+    return String(name || "").replace(/[ 　]/g, "");
+  }
+
   let characters = CHAR_NAMES.map((n, i) => ({
     id: "c" + i, name: n,
     swordType: "", height: "", hobby: "", formerOwner: "",
@@ -25,6 +53,7 @@
   window.readSaniwaReference = () => JSON.parse(JSON.stringify(characters));
   window.addEventListener("pagehide", saveState);
   let editingId = null;
+  let bulkConfirmOpen = false;
 
   function notify(text) {
     saveState();
@@ -105,9 +134,16 @@
 
     const addRow = document.createElement("div");
     addRow.className = "add-char-row";
+    const addTopRow = document.createElement("div");
+    addTopRow.className = "add-char-toprow";
     const addToggle = document.createElement("button");
     addToggle.className = "add-char-toggle";
     addToggle.textContent = "＋ 新入男士を追加";
+    const bulkToggle = document.createElement("button");
+    bulkToggle.className = "add-char-bulk";
+    bulkToggle.type = "button";
+    bulkToggle.textContent = "100振り追加";
+    bulkToggle.onclick = () => { bulkConfirmOpen = true; render(); };
     const addForm = document.createElement("div");
     addForm.className = "add-char-form";
     addForm.innerHTML = `
@@ -119,11 +155,14 @@
       <button class="add-char-submit" id="new-char-submit">この内容で追加</button>
     `;
     addToggle.onclick = () => addForm.classList.toggle("open");
-    addRow.appendChild(addToggle);
+    addTopRow.appendChild(addToggle);
+    addTopRow.appendChild(bulkToggle);
+    addRow.appendChild(addTopRow);
     addRow.appendChild(addForm);
     el.appendChild(addRow);
 
     if (editingId) el.appendChild(renderEditModal(editingId));
+    if (bulkConfirmOpen) el.appendChild(renderBulkConfirmModal());
 
     const submitBtn = document.getElementById("new-char-submit");
     if (submitBtn) {
@@ -149,6 +188,57 @@
 
   function escapeHtml(s) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function renderBulkConfirmModal() {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.onclick = e => { if (e.target === overlay) { bulkConfirmOpen = false; render(); } };
+
+    const card = document.createElement("div");
+    card.className = "modal-card";
+    card.innerHTML = `
+      <div class="m-eyebrow">一括登録</div>
+      <h2>100振り追加</h2>
+      <p class="confirm-text">刀剣男士100振りプレゼント対象の刀剣男士を追加しますか？</p>
+      <p class="confirm-text confirm-text-sub">すでに登録済みの刀剣男士は追加されません。</p>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn secondary" id="bulk-confirm-no">いいえ</button>
+        <button type="button" class="confirm-btn primary" id="bulk-confirm-yes">はい</button>
+      </div>
+    `;
+    overlay.appendChild(card);
+
+    card.querySelector("#bulk-confirm-no").onclick = () => { bulkConfirmOpen = false; render(); };
+    card.querySelector("#bulk-confirm-yes").onclick = () => {
+      bulkConfirmOpen = false;
+      addBulkCharacters();
+    };
+    return overlay;
+  }
+
+  function addBulkCharacters() {
+    const existingNames = new Set(characters.map(c => normalizeCharName(c.name)));
+    let added = 0, skipped = 0;
+    BULK_CHARACTERS.forEach((entry, i) => {
+      const name = entry[0], swordType = entry[1];
+      const key = normalizeCharName(name);
+      if (existingNames.has(key)) { skipped++; return; }
+      existingNames.add(key);
+      const newChar = {
+        id: "c" + Date.now() + "_" + i,
+        name, swordType,
+        height: "", hobby: "", formerOwner: "", personality: "", memo: "", level: "",
+        activationDate: "", unit: "", isCaptain: false, isKiwame: false
+      };
+      characters.push(newChar);
+      syncCharacter(newChar);
+      added++;
+    });
+    if (added) notify(`刀剣男士100振りプレゼント: ${added}振りを一括登録`);
+    else saveState();
+    render();
+    window.alert(`${added}振り追加しました。${skipped}振りは登録済みのためスキップしました。`);
   }
 
   function unitMembers(unit) {
