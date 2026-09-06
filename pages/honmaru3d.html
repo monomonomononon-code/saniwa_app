@@ -1072,7 +1072,7 @@
       patches.forEach(([color, n, r]) => {
         x.fillStyle = hex(color);
         for (let i = 0; i < n; i++) {
-          x.globalAlpha = .12 + rnd() * .2;
+          x.globalAlpha = .045 + rnd() * .07;
           x.beginPath();
           x.ellipse(rnd() * S, rnd() * S, r * (.5 + rnd()), r * (.4 + rnd() * .8), rnd() * Math.PI, 0, Math.PI * 2);
           x.fill();
@@ -1113,14 +1113,14 @@
       [[P.groundEarthDeep, 80, 26], [P.groundEarthLight, 46, 20]].forEach(([color, n, r]) => {
         x.fillStyle = hex(color);
         for (let i = 0; i < n; i++) {
-          x.globalAlpha = .14 + rnd() * .2;
+          x.globalAlpha = .035 + rnd() * .06;
           x.beginPath();
           x.ellipse(rnd() * S, rnd() * S, r * (.5 + rnd()), r * (.4 + rnd() * .9), rnd() * Math.PI, 0, Math.PI * 2);
           x.fill();
         }
       });
       // 小石(凹凸ではなく模様として薄く散らす)
-      x.globalAlpha = .5;
+      x.globalAlpha = .16;
       for (let i = 0; i < 150; i++) {
         x.fillStyle = hex(rnd() < .6 ? P.pebble : P.groundEarthDeep);
         x.beginPath();
@@ -1196,8 +1196,8 @@
     const env = resolveEnvironment();
     renderer.setClearColor(env.clear, 1);
     scene.fog.color.setHex(env.fog[0]); scene.fog.near = env.fog[1]; scene.fog.far = env.fog[2];
-    hemiLight.color.setHex(env.hemi[0]); hemiLight.groundColor.setHex(env.hemi[1]); hemiLight.intensity = env.hemi[2];
-    sun.color.setHex(env.sun[0]); sun.intensity = env.sun[1]; sun.position.set(env.sun[2][0], env.sun[2][1], env.sun[2][2]);
+    hemiLight.color.setHex(env.hemi[0]); hemiLight.groundColor.setHex(env.hemi[1]); hemiLight.intensity = env.hemi[2] * .72;
+    sun.color.setHex(env.sun[0]); sun.intensity = env.sun[1] * .72; sun.position.set(env.sun[2][0], env.sun[2][1], env.sun[2][2]);
     ambientLight.color.setHex(env.ambient[0]); ambientLight.intensity = env.ambient[1];
     // 地面はテクスチャなので、時間帯は「色をかける」形で反映する
     groundMat.color.setHex(env.ground);
@@ -1732,6 +1732,21 @@
     lintelL.position.set(-w / 2 - 0.06, FLOOR_H + WALL_H + 0.05, 0);
     g.add(lintelL);
 
+    contactShadow(g, w + 1.5, d + 1.5, -.275);
+    const framing = [], panels = [];
+    const bays = Math.min(18, Math.max(2, Math.round(w / 1.1)));
+    for (let i = 0; i <= bays; i++) framing.push([-w / 2 + w * i / bays, FLOOR_H + WALL_H / 2, -d / 2 + .025, .09, WALL_H, .18]);
+    const sideBays = Math.min(12, Math.max(2, Math.round(d / 1.1)));
+    for (let i = 0; i <= sideBays; i++) framing.push([-w / 2 + .025, FLOOR_H + WALL_H / 2, -d / 2 + d * i / sideBays, .18, WALL_H, .09]);
+    framing.push([0, FLOOR_H + .34, -d / 2 + .025, w, .08, .18], [-w / 2 + .025, FLOOR_H + .34, 0, .18, .08, d]);
+    panels.push([0, FLOOR_H + .15, -d / 2, w, .3, .19], [-w / 2, FLOOR_H + .15, 0, .19, .3, d]);
+    detailBoxes(g, 0xAE875B, panels);
+    detailBoxes(g, 0x70513B, framing);
+    // 開放面は維持し、奥壁だけに小さな瓦庇を添える。
+    const eaves = new THREE.Group(); eaves.position.z = -d / 2 - .08;
+    tiledRoof(eaves, w, .48, FLOOR_H + WALL_H + .14, mesh => eaves.add(mesh));
+    g.add(eaves);
+
     // 部屋名札
     const plate = makeLabelSprite(room.name || meta.label, {
       font: MINCHO, weight: "600", fontSize: 38, worldHeight: 0.72, radius: 12,
@@ -1795,7 +1810,93 @@
   //  引数: item(保存データ) / g(追加先グループ) / ctx { w, d, def, pick(mesh), mat(color), box(w,h,d,mat) }
   // =====================================================================
   const lambert = color => new THREE.MeshLambertMaterial({ color });
-  const box = (w, h, d, mat) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  const box = (w, h, d, mat) => {
+    const mesh = new THREE.Mesh(GEO.cube(), mat);
+    mesh.scale.set(w, h, d);
+    return mesh;
+  };
+
+  function batchStructureDetails(g, id) {
+    const batches = new Map();
+    g.children.forEach(mesh => {
+      if (!mesh.isMesh || mesh.isInstancedMesh || !mesh.geometry.userData.shared || Array.isArray(mesh.material) || mesh.material.transparent) return;
+      const key = mesh.geometry.uuid + mesh.material.uuid;
+      if (!batches.has(key)) batches.set(key, []);
+      batches.get(key).push(mesh);
+    });
+    const removed = new Set();
+    batches.forEach(meshes => {
+      if (meshes.length < 3) return;
+      const batch = new THREE.InstancedMesh(meshes[0].geometry, meshes[0].material, meshes.length);
+      let pickable = false;
+      meshes.forEach((mesh, i) => {
+        mesh.updateMatrix(); batch.setMatrixAt(i, mesh.matrix);
+        pickable = pickable || mesh.userData.kind === "structure";
+        g.remove(mesh); removed.add(mesh);
+      });
+      if (pickable) tagPickable(batch, id, g); else g.add(batch);
+    });
+    pickables = pickables.filter(mesh => !removed.has(mesh));
+  }
+
+  // 装飾は保存データから独立。反復する木組み・瓦筋は一括描画する。
+  function detailBoxes(g, color, entries) {
+    if (!entries.length) return;
+    const mesh = new THREE.InstancedMesh(GEO.cube(), cachedMat(color), entries.length);
+    const dummy = new THREE.Object3D();
+    entries.forEach((e, i) => {
+      dummy.position.set(e[0], e[1], e[2]);
+      dummy.scale.set(e[3], e[4], e[5]);
+      dummy.rotation.set(e[6] || 0, 0, e[7] || 0);
+      dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    g.add(mesh);
+    return mesh;
+  }
+
+  let contactTexture;
+  function contactShadow(g, w, d, y) {
+    if (!contactTexture) {
+      const c = document.createElement("canvas"); c.width = c.height = 64;
+      const x = c.getContext("2d");
+      const grad = x.createRadialGradient(32, 32, 5, 32, 32, 32);
+      grad.addColorStop(0, "rgba(37,43,28,.30)");
+      grad.addColorStop(.55, "rgba(37,43,28,.17)");
+      grad.addColorStop(1, "rgba(37,43,28,0)");
+      x.fillStyle = grad; x.fillRect(0, 0, 64, 64);
+      contactTexture = new THREE.CanvasTexture(c);
+    }
+    const mat = cachedMat(0xffffff, { transparent: true, depthWrite: false });
+    mat.map = contactTexture;
+    const shadow = new THREE.Mesh(GEO.plane(), mat);
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.scale.set(w, d, 1); shadow.position.y = y;
+    g.add(shadow);
+  }
+
+  function tiledRoof(g, w, d, y, pick) {
+    const half = d / 2 + .26, height = Math.min(1.4, Math.max(.35, d * .30));
+    const profile = t => height * Math.pow(1 - t, 1.55) + .10 * Math.pow(t, 8);
+    const ribs = [], edges = [];
+    const count = Math.min(48, Math.max(5, Math.round(w / .28)));
+    for (const side of [-1, 1]) {
+      for (let j = 0; j < 4; j++) {
+        const t0 = j / 4, t1 = (j + 1) / 4;
+        const a = profile(t0), b = profile(t1);
+        const len = Math.hypot(half / 4, a - b), angle = side * Math.atan2(a - b, half / 4);
+        const z = side * half * (t0 + t1) / 2, cy = y + (a + b) / 2;
+        const slab = box(w + .55, .095, len + .015, cachedMat(j % 2 ? 0x4C5961 : 0x46535B));
+        slab.position.set(0, cy, z); slab.rotation.x = angle; pick(slab);
+        for (let i = 0; i <= count; i++) ribs.push([-(w + .55) / 2 + i * (w + .55) / count, cy + .058, z, .042, .035, len + .022, angle]);
+        for (const end of [-1, 1]) edges.push([end * (w + .59) / 2, cy - .02, z, .10, .15, len + .025, angle]);
+      }
+      edges.push([0, y + profile(1) - .05, side * half, w + .72, .14, .14]);
+    }
+    detailBoxes(g, 0x657078, ribs);
+    detailBoxes(g, 0x303E47, edges);
+    detailBoxes(g, 0x35434C, [[0, y + height + .08, 0, w + .8, .17, .26], [-w / 2 - .35, y + height + .16, 0, .15, .24, .3], [w / 2 + .35, y + height + .16, 0, .15, .24, .3]]);
+  }
   // 風向き(花びらが流れる向き)。散った花びらの偏りと舞い散る演出で共有する
   const WIND = { x: .82, z: .57 };
   // ---------------------------------------------------------------
@@ -2245,20 +2346,7 @@
       g.add(step);
     },
     roof(item, g, ctx) {
-      // 屋根: 中央の棟から前後に傾く2枚の板
-      const h = Math.min(1.4, Math.max(.5, ctx.d * .32));
-      const slabLen = Math.hypot(ctx.d / 2, h) + .25;
-      const angle = Math.atan2(h, ctx.d / 2);
-      const tile = lambert(0x4F3020);
-      [1, -1].forEach(side => {
-        const slab = box(ctx.w + .5, .12, slabLen, tile);
-        slab.rotation.x = side * angle;
-        slab.position.set(0, h / 2, side * ctx.d / 4);
-        ctx.pick(slab);
-      });
-      const ridge = box(ctx.w + .6, .16, .28, lambert(0x3A2418));
-      ridge.position.y = h + .02;
-      g.add(ridge);
+      tiledRoof(g, ctx.w, ctx.d, 0, ctx.pick);
     },
     gate(item, g, ctx) {
       // 門: 柱2本 + 横木2本 + 小屋根
@@ -2275,17 +2363,16 @@
       const beam2 = box(ctx.w + .2, .12, .24, wood);
       beam2.position.y = H - .55;
       g.add(beam2);
-      const cap = box(ctx.w + 1, .14, Math.max(.9, ctx.d + .4), lambert(0x3A2418));
-      cap.position.y = H + .08;
-      g.add(cap);
+      tiledRoof(g, ctx.w + .35, Math.max(.7, ctx.d), H + .08, ctx.pick);
+      detailBoxes(g, 0x89877A, [-1, 1].map(side => [side * ctx.w / 2, -.05, 0, .42, .3, .42]));
     },
     fence(item, g, ctx) {
       // 塀: 長方形パネル + 笠木 + 柱
       const H = 1.4;
-      const panel = box(ctx.w, H, Math.max(.16, ctx.d), lambert(0xA89F88));
+      const panel = box(ctx.w, H, Math.max(.16, ctx.d), lambert(0xE3D8BC));
       panel.position.y = H / 2;
       ctx.pick(panel);
-      const cap = box(ctx.w + .1, .1, Math.max(.3, ctx.d + .18), lambert(0x4F3020));
+      const cap = box(ctx.w + .1, .1, Math.max(.3, ctx.d + .18), lambert(0x46535B));
       cap.position.y = H + .05;
       g.add(cap);
       const posts = Math.max(2, Math.round(ctx.w / 2) + 1);
@@ -2296,17 +2383,22 @@
       }
     },
     garden(item, g, ctx) {
-      // 庭(芝): 色は季節パレット(春は若草色)
       const P = ctx.season.palette;
-      const lawn = box(ctx.w, .1, ctx.d, lambert(P.lawn));
-      lawn.position.y = -.12;
-      ctx.pick(lawn);
-      const border = new THREE.LineSegments(
-        new THREE.EdgesGeometry(new THREE.BoxGeometry(ctx.w, .11, ctx.d)),
-        new THREE.LineBasicMaterial({ color: P.lawnEdge })
-      );
-      border.position.y = -.12;
-      g.add(border);
+      // 四隅を丸めた芝庭。高い物を自動配置せず、重ねた家具の領域を保つ。
+      const w = ctx.w / 2, d = ctx.d / 2, r = Math.min(w, d) * .26;
+      const shape = new THREE.Shape();
+      shape.moveTo(-w + r, -d); shape.lineTo(w - r, -d);
+      shape.quadraticCurveTo(w, -d, w, -d + r); shape.lineTo(w, d - r);
+      shape.quadraticCurveTo(w, d, w - r, d); shape.lineTo(-w + r, d);
+      shape.quadraticCurveTo(-w, d, -w, d - r); shape.lineTo(-w, -d + r);
+      shape.quadraticCurveTo(-w, -d, -w + r, -d);
+      const lawn = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: .14, bevelEnabled: false, curveSegments: 4 }), ctx.mat(P.lawn));
+      lawn.rotation.x = -Math.PI / 2; lawn.position.y = -.22; ctx.pick(lawn);
+      for (let i = 0; i < 5; i++) {
+        const patch = new THREE.Mesh(GEO.puff(), ctx.mat(i % 2 ? P.lawnEdge : P.lawn));
+        patch.position.set((ctx.rand() - .5) * ctx.w * .65, -.077, (ctx.rand() - .5) * ctx.d * .65);
+        patch.scale.set(ctx.w * (.12 + ctx.rand() * .12), .012, ctx.d * .14); g.add(patch);
+      }
     },
     pond(item, g, ctx) {
       // 池: 四角いプールに見えないよう、輪郭をいびつな丸(blobPoints)で作る。
@@ -2366,7 +2458,7 @@
         const len = p.length() || 1;
         const out = p.clone().multiplyScalar((len + rim * .55) / len);
         const rock = new THREE.Mesh(GEO.rock(i), ctx.mat(i % 3 ? P.stone : P.stoneDark));
-        const rs = .17 + ctx.rand() * .16;
+        const rs = (.20 + ctx.rand() * .19) * (i === 0 ? 1.65 : 1);
         rock.scale.set(rs * 1.35, rs * (.55 + ctx.rand() * .4), rs * 1.15);
         rock.position.set(out.x, .05 + rs * .25, -out.y);
         rock.rotation.set(ctx.rand() * .4, ctx.rand() * Math.PI, ctx.rand() * .4);
@@ -2391,6 +2483,19 @@
       }
 
       // --- 睡蓮の葉と、水面に浮く花びら ---
+      // 淡い弧を1回で描画。反射用レンダーターゲットを使わない水の表情。
+      const rippleVertices = [];
+      for (let ring = 0; ring < 3; ring++) {
+        const radius = Math.min(ctx.w, ctx.d) * (.10 + ring * .055);
+        for (let j = 0; j < 16; j++) {
+          const a = j / 16 * Math.PI * 1.6, b = (j + 1) / 16 * Math.PI * 1.6;
+          rippleVertices.push(Math.cos(a) * radius - ctx.w * .12, -.006, Math.sin(a) * radius * .7,
+            Math.cos(b) * radius - ctx.w * .12, -.006, Math.sin(b) * radius * .7);
+        }
+      }
+      const rippleGeo = new THREE.BufferGeometry();
+      rippleGeo.setAttribute("position", new THREE.Float32BufferAttribute(rippleVertices, 3));
+      g.add(new THREE.LineSegments(rippleGeo, new THREE.LineBasicMaterial({ color: P.waterSpec, transparent: true, opacity: .32, depthWrite: false })));
       for (let i = 0; i < Math.min(ctx.lod ? 5 : 3, Math.round(ctx.w * ctx.d * .35)); i++) {
         const pad = new THREE.Mesh(GEO.disc(), ctx.mat(P.lily));
         const pr = .15 + ctx.rand() * .1;
@@ -2417,7 +2522,7 @@
       const W = Math.min(Math.max(.55, ctx.d), L * .42);
       const rise = Math.min(.95, Math.max(.3, L * .17));
       const segs = Math.max(8, Math.min(ctx.lod ? 16 : 11, Math.round(L / .34))); // 分割を細かくして弧を滑らかに
-      const red = ctx.mat(P.bridge), redDark = ctx.mat(P.bridge, { transparent: false }), deck = ctx.mat(P.bridgeDeck), cap = ctx.mat(P.bridgeCap);
+      const red = ctx.mat(P.bridge), redDark = ctx.mat(new THREE.Color(P.bridge).multiplyScalar(.65).getHex()), deck = ctx.mat(P.bridgeDeck), cap = ctx.mat(P.bridgeCap);
       const arch = x => rise * Math.sin(Math.PI * (x + L / 2) / L);
       const railH = [.34, .6];
       for (let i = 0; i < segs; i++) {
@@ -2750,6 +2855,12 @@
           pad.scale.set(t.r * f * s, t.h * f * s, t.r * f * s * .92);
           pad.position.set(t.to.x + dx * s * .5, t.to.y + dy * s * .5, t.to.z + (i === 1 ? .18 : -.14) * s * .5);
           ctx.pick(pad);
+          if (ctx.season.foliage.snow && i === 0) {
+            const snow = new THREE.Mesh(GEO.puff(), ctx.mat(ctx.season.palette.snow || 0xF2F3EB));
+            snow.scale.set(t.r * f * s * .84, t.h * f * s * .48, t.r * f * s * .77);
+            snow.position.copy(pad.position); snow.position.y += t.h * f * s * .82;
+            g.add(snow);
+          }
         });
       });
     },
@@ -2785,12 +2896,12 @@
           g.add(ring);
         }
         // 葉: 上の節から扇状に(スマホでは枚数を減らす)
-        const leafRows = ctx.lod ? 3 : 2, leafFan = ctx.lod ? 3 : 2;
+        const leafRows = ctx.lod ? 4 : 3, leafFan = ctx.lod ? 5 : 4;
         for (let k = 0; k < leafRows; k++) {
           const ly = h - .3 - k * .45;
           for (let j = 0; j < leafFan; j++) {
             const leaf = new THREE.Mesh(GEO.leaf(), j === 1 ? leafDark : leafMat);
-            leaf.scale.set(.5 + ctx.rand() * .2, .26, 1);
+            leaf.scale.set(.65 + ctx.rand() * .25, .65, 1);
             leaf.position.set(x + lean * ly, ly, z);
             // (ひねり, 向き, 垂れ具合)。少し上を向かせて真上から見ても葉の形が分かるようにする
             leaf.rotation.order = "YXZ";
@@ -2974,6 +3085,21 @@
       lod: isMobileLayout() ? 0 : 1      // 0 = スマホ(飾りを間引いて描画数を減らす)
     };
     (PART_RENDERERS[item.type] || PART_RENDERERS.placeholder)(item, g, ctx);
+    if (["tree", "sakura", "pine", "bamboo", "shrub", "stone", "gate", "fence", "engawa", "garden", "pond"].includes(item.type)) {
+      contactShadow(g, ctx.w + .9, ctx.d + .9, -.274);
+    }
+    if (["pine", "bamboo", "shrub", "tree", "sakura"].includes(item.type)) {
+      const P = ctx.season.palette;
+      const bed = new THREE.Mesh(GEO.puff(), ctx.mat(P.lawnEdge));
+      bed.scale.set(ctx.w * .53, .12, ctx.d * .49); bed.position.y = -.15; g.add(bed);
+      for (let i = 0; i < 3; i++) {
+        const rock = new THREE.Mesh(GEO.rock(i), ctx.mat(i % 2 ? P.stoneDark : P.stone));
+        const a = 2.2 + i * 1.6;
+        rock.scale.set(.16 + i * .025, .12, .18);
+        rock.position.set(Math.cos(a) * ctx.w * .38, -.10, Math.sin(a) * ctx.d * .36); g.add(rock);
+      }
+    }
+    batchStructureDetails(g, item.id);
     // 建築・景観パーツの名札は3D空間には常時表示しない(選択時の名称は
     // 情報パネル側 renderStructurePanel が item.name から表示する)。
     return g;
