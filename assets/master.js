@@ -667,7 +667,10 @@
       if (!window.confirm(`${c.name}を削除しますか？\nこの操作は取り消せません。`)) return;
       characters = characters.filter(x => x.id !== c.id);
       editingId = null;
-      saveState();
+      notify(`${c.name}を削除`);
+      // 親(app.js)の共有リストにも削除を伝える。伝えないと、他の画面を触るたびに
+      // 親から古い characters_sync が返ってきて削除したキャラが復活してしまう。
+      try { window.parent && window.parent.postMessage({ source: "master", type: "character_delete", id: c.id }, "*"); } catch (e) {}
       render();
     };
     bottomActions.appendChild(deleteBtn);
