@@ -392,7 +392,11 @@
       suggestBox.classList.add("open");
     };
     nameInput.oninput = () => { showSuggestions(); applyExactMatch(); };
-    nameInput.onfocus = showSuggestions;
+    nameInput.onfocus = () => {
+      showSuggestions();
+      // ソフトキーボードが開いた後にカードの表示位置がずれても、名前欄が隠れないよう寄せ直す
+      setTimeout(() => nameInput.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+    };
     nameInput.onblur = hideSuggestions;
 
     card.querySelector("#new-char-cancel").onclick = () => { addCharModalOpen = false; render(); };
