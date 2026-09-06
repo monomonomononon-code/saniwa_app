@@ -2408,8 +2408,16 @@
       // props.style: "round"(丸い池) / "stream"(中央がくびれた細長い池。橋を架けやすい)
       const P = ctx.season.palette;
       const style = propOf(item, "style", "round");
-      const inner = blobPoints(ctx.w, ctx.d, ctx.rand, style);
-      const rim = .16 + Math.min(ctx.w, ctx.d) * .06;      // 岸の幅
+      // 池専用の輪郭。共有の blobPoints は他の景観に影響させない。
+      const phase = ctx.rand() * Math.PI * 2;
+      const inner = Array.from({ length: 20 }, (_, i) => {
+        const a = i / 20 * Math.PI * 2;
+        const swell = 1 + .10 * Math.sin(a * 3 + phase) + .055 * Math.cos(a * 2 - phase);
+        const neck = style === "stream" ? .52 + .48 * Math.pow(Math.cos(a), 2) : 1;
+        return new THREE.Vector2(Math.cos(a) * ctx.w * .46 * swell * (style === "stream" ? 1.12 : 1),
+          Math.sin(a) * ctx.d * .46 * swell * neck);
+      });
+      const rim = Math.min(ctx.w, ctx.d) * .09 + .09;
       const outer = inner.map(p => {
         const len = p.length() || 1;
         return p.clone().multiplyScalar((len + rim) / len);
@@ -2425,25 +2433,26 @@
       const makeRing = (outLine, inLine, capColor, sideColor) => {
         const shape = blobShape(outLine);
         shape.holes.push(blobPath(inLine, new THREE.Path()));
-        const geo = new THREE.ExtrudeGeometry(shape, { depth: .3, bevelEnabled: false, curveSegments: 3 });
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: .3, bevelEnabled: false, curveSegments: 6 });
         const mesh = new THREE.Mesh(geo, [ctx.mat(capColor), ctx.mat(sideColor)]);
         mesh.rotation.x = -Math.PI / 2;
         mesh.position.y = -.24; // 上面 +.06
         ctx.pick(mesh);
       };
-      makeRing(mid, inner, P.waterRim, P.waterRim); // 水際(土の岸)
-      makeRing(outer, mid, P.lawn, P.lawn);         // 芝側のふち
+      makeRing(mid, inner, P.stoneDark, P.waterRim);
+      makeRing(outer, mid, P.lawnEdge, P.lawn); // 石の隙間にのぞく苔の岸
 
       // --- 池底と水面 ---
-      const bottom = flatBlob(inner, ctx.mat(P.waterDeep), -.13);
+      const bottom = flatBlob(inner, ctx.mat(P.waterDeep), -.13, 6);
       g.add(bottom);
       // 鏡のような反射は避け、Lambert の淡い水色 + わずかな明るい部分だけにする
-      const water = flatBlob(inner.map(p => p.clone().multiplyScalar(.99)), ctx.mat(P.water, { transparent: true, opacity: .8 }), -.02);
+      const waterColor = new THREE.Color(P.water).lerp(new THREE.Color(P.waterDeep), .25).getHex();
+      const water = flatBlob(inner.map(p => p.clone().multiplyScalar(.99)), ctx.mat(waterColor, { transparent: true, opacity: .84 }), -.02, 6);
       ctx.pick(water);
       for (let i = 0; i < (ctx.lod ? 2 : 1); i++) {
         const shallow = flatBlob(
           inner.map(p => p.clone().multiplyScalar(.34 + i * .16)),
-          ctx.mat(P.waterSpec, { transparent: true, opacity: .16, depthWrite: false }),
+          ctx.mat(P.waterSpec, { transparent: true, opacity: .09, depthWrite: false }),
           -.014 + i * .002
         );
         shallow.position.x += (ctx.rand() - .5) * ctx.w * .25;
@@ -2451,19 +2460,22 @@
         g.add(shallow);
       }
 
-      // --- ふちの庭石(輪郭の点に沿って外へ少し出す) ---
-      const every = ctx.lod ? 2 : 3;
-      inner.forEach((p, i) => {
-        if (i % every) return;
-        const len = p.length() || 1;
-        const out = p.clone().multiplyScalar((len + rim * .55) / len);
-        const rock = new THREE.Mesh(GEO.rock(i), ctx.mat(i % 3 ? P.stone : P.stoneDark));
-        const rs = (.20 + ctx.rand() * .19) * (i === 0 ? 1.65 : 1);
-        rock.scale.set(rs * 1.35, rs * (.55 + ctx.rand() * .4), rs * 1.15);
-        rock.position.set(out.x, .05 + rs * .25, -out.y);
-        rock.rotation.set(ctx.rand() * .4, ctx.rand() * Math.PI, ctx.rand() * .4);
-        g.add(rock);
-      });
+      // 滑らかな岸の「弧長」で均等に石を並べる。細長い池でも隙間が開きにくい。
+      const shoreline = blobShape(mid);
+      const perimeter = shoreline.getLength();
+      const stones = Math.max(14, Math.min(ctx.lod ? 64 : 48, Math.ceil(perimeter / .40)));
+      const stoneGeo = sharedGeo("pond-rounded-stone", () => new THREE.SphereGeometry(1, 7, 4));
+      for (let i = 0; i < stones; i++) {
+        const u = i / stones, p = shoreline.getPointAt(u);
+        const tangent = shoreline.getTangentAt(u);
+        const prominent = i === Math.floor(stones * .32) || i === Math.floor(stones * .39);
+        const h = (prominent ? .30 : .15) * (.85 + ctx.rand() * .3);
+        const rock = new THREE.Mesh(stoneGeo, ctx.mat(i % 4 === 0 ? P.stoneDark : P.stone));
+        rock.scale.set(perimeter / stones * (.63 + ctx.rand() * .09), h, rim * (.83 + ctx.rand() * .15));
+        rock.position.set(p.x, .025 + h * .42, -p.y);
+        rock.rotation.set((ctx.rand() - .5) * .12, Math.atan2(tangent.y, tangent.x), (ctx.rand() - .5) * .1);
+        ctx.pick(rock);
+      }
 
       // --- 岸の草(角を隠して自然になじませる) ---
       const tufts = ctx.lod ? 3 : 2;
@@ -2495,9 +2507,10 @@
       }
       const rippleGeo = new THREE.BufferGeometry();
       rippleGeo.setAttribute("position", new THREE.Float32BufferAttribute(rippleVertices, 3));
-      g.add(new THREE.LineSegments(rippleGeo, new THREE.LineBasicMaterial({ color: P.waterSpec, transparent: true, opacity: .32, depthWrite: false })));
+      g.add(new THREE.LineSegments(rippleGeo, new THREE.LineBasicMaterial({ color: P.waterSpec, transparent: true, opacity: .23, depthWrite: false })));
+      const lilyGeo = sharedGeo("pond-notched-lily", () => new THREE.CircleGeometry(1, 16, .20, Math.PI * 2 - .40));
       for (let i = 0; i < Math.min(ctx.lod ? 5 : 3, Math.round(ctx.w * ctx.d * .35)); i++) {
-        const pad = new THREE.Mesh(GEO.disc(), ctx.mat(P.lily));
+        const pad = new THREE.Mesh(lilyGeo, ctx.mat(P.lily));
         const pr = .15 + ctx.rand() * .1;
         pad.rotation.x = -Math.PI / 2;
         pad.rotation.z = ctx.rand() * Math.PI;
@@ -2828,40 +2841,60 @@
       }
     },
     pine(item, g, ctx) {
-      // 松: 曲がった幹 + 横へ大きく張り出す枝 + 段に分かれた平たい葉叢(和風の仕立て)
+      // 幹のS字と枝の余白を残し、枝先に小房を寄せた庭園の仕立て松。
       const P = ctx.season.palette;
       const s = Math.max(.5, ctx.w / 1.8);
       const bark = ctx.mat(P.trunkDark);
       const V = (x, y, z) => new THREE.Vector3(x * s, y * s, z * s);
-      // 幹: 3節でくねらせる
-      const k1 = V(-.12, .62, .05), k2 = V(.14, 1.24, -.06), top = V(-.02, 1.72, .04);
-      ctx.pick(limb(g, bark, V(.02, 0, 0), k1, .15 * s, 1));
-      ctx.pick(limb(g, bark, k1, k2, .12 * s, 1));
-      ctx.pick(limb(g, bark, k2, top, .09 * s, 1));
-      // 枝と葉叢: 高さごとに左右へ大きく張り出す
+      const spine = [V(.04, -.08, .03), V(-.24, .48, .04), V(-.32, .94, 0), V(.04, 1.46, -.04), V(.12, 2.03, -.08), V(-.02, 2.43, -.03)];
+      for (let i = 1; i < spine.length; i++) {
+        ctx.pick(limb(g, bark, spine[i - 1], spine[i], [.25, .20, .155, .115, .075][i - 1] * s, 1));
+      }
+      for (let i = 0; i < 4; i++) {
+        const a = .5 + i * 1.7;
+        limb(g, bark, V(Math.cos(a) * .38, -.08, Math.sin(a) * .29), spine[0].clone().add(V(0, .16, 0)), .10 * s, 1);
+      }
       const tiers = [
-        { from: k1, to: V(-1.0, .95, .28),  r: .62, h: .2,  c: P.pineDark },
-        { from: k2, to: V(1.02, 1.42, -.2), r: .58, h: .19, c: P.pine },
-        { from: k2, to: V(-.72, 1.62, -.5), r: .46, h: .16, c: P.pineDark },
-        { from: top, to: V(.5, 1.95, .45),  r: .42, h: .15, c: P.pine },
-        { from: top, to: V(-.05, 2.15, 0),  r: .4,  h: .16, c: P.pineLight }
+        { from: spine[2], elbow: V(.48, 1.02, .24), to: V(.92, 1.23, .34), r: .60 },
+        { from: spine[3], elbow: V(-.76, 1.45, .10), to: V(-1.05, 1.65, .10), r: .61 },
+        { from: spine[3], elbow: V(.62, 1.81, -.29), to: V(.92, 1.98, -.32), r: .49 },
+        { from: spine[4], elbow: V(-.43, 2.12, -.38), to: V(-.66, 2.29, -.41), r: .42 },
+        { from: spine[4], elbow: spine[5], to: V(.06, 2.53, -.02), r: .64 }
       ];
-      tiers.forEach(t => {
-        limb(g, bark, t.from, t.to, .055 * s);
-        // 葉叢は平たい球を2〜3枚重ねて「段」に見せる
-        const layers = ctx.lod ? [[0, 0, 1], [.22, .1, .66], [-.2, .12, .58]] : [[0, 0, 1], [.2, .1, .62]];
-        layers.forEach(([dx, dy, f], i) => {
-          const pad = new THREE.Mesh(GEO.puff(), ctx.mat(i === 2 ? P.pineLight : t.c));
-          pad.scale.set(t.r * f * s, t.h * f * s, t.r * f * s * .92);
-          pad.position.set(t.to.x + dx * s * .5, t.to.y + dy * s * .5, t.to.z + (i === 1 ? .18 : -.14) * s * .5);
-          ctx.pick(pad);
-          if (ctx.season.foliage.snow && i === 0) {
-            const snow = new THREE.Mesh(GEO.puff(), ctx.mat(ctx.season.palette.snow || 0xF2F3EB));
-            snow.scale.set(t.r * f * s * .84, t.h * f * s * .48, t.r * f * s * .77);
-            snow.position.copy(pad.position); snow.position.y += t.h * f * s * .82;
+      const foliageGeo = sharedGeo("pine-foliage-lobe", () => new THREE.SphereGeometry(1, 7, 5));
+      tiers.forEach((t, tier) => {
+        limb(g, bark, t.from, t.elbow, .075 * s, 1);
+        limb(g, bark, t.elbow, t.to, .048 * s, 1);
+        for (const side of [-1, 1]) {
+          limb(g, bark, t.elbow, t.to.clone().add(V(side * t.r * .45, .045, side * .17)), .027 * s, 1);
+        }
+        // 下側は一続きの葉座、上側は大小の小房で輪郭に凹凸を付ける。
+        const base = new THREE.Mesh(foliageGeo, ctx.mat(P.pineDark));
+        base.position.copy(t.to).add(V(0, .035, 0));
+        base.scale.set(t.r * s, .11 * s, t.r * .72 * s); ctx.pick(base);
+        const lobes = ctx.lod ? 8 : 6;
+        for (let i = 0; i < lobes; i++) {
+          const a = i * 2.399 + tier * .6, rr = i === 0 ? 0 : .47 + ctx.rand() * .11;
+          const f = i === 0 ? .51 : .35 + ctx.rand() * .1;
+          const pad = new THREE.Mesh(foliageGeo, ctx.mat(i % 4 === 0 ? P.pineLight : P.pine));
+          pad.position.copy(t.to).add(V(Math.cos(a) * t.r * rr, .12 + (i === 0 ? .09 : ctx.rand() * .04), Math.sin(a) * t.r * rr * .74));
+          pad.scale.set(t.r * f * s, (.11 + f * .09) * s, t.r * f * s * .80); ctx.pick(pad);
+          if (ctx.season.foliage.snow && i % 2 === 0) {
+            const snow = new THREE.Mesh(foliageGeo, ctx.mat(0xF2F3EB));
+            snow.scale.set(pad.scale.x * .85, pad.scale.y * .30, pad.scale.z * .82);
+            snow.position.copy(pad.position); snow.position.y += pad.scale.y * .85;
             g.add(snow);
           }
-        });
+        }
+        // 針葉の房を小さく添え、球の寄せ集めに見えない細かな稜線を作る。
+        for (let i = 0; i < (ctx.lod ? 11 : 7); i++) {
+          const a = i * 2.399 + tier, r = Math.sqrt((i + .5) / 11) * t.r * .76;
+          const tuft = new THREE.Mesh(GEO.clump(), ctx.mat(i % 3 ? P.pine : P.pineLight));
+          const f = (.075 + ctx.rand() * .045) * s;
+          tuft.scale.set(f * 1.2, f * .65, f);
+          tuft.position.copy(t.to).add(V(Math.cos(a) * r, .24 + ctx.rand() * .025, Math.sin(a) * r * .74));
+          g.add(tuft);
+        }
       });
     },
     bamboo(item, g, ctx) {
@@ -2970,45 +3003,66 @@
       }
     },
     flowers(item, g, ctx) {
-      // 花: 高さ・大きさ・色をばらけさせ、数株ずつ寄せて咲かせる
+      // 小さな五弁花の群生。白・薄黄を主にして庭の添え花にする。
       const P = ctx.season.palette;
-      // 下地は四角いタイルに見えないよう、六角形の低い花壇にする
-      const bed = new THREE.Mesh(GEO.disc(), ctx.mat(P.shrub));
-      bed.rotation.x = -Math.PI / 2;
-      bed.scale.set(ctx.w * .48, ctx.d * .48, 1);
-      bed.position.y = .015;
-      ctx.pick(bed);
-      const clumps = Math.max(2, Math.min(ctx.lod ? 6 : 4, Math.round(ctx.w * ctx.d * 2.2)));
-      const stemMat = ctx.mat(P.lily);
-      const leafMat = ctx.mat(P.lily, { side: THREE.DoubleSide });
-      for (let c = 0; c < clumps; c++) {
-        const cx = (ctx.rand() - .5) * ctx.w * .78, cz = (ctx.rand() - .5) * ctx.d * .78;
-        const color = P.flowers[Math.floor(ctx.rand() * P.flowers.length)];
-        const n = 2 + Math.floor(ctx.rand() * 3);
-        for (let i = 0; i < n; i++) {
-          const x = cx + (ctx.rand() - .5) * .3, z = cz + (ctx.rand() - .5) * .3;
-          const h = .18 + ctx.rand() * .28;           // 背丈をばらす
-          const tilt = (ctx.rand() - .5) * .22;
-          const stem = new THREE.Mesh(GEO.stick(), stemMat);
-          stem.scale.set(.016, h, .016);
-          stem.position.set(x + tilt * h * .5, .05 + h / 2, z);
-          stem.rotation.z = tilt;
-          g.add(stem);
-          const head = new THREE.Mesh(GEO.puff(), ctx.mat(ctx.rand() < .25 ? P.sakuraLight : color));
-          const hr = .06 + ctx.rand() * .045;         // 花の大きさもばらす
-          head.scale.set(hr, hr * .85, hr);
-          head.position.set(x + tilt * h, .05 + h, z);
-          g.add(head);
+      const unit = Math.min(1, Math.min(ctx.w, ctx.d) / .8);
+      const flowerGeo = sharedGeo("garden-five-petal", () => {
+        const shape = new THREE.Shape();
+        const point = (angle, radius) => [Math.cos(angle) * radius, Math.sin(angle) * radius];
+        shape.moveTo(...point(-Math.PI / 5, .28));
+        for (let i = 0; i < 5; i++) {
+          const a = i * Math.PI * 2 / 5;
+          shape.bezierCurveTo(...point(a - .52, .86), ...point(a - .28, 1.08), ...point(a, 1));
+          shape.bezierCurveTo(...point(a + .28, 1.08), ...point(a + .52, .86), ...point(a + Math.PI / 5, .28));
         }
-        // 株元の葉
-        for (let i = 0; i < (ctx.lod ? 2 : 1); i++) {
-          const blade = new THREE.Mesh(GEO.leaf(), leafMat);
-          blade.scale.set(.24, .18, 1);
-          blade.position.set(cx, .06, cz);
-          blade.rotation.order = "YXZ";
-          blade.rotation.set(-1.3, ctx.rand() * Math.PI * 2, .15);
-          g.add(blade);
+        shape.closePath();
+        return new THREE.ExtrudeGeometry(shape, { depth: .12, bevelEnabled: false, curveSegments: 3 });
+      });
+      const colors = {
+        spring: [0xFFF6DE, 0xF0D985, 0xEACDC6],
+        summer: [0xFFF8E8, 0xE9CE78, 0xDADAC2],
+        autumn: [0xF4EAD0, 0xDDBD70, 0xD8BBA7],
+        winter: [0xF3EEE3, 0xDCD5AF, 0xDDD6D0]
+      }[ctx.season.key] || [0xFFF6DE, 0xF0D985, 0xEACDC6];
+      const leafColor = new THREE.Color(P.shrubDeep).lerp(new THREE.Color(P.lily), .35).getHex();
+      const leafMat = ctx.mat(leafColor, { side: THREE.DoubleSide });
+      const stemMat = ctx.mat(leafColor);
+      const winter = ctx.season.foliage.snow;
+      const count = Math.max(7, Math.min(ctx.lod ? 36 : 24, Math.round(ctx.w * ctx.d * 13)));
+      contactShadow(g, ctx.w + .18, ctx.d + .18, -.273);
+      // 点在する低い葉座で土となじませる。共通のタイル状の台は作らない。
+      for (let i = 0; i < count; i++) {
+        const a = i * 2.39996 + .25, r = Math.sqrt((i + .5) / count);
+        const x = Math.cos(a) * r * ctx.w * .39 + Math.sin(i * 1.7) * ctx.w * .035;
+        const z = Math.sin(a) * r * ctx.d * .37;
+        const h = (.19 + ctx.rand() * .23) * unit * (winter ? .75 : 1);
+        const headR = (.075 + ctx.rand() * .03) * unit;
+        const tip = new THREE.Vector3(x + (ctx.rand() - .5) * .08 * unit, h - .08, z);
+        const base = new THREE.Vector3(x, -.19, z);
+        const mound = new THREE.Mesh(GEO.puff(), ctx.mat(P.lawnEdge));
+        mound.scale.set(.13 * unit, .035 * unit, .12 * unit);
+        mound.position.copy(base); g.add(mound);
+        ctx.pick(limb(g, stemMat, base, tip, .010 * unit));
+        for (let j = 0; j < 3; j++) {
+          const leaf = new THREE.Mesh(GEO.leaf(), leafMat);
+          leaf.scale.set((.14 + ctx.rand() * .07) * unit, .32 * unit, 1);
+          leaf.position.set(x, -.14 + j * .045 * unit, z);
+          leaf.rotation.order = "YXZ";
+          leaf.rotation.set(-1.2, a + j * 2.3, .25 + ctx.rand() * .3); g.add(leaf);
         }
+        // 冬も位置を変えず、一部を小さな蕾にして季節差を付ける。
+        if (winter && i % 3 === 0) {
+          const bud = new THREE.Mesh(GEO.puff(), ctx.mat(colors[0]));
+          bud.scale.set(headR * .38, headR * .6, headR * .38); bud.position.copy(tip); ctx.pick(bud);
+          continue;
+        }
+        const head = new THREE.Mesh(flowerGeo, ctx.mat(colors[i % 7 === 0 ? 2 : i % 3 === 0 ? 1 : 0]));
+        head.scale.setScalar(headR);
+        head.rotation.set(-Math.PI / 2 + (ctx.rand() - .5) * .28, (ctx.rand() - .5) * .24, a);
+        head.position.copy(tip); ctx.pick(head);
+        const center = new THREE.Mesh(GEO.puff(), ctx.mat(0xC5A354));
+        center.scale.set(headR * .25, headR * .15, headR * .25);
+        center.position.copy(tip); center.position.y += headR * .13; g.add(center);
       }
     },
     tansu(item, g, ctx) {
