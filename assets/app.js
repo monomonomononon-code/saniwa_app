@@ -410,6 +410,14 @@
       broadcastCharacters();
       saveAppState();
     }
+    if (data.type === "character_delete" && data.id) {
+      const idx = sharedCharacters.findIndex(c => c.id === data.id);
+      if (idx !== -1) {
+        sharedCharacters.splice(idx, 1);
+        broadcastCharacters();
+        saveAppState();
+      }
+    }
     if (!data.text) return;
     const now = new Date();
     const time = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
