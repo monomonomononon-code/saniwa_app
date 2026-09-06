@@ -47,7 +47,34 @@
   }
   .header p { margin: 0; font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
 
-  .filter-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .filter-wrap { margin-bottom: 14px; }
+  .filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 9px;
+    padding: 9px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--ink-soft);
+  }
+  .filter-toggle.open { color: var(--ink); border-color: var(--moss); }
+  .filter-toggle-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--hanko);
+    color: #FBF6EA;
+    font-size: 9.5px;
+  }
+  .filter-toggle-chev { margin-left: auto; font-size: 9px; color: var(--ink-soft); }
+  .filter-bar { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
   .filter-group-label { font-size: 10px; color: var(--ink-soft); margin-bottom: 4px; }
   .filter-chips {
     display: flex;
