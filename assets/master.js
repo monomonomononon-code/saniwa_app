@@ -81,6 +81,7 @@
   window.addEventListener("pagehide", saveState);
   let editingId = null;
   let bulkConfirmOpen = false;
+  let filterPanelOpen = false;
 
   function notify(text) {
     saveState();
@@ -222,9 +223,23 @@
     }
   }
 
-  // 絞り込みバー: 部隊・刀種・刀派の3カテゴリ、各カテゴリは単一選択+「すべて」。
+  // 絞り込み/並び替えパネル: 「絞込/並替」ボタンで開閉する。
+  // 中身は部隊・刀種・刀派の3カテゴリ、各カテゴリは単一選択+「すべて」。
   // 複数カテゴリを選ぶとAND条件になる(matchesFilters側で判定)。
   function renderFilterBar() {
+    const wrap = document.createElement("div");
+    wrap.className = "filter-wrap";
+
+    const activeCount = ["unit", "swordType", "school"].filter(k => filters[k] !== "all").length;
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "filter-toggle" + (filterPanelOpen ? " open" : "");
+    toggle.innerHTML = `<span>絞込 / 並替</span>${activeCount ? `<span class="filter-toggle-count">${activeCount}</span>` : ""}<span class="filter-toggle-chev">${filterPanelOpen ? "▲" : "▼"}</span>`;
+    toggle.onclick = () => { filterPanelOpen = !filterPanelOpen; render(); };
+    wrap.appendChild(toggle);
+
+    if (!filterPanelOpen) return wrap;
+
     const bar = document.createElement("div");
     bar.className = "filter-bar";
     const groups = [
@@ -260,7 +275,8 @@
       group.appendChild(chips);
       bar.appendChild(group);
     });
-    return bar;
+    wrap.appendChild(bar);
+    return wrap;
   }
 
   function escapeHtml(s) {
