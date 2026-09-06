@@ -235,6 +235,20 @@
       c.unit = sc.unit || "";
       c.isCaptain = !!sc.isCaptain;
     });
+    // characters_sync は刀剣男士の正本(全件)なので、ここに無い = 削除された刀剣男士とみなし、
+    // 配置待ち・各部屋のタグからも消す(そのままだと「?」タグとして残ってしまう)。
+    const validIds = new Set(data.characters.map(sc => sc.id));
+    characters = characters.filter(c => validIds.has(c.id));
+    let changed = false;
+    const beforeUnplaced = state.unplaced.length;
+    state.unplaced = state.unplaced.filter(c => validIds.has(c.id));
+    if (state.unplaced.length !== beforeUnplaced) changed = true;
+    state.rooms.forEach(r => {
+      const before = r.occupants.length;
+      r.occupants = r.occupants.filter(o => validIds.has(o.charId));
+      if (r.occupants.length !== before) changed = true;
+    });
+    if (changed) { saveState(); syncRooms(); }
     render();
   });
   try { window.parent && window.parent.postMessage({ source: "rooms", type: "ready" }, "*"); } catch (e) {}
