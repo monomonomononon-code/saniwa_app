@@ -131,6 +131,23 @@
   let bulkConfirmOpen = false;
   let filterPanelOpen = false;
   let addCharModalOpen = false;
+  let duplicateConfirm = null; // 追加しようとした内容が重複していた時の確認待ち { name, swordType, level }
+
+  // 新入り登録の確定処理。通常追加/重複確認「はい」の両方から呼ぶ。
+  function commitNewCharacter(draft) {
+    const newChar = {
+      id: "c" + Date.now(),
+      name: draft.name,
+      swordType: draft.swordType || "",
+      height: "", hobby: "", formerOwner: "", personality: "", memo: "",
+      level: draft.level || 1,
+      activationDate: "", unit: "", isCaptain: false, isKiwame: false
+    };
+    characters.push(newChar);
+    notify(`新入り「${newChar.name}」を追加`);
+    syncCharacter(newChar);
+    render();
+  }
 
   function notify(text) {
     saveState();
@@ -241,6 +258,7 @@
     if (editingId) el.appendChild(renderEditModal(editingId));
     if (bulkConfirmOpen) el.appendChild(renderBulkConfirmModal());
     if (addCharModalOpen) el.appendChild(renderAddCharModal());
+    if (duplicateConfirm) el.appendChild(renderDuplicateConfirmModal());
   }
 
   // 絞込/並替の開閉ボタン(ツールバーに配置)
@@ -403,21 +421,45 @@
     card.querySelector("#new-char-submit").onclick = () => {
       const name = nameInput.value.trim();
       if (!name) return;
-      const newChar = {
-        id: "c" + Date.now(),
-        name,
-        swordType: typeSelect.value.trim(),
-        height: "", hobby: "", formerOwner: "", personality: "", memo: "",
-        level: Number(levelSelect.value) || 1,
-        activationDate: "", unit: "", isCaptain: false, isKiwame: false
-      };
-      characters.push(newChar);
-      notify(`新入り「${newChar.name}」を追加`);
-      syncCharacter(newChar);
+      const draft = { name, swordType: typeSelect.value.trim(), level: Number(levelSelect.value) || 1 };
       addCharModalOpen = false;
-      render();
+      // 半角/全角スペース違いも同一とみなして重複を確認する(normalizeCharNameと同じ規則)
+      const dup = characters.find(x => normalizeCharName(x.name) === normalizeCharName(name));
+      if (dup) { duplicateConfirm = draft; render(); return; }
+      commitNewCharacter(draft);
     };
 
+    return overlay;
+  }
+
+  // 同名(スペース違い含む)の刀剣男士が既にいる時の確認ポップ。
+  // 「はい」でそのまま追加、「いいえ」で追加せず閉じる。
+  function renderDuplicateConfirmModal() {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.onclick = e => { if (e.target === overlay) { duplicateConfirm = null; render(); } };
+
+    const name = duplicateConfirm.name;
+    const card = document.createElement("div");
+    card.className = "modal-card";
+    card.innerHTML = `
+      <div class="m-eyebrow">確認</div>
+      <h2>登録済みです</h2>
+      <p class="confirm-text">${escapeHtml(name)}は既に登録されています。</p>
+      <p class="confirm-text confirm-text-sub">${escapeHtml(name)}を登録しますか？</p>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn secondary" id="dup-confirm-no">いいえ</button>
+        <button type="button" class="confirm-btn primary" id="dup-confirm-yes">はい</button>
+      </div>
+    `;
+    overlay.appendChild(card);
+
+    card.querySelector("#dup-confirm-no").onclick = () => { duplicateConfirm = null; render(); };
+    card.querySelector("#dup-confirm-yes").onclick = () => {
+      const draft = duplicateConfirm;
+      duplicateConfirm = null;
+      commitNewCharacter(draft);
+    };
     return overlay;
   }
 
@@ -609,11 +651,27 @@
     hint.textContent = "例：「育成中、経験値〇〇」「初期刀」「審神者と結婚した」など、何でも自由に";
     card.appendChild(hint);
 
+    const bottomActions = document.createElement("div");
+    bottomActions.className = "modal-bottom-actions";
     const closeBtn = document.createElement("button");
     closeBtn.className = "modal-close";
     closeBtn.textContent = "閉じる";
     closeBtn.onclick = closeModal;
-    card.appendChild(closeBtn);
+    bottomActions.appendChild(closeBtn);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "modal-delete";
+    deleteBtn.textContent = "削除";
+    deleteBtn.onclick = () => {
+      if (!window.confirm(`${c.name}を削除しますか？\nこの操作は取り消せません。`)) return;
+      characters = characters.filter(x => x.id !== c.id);
+      editingId = null;
+      saveState();
+      render();
+    };
+    bottomActions.appendChild(deleteBtn);
+    card.appendChild(bottomActions);
 
     overlay.appendChild(card);
     return overlay;
