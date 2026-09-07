@@ -58,6 +58,34 @@
     const used = occupiedSlots(rooms, excludeId);
     return span === 2 ? (!used.has(slot) && !used.has(slot + 1)) : !used.has(slot);
   }
+  // そのslotを占めている部屋を返す(2列部屋は2つのslotどちらでも見つかる)
+  function occupantAt(rooms, slot, excludeId) {
+    return rooms.find(r => {
+      if (r.id === excludeId) return false;
+      return r.slot === slot || (roomSpan(r) === 2 && r.slot + 1 === slot);
+    }) || null;
+  }
+  // 2部屋の位置を入れ替える。大きさが同じならslotをそのまま交換するだけでよいが、
+  // 大きさが違う場合は、そのまま交換すると大型の部屋が1マス分の場所にはみ出して
+  // しまうため、小さい方を大きい方の元位置へ、大きい方は(小さい方が元いた場所に
+  // ちょうど収まるならそこへ、収まらなければ)別の空いている場所へ動かす。
+  function swapRoomPositions(a, b) {
+    const spanA = roomSpan(a), spanB = roomSpan(b);
+    if (spanA === spanB) {
+      const tmp = a.slot;
+      a.slot = b.slot;
+      b.slot = tmp;
+    } else {
+      const small = spanA < spanB ? a : b;
+      const big = spanA < spanB ? b : a;
+      const smallOldSlot = small.slot;
+      const bigOldSlot = big.slot;
+      small.slot = bigOldSlot;
+      big.slot = slotFits(state.rooms, smallOldSlot, 2, big.id)
+        ? smallOldSlot
+        : nextAvailableSlot(state.rooms, 2, big.id);
+    }
+  }
   // 読み込んだデータにslotが無い(旧バージョンの保存データ)場合は、これまでの
   // 詰め表示と同じ並びになるように、登録順で自動採番する(見た目が変わらない移行措置)。
   function ensureSlots(rooms) {
@@ -825,27 +853,7 @@
       // 既存の部屋の上 → その2部屋だけ入れ替える
       const other = state.rooms.find(r => r.id === card.dataset.roomId);
       if (!other) return;
-      const movingSpan = roomSpan(moving);
-      const otherSpan = roomSpan(other);
-      if (movingSpan === otherSpan) {
-        // 同じ大きさ同士ならslotをそのまま交換するだけでよい
-        const tmp = moving.slot;
-        moving.slot = other.slot;
-        other.slot = tmp;
-      } else {
-        // 大きさが違う場合、slotをそのまま入れ替えると大型の部屋が1マス分の
-        // 場所にはみ出して置かれてしまう。小さい方を大きい方の元位置へ、
-        // 大きい方は(小さい方が元いた場所にちょうど収まるならそこへ、
-        // 収まらなければ)別の空いている場所へ動かす。
-        const small = movingSpan < otherSpan ? moving : other;
-        const big = movingSpan < otherSpan ? other : moving;
-        const smallOldSlot = small.slot;
-        const bigOldSlot = big.slot;
-        small.slot = bigOldSlot;
-        big.slot = slotFits(state.rooms, smallOldSlot, 2, big.id)
-          ? smallOldSlot
-          : nextAvailableSlot(state.rooms, 2, big.id);
-      }
+      swapRoomPositions(moving, other);
       notify(`部屋「${moving.name}」と「${other.name}」を入れ替え`);
       render();
       return;
@@ -895,14 +903,31 @@
     let targetSlot = targetRow * GRID_COLS + col;
     const span = roomSpan(moving);
     if (span === 2 && targetSlot % GRID_COLS !== 0) targetSlot -= 1; // 2列部屋は必ず列0始まり
+    if (targetSlot === moving.slot) return;
 
-    // 念のため、そこが本当に空いているか確認する(埋まっていれば何もしない)
     const used = occupiedSlots(state.rooms, roomId);
     const free = span === 2 ? (!used.has(targetSlot) && !used.has(targetSlot + 1)) : !used.has(targetSlot);
-    if (!free || targetSlot === moving.slot) return;
 
-    moving.slot = targetSlot;
-    notify(`部屋「${moving.name}」の並び順を変更`);
+    if (free) {
+      moving.slot = targetSlot;
+      notify(`部屋「${moving.name}」の並び順を変更`);
+      render();
+      return;
+    }
+
+    // 空いていない場合: 例えば「上段は空欄+六畳、下段は広間」のように、大型の部屋が
+    // 1マス分の空きだけでは収まらないケース。その段を塞いでいる部屋が1つだけなら、
+    // 部屋の上に直接落とした時と同じく、その部屋とだけ入れ替える。
+    const blockingSlots = span === 2 ? [targetSlot, targetSlot + 1] : [targetSlot];
+    const blockers = new Set();
+    blockingSlots.forEach(s => {
+      const r = occupantAt(state.rooms, s, roomId);
+      if (r) blockers.add(r);
+    });
+    if (blockers.size !== 1) return; // 複数の部屋にまたがるなど、判断できない場合は何もしない
+    const blocker = [...blockers][0];
+    swapRoomPositions(moving, blocker);
+    notify(`部屋「${moving.name}」と「${blocker.name}」を入れ替え`);
     render();
   }
 
