@@ -222,6 +222,27 @@
     render();
   }
 
+  // この画面(男士の配置)からの部屋削除。誰かが配置されていても削除でき、
+  // その場合は配置されていた刀剣男士を配置待ちへ戻す。
+  function removeRoom(roomId) {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room) return;
+    const meta = TEMPLATE_META[room.template] || TEMPLATE_META.a;
+    const occCount = (room.occupants || []).length;
+    const confirmMsg = occCount > 0
+      ? `「${room.name || meta.label}」を削除しますか？\n配置されている${occCount}振りは配置待ちに戻ります。`
+      : `「${room.name || meta.label}」を削除しますか？`;
+    if (!window.confirm(confirmMsg)) return;
+    (room.occupants || []).forEach(o => {
+      if (!state.unplaced.some(c => c.id === o.charId)) {
+        state.unplaced.push({ id: o.charId, name: nameOf(o.charId) });
+      }
+    });
+    state.rooms = state.rooms.filter(r => r.id !== roomId);
+    notify(`部屋「${room.name || meta.label}」を削除${occCount ? "(住人は配置待ちに戻しました)" : ""}`);
+    render();
+  }
+
   window.addEventListener("message", e => {
     const data = e.data;
     if (!data) return;
@@ -456,9 +477,20 @@
     const meta = TEMPLATE_META[room.template] || TEMPLATE_META.a;
     const card = document.createElement("div");
     card.className = "room-card" + (meta.size === 2 ? " size-large" : "");
+    // 部屋の削除・並び替えの両方から参照する。刀剣男士タグのドロップ判定は
+    // (部屋の隙間に落としても部屋の中に落としたことになるよう)カード全体を対象にする。
+    card.dataset.dropzone = "room";
+    card.dataset.roomId = room.id;
 
     const head = document.createElement("div");
     head.className = "room-head";
+    const dragHandle = document.createElement("button");
+    dragHandle.type = "button";
+    dragHandle.className = "room-drag-handle";
+    dragHandle.textContent = "⠿";
+    dragHandle.title = "ドラッグして並び替え";
+    dragHandle.setAttribute("aria-label", "部屋を並び替え");
+    attachRoomDrag(dragHandle, room.id);
     const nameInput = document.createElement("input");
     nameInput.className = "room-name-input";
     nameInput.value = room.name;
@@ -468,8 +500,17 @@
     tplSelect.innerHTML = templateOptionsHtml();
     tplSelect.value = TEMPLATE_META[room.template] ? room.template : "a";
     tplSelect.onchange = e => { room.template = e.target.value; render(); };
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "room-delete-btn";
+    deleteBtn.textContent = "×";
+    deleteBtn.title = "部屋を削除";
+    deleteBtn.setAttribute("aria-label", "部屋を削除");
+    deleteBtn.onclick = () => removeRoom(room.id);
+    head.appendChild(dragHandle);
     head.appendChild(nameInput);
     head.appendChild(tplSelect);
+    head.appendChild(deleteBtn);
     card.appendChild(head);
 
     const noteInput = document.createElement("input");
@@ -481,8 +522,6 @@
 
     const surface = document.createElement("div");
     surface.className = "room-surface" + (meta.aspectClass ? " " + meta.aspectClass : "");
-    surface.dataset.dropzone = "room";
-    surface.dataset.roomId = room.id;
     surface.innerHTML = floorSvgOf(room.template);
 
     room.occupants.forEach(o => {
@@ -573,25 +612,29 @@
     clearHighlights();
     const target = document.elementFromPoint(x, y);
     const zone = target && target.closest && target.closest('[data-dropzone="room"]');
-    if (zone) zone.classList.add("dragover");
+    if (zone) {
+      const surfaceEl = zone.querySelector(".room-surface");
+      if (surfaceEl) surfaceEl.classList.add("dragover");
+    }
   }
   function clearHighlights() {
     document.querySelectorAll(".room-surface.dragover").forEach(n => n.classList.remove("dragover"));
   }
 
+  // 部屋の判定対象はカード全体(見出し・備考欄も含む)にしてあるので、部屋の隙間や
+  // 画面外など「本当に部屋の外」に投げ出した時だけ配置待ちへ戻る。部屋の上のほうに
+  // 少しずれて落としても、その部屋への配置として扱われる。
   function handleDrop(x, y, charId) {
     const target = document.elementFromPoint(x, y);
-    if (!target) return;
-    const roomZone = target.closest && target.closest('[data-dropzone="room"]');
-    const trayZone = target.closest && target.closest('[data-dropzone="unplaced"]');
+    const roomZone = target && target.closest && target.closest('[data-dropzone="room"]');
+    const room = roomZone && state.rooms.find(r => r.id === roomZone.dataset.roomId);
 
     const prevRoom = state.rooms.find(r => r.occupants.some(o => o.charId === charId));
     const wasUnplaced = state.unplaced.some(c => c.id === charId);
 
-    if (roomZone) {
-      const roomId = roomZone.dataset.roomId;
-      const room = state.rooms.find(r => r.id === roomId);
-      const rect = roomZone.getBoundingClientRect();
+    if (room) {
+      const surfaceEl = roomZone.querySelector(".room-surface") || roomZone;
+      const rect = surfaceEl.getBoundingClientRect();
       let px = ((x - rect.left) / rect.width) * 100;
       let py = ((y - rect.top) / rect.height) * 100;
       px = Math.max(6, Math.min(94, px));
@@ -602,7 +645,8 @@
         notify(`${nameOf(charId)}を「${room.name}」に配置`);
       }
       render();
-    } else if (trayZone) {
+    } else {
+      // 配置待ちトレイに落とした場合も、部屋の外(隙間・画面外)に投げ出した場合も同じ扱い
       removeFromEverywhere(charId);
       state.unplaced.push({ id: charId, name: nameOf(charId) });
       if (!wasUnplaced) {
@@ -610,7 +654,85 @@
       }
       render();
     }
-    // ドロップ先が無効な場所なら何もしない(元の位置のまま)
+  }
+
+  // ---- 部屋そのものの並び替え(刀剣男士タグのドラッグとは別の仕組み) ----
+  // 見出しの掴みどころ(room-drag-handle)からしか始まらないので、タグの移動と混ざらない。
+  function attachRoomDrag(handle, roomId) {
+    handle.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const THRESHOLD = 9;
+      let moved = false;
+      let ghost = null;
+      const sourceCard = handle.closest(".room-card");
+
+      const move = ev => {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        if (!moved && Math.hypot(dx, dy) > THRESHOLD) {
+          moved = true;
+          const room = state.rooms.find(r => r.id === roomId);
+          ghost = document.createElement("div");
+          ghost.className = "ghost-room";
+          ghost.textContent = (room && room.name) || "部屋";
+          document.body.appendChild(ghost);
+          if (sourceCard) sourceCard.classList.add("room-dragging-source");
+        }
+        if (moved) {
+          positionGhost(ghost, ev.clientX, ev.clientY);
+          highlightRoomDropTarget(ev.clientX, ev.clientY, sourceCard);
+        }
+      };
+      const up = ev => {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", cancel);
+        clearRoomDropHighlight();
+        if (sourceCard) sourceCard.classList.remove("room-dragging-source");
+        if (moved) {
+          ghost.remove();
+          handleRoomDrop(ev.clientX, ev.clientY, roomId);
+        }
+      };
+      // pointercancel でも後片付けする(タグ移動と同じ理由)
+      const cancel = () => {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", cancel);
+        clearRoomDropHighlight();
+        if (sourceCard) sourceCard.classList.remove("room-dragging-source");
+        if (ghost) ghost.remove();
+      };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", cancel);
+    });
+  }
+  function highlightRoomDropTarget(x, y, sourceCard) {
+    clearRoomDropHighlight();
+    const target = document.elementFromPoint(x, y);
+    const card = target && target.closest && target.closest(".room-card");
+    if (card && card !== sourceCard) card.classList.add("room-drop-target");
+  }
+  function clearRoomDropHighlight() {
+    document.querySelectorAll(".room-card.room-drop-target").forEach(n => n.classList.remove("room-drop-target"));
+  }
+  // 落とした先の部屋の「直前」に割り込む形で並び替える(単純な操作で済むように)。
+  // 部屋の外(隙間・画面外)や自分自身の上に落とした場合は何もしない。
+  function handleRoomDrop(x, y, roomId) {
+    const target = document.elementFromPoint(x, y);
+    const card = target && target.closest && target.closest(".room-card");
+    const targetRoomId = card && card.dataset.roomId;
+    if (!targetRoomId || targetRoomId === roomId) return;
+    const fromIdx = state.rooms.findIndex(r => r.id === roomId);
+    if (fromIdx === -1 || !state.rooms.some(r => r.id === targetRoomId)) return;
+    const [moving] = state.rooms.splice(fromIdx, 1);
+    const insertAt = state.rooms.findIndex(r => r.id === targetRoomId);
+    state.rooms.splice(insertAt, 0, moving);
+    notify(`部屋「${moving.name}」の並び順を変更`);
+    render();
   }
 
   render();
