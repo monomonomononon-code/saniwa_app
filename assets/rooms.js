@@ -667,6 +667,10 @@
   function attachDrag(el, charId) {
     el.addEventListener("pointerdown", e => {
       e.preventDefault();
+      // ポインターをこの要素に固定する。これが無いと、指が途中で他の要素
+      // (別の部屋の入力欄など)の上を通った瞬間に実機(特にiOS)でドラッグが
+      // 強制的に中断されることがある。
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
       const startX = e.clientX;
       const startY = e.clientY;
       const THRESHOLD = 9; // これ未満の移動ならタップ扱い
@@ -692,11 +696,14 @@
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
+        try { el.releasePointerCapture(ev.pointerId); } catch (err) {}
+        clearHighlights();
+        if (ghost) ghost.remove();
+        dragging = null;
         if (moved) {
-          clearHighlights();
-          handleDrop(ev.clientX, ev.clientY, charId);
-          ghost.remove();
-          dragging = null;
+          // 万一ここで例外が起きても、再描画だけは必ず行い、次の操作で
+          // 掴めなくなる(掴み手が古いままになる)のを防ぐ。
+          try { handleDrop(ev.clientX, ev.clientY, charId); } catch (err) { render(); }
         } else {
           // 動かずに離した = タップ = 詳細ページへ
           openProfile(charId);
@@ -710,6 +717,7 @@
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
+        try { el.releasePointerCapture(e.pointerId); } catch (err) {}
         clearHighlights();
         if (ghost) ghost.remove();
         dragging = null;
@@ -778,6 +786,10 @@
   function attachRoomDrag(handle, roomId) {
     handle.addEventListener("pointerdown", e => {
       e.preventDefault();
+      // ポインターをこの要素に固定する。これが無いと、指が途中で他の部屋の
+      // 入力欄やセレクトボックスの上を通った瞬間に実機(特にiOS)でドラッグが
+      // 強制的に中断され、以後つまめなくなったように見えることがある。
+      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
       const startX = e.clientX;
       const startY = e.clientY;
       const THRESHOLD = 9;
@@ -806,11 +818,14 @@
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
+        try { handle.releasePointerCapture(ev.pointerId); } catch (err) {}
         clearRoomDropHighlight();
         if (sourceCard) sourceCard.classList.remove("room-dragging-source");
+        if (ghost) ghost.remove();
         if (moved) {
-          ghost.remove();
-          handleRoomDrop(ev.clientX, ev.clientY, roomId);
+          // 万一ここで例外が起きても、再描画だけは必ず行い、次の操作で
+          // 掴めなくなる(掴み手が古いままになる)のを防ぐ。
+          try { handleRoomDrop(ev.clientX, ev.clientY, roomId); } catch (err) { render(); }
         }
       };
       // pointercancel でも後片付けする(タグ移動と同じ理由)
@@ -818,6 +833,7 @@
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
+        try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
         clearRoomDropHighlight();
         if (sourceCard) sourceCard.classList.remove("room-dragging-source");
         if (ghost) ghost.remove();
