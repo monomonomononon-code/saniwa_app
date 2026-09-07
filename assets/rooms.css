@@ -127,7 +127,9 @@
   .rooms-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-flow: row dense;
+    /* dense不使用: 隙間を自動で詰めると、部屋の入れ替え時に無関係な部屋まで
+       連れて動いてしまうため。1部屋分の空白ができることは許容する。 */
+    grid-auto-flow: row;
     gap: 12px;
   }
   @media (max-width: 420px) {
