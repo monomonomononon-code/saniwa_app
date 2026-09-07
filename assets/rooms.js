@@ -211,10 +211,22 @@
     return room;
   }
 
+  // 3D俯瞰図(見取り図)からの部屋削除。誰も配置されていない部屋だけ削除できる
+  // (男士が入っている部屋を誤って消せないようにするための安全策)。
+  function removeRoomIfEmpty(roomId) {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room || (room.occupants || []).length > 0) return;
+    state.rooms = state.rooms.filter(r => r.id !== roomId);
+    const meta = TEMPLATE_META[room.template] || TEMPLATE_META.a;
+    notify(`部屋「${room.name || meta.label}」を削除`);
+    render();
+  }
+
   window.addEventListener("message", e => {
     const data = e.data;
     if (!data) return;
     if (data.type === "room_add" && data.template) { addRoomFromTemplate(data.template, data.name, data.note); return; }
+    if (data.type === "room_delete" && data.roomId) { removeRoomIfEmpty(data.roomId); return; }
     if (data.type !== "characters_sync" || !Array.isArray(data.characters)) return;
     data.characters.forEach(sc => {
       let c = characters.find(x => x.id === sc.id);
