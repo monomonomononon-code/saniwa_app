@@ -127,9 +127,9 @@
   .rooms-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    /* dense不使用: 隙間を自動で詰めると、部屋の入れ替え時に無関係な部屋まで
-       連れて動いてしまうため。1部屋分の空白ができることは許容する。 */
-    grid-auto-flow: row;
+    /* 各部屋の行・列はJS側でslotから明示的に指定する(grid-auto-flowには任せない)。
+       自動詰めに任せると、部屋の入れ替え時に無関係な部屋まで連れて動いてしまうため。
+       入れ替えの結果1部屋分の空白ができることは許容する。 */
     gap: 12px;
   }
   @media (max-width: 420px) {
@@ -142,9 +142,6 @@
     padding: 7px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     min-width: 0;
-  }
-  .room-card.size-large {
-    grid-column: span 2;
   }
   .room-card.room-dragging-source { opacity: .45; }
   .room-card.room-drop-target {
