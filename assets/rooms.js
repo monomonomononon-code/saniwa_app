@@ -673,10 +673,6 @@
   function attachDrag(el, charId) {
     el.addEventListener("pointerdown", e => {
       e.preventDefault();
-      // ポインターをこの要素に固定する。これが無いと、指が途中で他の要素
-      // (別の部屋の入力欄など)の上を通った瞬間に実機(特にiOS)でドラッグが
-      // 強制的に中断されることがある。
-      try { el.setPointerCapture(e.pointerId); } catch (err) {}
       const myGen = ++dragGeneration;
       const myPointerId = e.pointerId;
       const startX = e.clientX;
@@ -689,7 +685,6 @@
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
-        try { el.releasePointerCapture(myPointerId); } catch (err) {}
         clearHighlights();
         if (ghost) { ghost.remove(); ghost = null; }
       }
@@ -804,10 +799,6 @@
   function attachRoomDrag(handle, roomId) {
     handle.addEventListener("pointerdown", e => {
       e.preventDefault();
-      // ポインターをこの要素に固定する。これが無いと、指が途中で他の部屋の
-      // 入力欄やセレクトボックスの上を通った瞬間に実機(特にiOS)でドラッグが
-      // 強制的に中断され、以後つまめなくなったように見えることがある。
-      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
       const myGen = ++dragGeneration;
       const myPointerId = e.pointerId;
       const startX = e.clientX;
@@ -821,7 +812,6 @@
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
-        try { handle.releasePointerCapture(myPointerId); } catch (err) {}
         clearRoomDropHighlight();
         if (sourceCard) sourceCard.classList.remove("room-dragging-source");
         if (ghost) { ghost.remove(); ghost = null; }
