@@ -56,5 +56,17 @@
 #diary .diary-editor-header > .diary-primary { padding-inline: 12px; white-space: nowrap; }
 .diary-count-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 5px 0 0; }
 .diary-count-row .diary-meta { margin: 0; flex-shrink: 0; }
-/* 本文の邪魔にならないよう、保存先の注記は編集エリアから離してかなり下に置く */
+/* 一覧画面では通常の注記。執筆画面では iframe の表示領域の底辺に固定する。 */
 #diary-storage-note { margin-top: 32px; padding-top: 14px; border-top: 1px solid #C9BFA6; }
+#diary-editor:not([hidden]) { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+#diary-editor:not([hidden]) + #diary-storage-note {
+  position: fixed;
+  z-index: 80;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  padding: 11px 14px calc(11px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #C9BFA6;
+  background: rgb(242 235 221 / .98);
+}
