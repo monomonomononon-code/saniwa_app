@@ -719,7 +719,9 @@
   function clearRoomDropHighlight() {
     document.querySelectorAll(".room-card.room-drop-target").forEach(n => n.classList.remove("room-drop-target"));
   }
-  // 落とした先の部屋の「直前」に割り込む形で並び替える(単純な操作で済むように)。
+  // 落とした先の部屋と位置を入れ替える(挿入して詰め直すと、間にある無関係な部屋まで
+  // 連れて動いてしまうため、常にこの2部屋だけを交換する)。大きさの違う部屋同士でも
+  // 交換した結果1部屋分の空白ができることは許容する(無理に詰めない)。
   // 部屋の外(隙間・画面外)や自分自身の上に落とした場合は何もしない。
   function handleRoomDrop(x, y, roomId) {
     const target = document.elementFromPoint(x, y);
@@ -727,11 +729,13 @@
     const targetRoomId = card && card.dataset.roomId;
     if (!targetRoomId || targetRoomId === roomId) return;
     const fromIdx = state.rooms.findIndex(r => r.id === roomId);
-    if (fromIdx === -1 || !state.rooms.some(r => r.id === targetRoomId)) return;
-    const [moving] = state.rooms.splice(fromIdx, 1);
-    const insertAt = state.rooms.findIndex(r => r.id === targetRoomId);
-    state.rooms.splice(insertAt, 0, moving);
-    notify(`部屋「${moving.name}」の並び順を変更`);
+    const toIdx = state.rooms.findIndex(r => r.id === targetRoomId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const moving = state.rooms[fromIdx];
+    const target2 = state.rooms[toIdx];
+    state.rooms[fromIdx] = target2;
+    state.rooms[toIdx] = moving;
+    notify(`部屋「${moving.name}」と「${target2.name}」を入れ替え`);
     render();
   }
 
