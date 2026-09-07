@@ -3476,6 +3476,11 @@
       const rotate = el("button", null, "90°回転");
       rotate.onclick = () => rotateSelection();
       editActions.appendChild(rotate);
+      if (occ.length === 0) {
+        const remove = el("button", "danger", "削除");
+        remove.onclick = () => requestRoomDelete(room.id);
+        editActions.appendChild(remove);
+      }
       panelEl.appendChild(editActions);
       panelEl.appendChild(arrowPad((dx, dz) => {
         layout.position.x = snap(layout.position.x + dx);
@@ -3832,6 +3837,19 @@
     pendingRoomPlacement = { wingId: defaultWingForNew() || buildingState.wings[0].id, position: snappedTarget() };
     try { window.parent.postMessage({ source: "honmaru3d", type: "add_room", template, name: "" }, "*"); } catch (e) {}
     if (isMobileLayout()) setDockCollapsed(true);
+  }
+  // 部屋の削除。部屋データの正本は「部屋割り」画面側にあるので、ここでは削除を依頼するだけ。
+  // 誰か配置されている部屋は消せない(部屋割り側でも同じ条件で弾く二重チェック)。
+  function requestRoomDelete(roomId) {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room || (room.occupants || []).length > 0) return;
+    if (window.parent === window) {
+      updateSaveStatus("部屋の削除は「部屋割り」画面と連携している時だけできます");
+      return;
+    }
+    if (!window.confirm(`「${room.name || metaOf(room.template).label}」を削除しますか？`)) return;
+    if (selected && selected.kind === "room" && selected.id === roomId) setSelection(null);
+    try { window.parent.postMessage({ source: "honmaru3d", type: "delete_room", roomId }, "*"); } catch (e) {}
   }
   function addStructure(type) {
     const def = partDef(type);
