@@ -279,12 +279,15 @@
   }
 
   let dragging = null; // { charId, ghostEl }
-  // ドラッグの「世代」カウンタ。実機では、指を離した時の後始末(pointerup)が
-  // まれに発火せず、documentに貼ったmove/upリスナーが残ったままになることがある。
-  // 新しいドラッグを始めるたびにこれを進め、各ドラッグは自分の世代番号を覚えておく。
-  // 古い世代のリスナーが後から発火しても「自分は もう古い」と気付いて即座に
-  // 後片付けだけして何もしない(＝混線して部屋が誤動作する・つまめなくなるのを防ぐ)。
-  let dragGeneration = 0;
+  // 現在進行中のドラッグ(タグ移動・部屋並び替えのどちらか一方のみ)を指す。
+  // 実機では指を離した時の後始末(pointerup)がまれに発火せず、documentに貼った
+  // move/upリスナーが残ったままになることがある。pointerIdでの照合は環境によって
+  // 信用できない(pointerdown時と後続のmove/upとでidの報告が食い違う端末があり、
+  // 単純比較すると自分自身の操作まで無視されてしまう)ため、代わりに「今アクティブな
+  // ドラッグはこれ」という参照(オブジェクト)そのものを共有変数に持たせて比較する。
+  // さらに、新しいドラッグを始める瞬間に前のドラッグが残っていれば強制的に後片付け
+  // してから始めるので、残骸のリスナーがそのまま延々居座ることも無い。
+  let activeDrag = null;
   let openProfileId = null;
   let addRoomOpen = false;
   let addRoomDraft = { template: "a", name: "", note: "" };
@@ -673,13 +676,15 @@
   function attachDrag(el, charId) {
     el.addEventListener("pointerdown", e => {
       e.preventDefault();
-      const myGen = ++dragGeneration;
-      const myPointerId = e.pointerId;
+      // 前のドラッグの後始末が実機の都合で漏れていても、新しく掴んだ瞬間に
+      // 強制的に片付けてから始める(残骸が新しい操作の邪魔をしないように)。
+      if (activeDrag) { try { activeDrag.cleanup(); } catch (err) {} activeDrag = null; }
       const startX = e.clientX;
       const startY = e.clientY;
       const THRESHOLD = 9; // これ未満の移動ならタップ扱い
       let moved = false;
       let ghost = null;
+      const self = {};
 
       function cleanup() {
         document.removeEventListener("pointermove", move);
@@ -687,15 +692,13 @@
         document.removeEventListener("pointercancel", cancel);
         clearHighlights();
         if (ghost) { ghost.remove(); ghost = null; }
+        if (activeDrag === self) activeDrag = null;
       }
-      // 自分より新しいドラッグが始まっていたら、このドラッグは既に無効。
-      // (実機でpointerupが発火せず後片付けできなかった場合の保険)
-      // 後片付けだけして何もしない。
-      function isStale() { return myGen !== dragGeneration; }
+      self.cleanup = cleanup;
+      activeDrag = self;
 
       const move = ev => {
-        if (ev.pointerId !== myPointerId) return;
-        if (isStale()) { cleanup(); return; }
+        if (activeDrag !== self) return; // 既に後片付け済み(=このドラッグはもう無効)
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
         if (!moved && Math.hypot(dx, dy) > THRESHOLD) {
@@ -711,12 +714,10 @@
         }
       };
       const up = ev => {
-        if (ev.pointerId !== myPointerId) return;
-        const stale = isStale();
+        if (activeDrag !== self) return;
         const wasMoved = moved;
         cleanup();
         dragging = null;
-        if (stale) return;
         if (wasMoved) {
           // 万一ここで例外が起きても、再描画だけは必ず行い、次の操作で
           // 掴めなくなる(掴み手が古いままになる)のを防ぐ。
@@ -730,8 +731,8 @@
       // pointercancel だけが来ることがある。ここで確実に後始末しないと、document に
       // 貼りっぱなしの move/up リスナーが残り、後の無関係な操作で誤発火して
       // 別の刀剣男士が意図しない場所へ移動する原因になる。
-      const cancel = ev => {
-        if (ev && ev.pointerId !== undefined && ev.pointerId !== myPointerId) return;
+      const cancel = () => {
+        if (activeDrag !== self) return;
         cleanup();
         dragging = null;
       };
@@ -799,14 +800,16 @@
   function attachRoomDrag(handle, roomId) {
     handle.addEventListener("pointerdown", e => {
       e.preventDefault();
-      const myGen = ++dragGeneration;
-      const myPointerId = e.pointerId;
+      // 前のドラッグの後始末が実機の都合で漏れていても、新しく掴んだ瞬間に
+      // 強制的に片付けてから始める(残骸が新しい操作の邪魔をしないように)。
+      if (activeDrag) { try { activeDrag.cleanup(); } catch (err) {} activeDrag = null; }
       const startX = e.clientX;
       const startY = e.clientY;
       const THRESHOLD = 9;
       let moved = false;
       let ghost = null;
       const sourceCard = handle.closest(".room-card");
+      const self = {};
 
       function cleanup() {
         document.removeEventListener("pointermove", move);
@@ -815,16 +818,13 @@
         clearRoomDropHighlight();
         if (sourceCard) sourceCard.classList.remove("room-dragging-source");
         if (ghost) { ghost.remove(); ghost = null; }
+        if (activeDrag === self) activeDrag = null;
       }
-      // 自分より新しいドラッグが始まっていたら、このドラッグは既に無効(実機でpointerupが
-      // 発火せず後片付けできなかった場合の保険)。後片付けだけして何もしない。
-      // これが無いと、古いドラッグのリスナーが新しいドラッグのmove/upにも反応してしまい、
-      // 何度か操作するうちに部屋が意図せず動く・つまめなくなる不具合につながる。
-      function isStale() { return myGen !== dragGeneration; }
+      self.cleanup = cleanup;
+      activeDrag = self;
 
       const move = ev => {
-        if (ev.pointerId !== myPointerId) return;
-        if (isStale()) { cleanup(); return; }
+        if (activeDrag !== self) return; // 既に後片付け済み(=このドラッグはもう無効)
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
         if (!moved && Math.hypot(dx, dy) > THRESHOLD) {
@@ -842,11 +842,9 @@
         }
       };
       const up = ev => {
-        if (ev.pointerId !== myPointerId) return;
-        const stale = isStale();
+        if (activeDrag !== self) return;
         const wasMoved = moved;
         cleanup();
-        if (stale) return;
         if (wasMoved) {
           // 万一ここで例外が起きても、再描画だけは必ず行い、次の操作で
           // 掴めなくなる(掴み手が古いままになる)のを防ぐ。
@@ -854,8 +852,8 @@
         }
       };
       // pointercancel でも後片付けする(タグ移動と同じ理由)
-      const cancel = ev => {
-        if (ev && ev.pointerId !== undefined && ev.pointerId !== myPointerId) return;
+      const cancel = () => {
+        if (activeDrag !== self) return;
         cleanup();
       };
       document.addEventListener("pointermove", move);
