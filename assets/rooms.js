@@ -860,11 +860,14 @@
       && y >= gridRect.top - margin && y <= gridRect.bottom + margin;
     if (!withinGrid) return;
 
-    // 既存の部屋から「段(row)ごとのY範囲」を集める。同じ段の部屋だけを比べることで、
-    // 別の段にある部屋を誤って巻き込まない(六畳2つの下に六畳1つ、のような場合の誤爆対策)。
+    // 全部屋(掴んでいる部屋自身も含む)から「段(row)ごとのY範囲」を集める。同じ段の
+    // 部屋だけを比べることで、別の段にある部屋を誤って巻き込まない
+    // (六畳2つの下に六畳1つ、のような場合の誤爆対策)。
+    // 掴んでいる部屋自身も含めるのは、その部屋が今いる段に他の部屋が1つも無い
+    // (=1部屋だけで段を作っている)場合でも、その段を認識できるようにするため。
+    // 除外すると、その段だけ判定材料が無くなり同じ段の中で動かせなくなってしまう。
     const rowRanges = new Map(); // row -> { top, bottom }
     state.rooms.forEach(r => {
-      if (r.id === roomId) return;
       const el = grid.querySelector('[data-room-id="' + r.id + '"]');
       if (!el) return;
       const rect = el.getBoundingClientRect();
