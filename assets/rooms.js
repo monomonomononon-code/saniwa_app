@@ -675,30 +675,40 @@
 
   function attachDrag(el, charId) {
     el.addEventListener("pointerdown", e => {
+      if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
       e.preventDefault();
       // 前のドラッグの後始末が実機の都合で漏れていても、新しく掴んだ瞬間に
       // 強制的に片付けてから始める(残骸が新しい操作の邪魔をしないように)。
       if (activeDrag) { try { activeDrag.cleanup(); } catch (err) {} activeDrag = null; }
       const startX = e.clientX;
       const startY = e.clientY;
+      const pointerId = e.pointerId;
       const THRESHOLD = 9; // これ未満の移動ならタップ扱い
       let moved = false;
       let ghost = null;
+      let cleaned = false;
       const self = {};
 
       function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
+        window.removeEventListener("blur", cancel);
+        el.removeEventListener("lostpointercapture", lostCapture);
         clearHighlights();
         if (ghost) { ghost.remove(); ghost = null; }
+        try {
+          if (el.hasPointerCapture && el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId);
+        } catch (err) {}
         if (activeDrag === self) activeDrag = null;
       }
       self.cleanup = cleanup;
       activeDrag = self;
 
       const move = ev => {
-        if (activeDrag !== self) return; // 既に後片付け済み(=このドラッグはもう無効)
+        if (activeDrag !== self || ev.pointerId !== pointerId) return; // 既に後片付け済み、または別の指/ポインター
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
         if (!moved && Math.hypot(dx, dy) > THRESHOLD) {
@@ -714,8 +724,10 @@
         }
       };
       const up = ev => {
-        if (activeDrag !== self) return;
-        const wasMoved = moved;
+        if (activeDrag !== self || ev.pointerId !== pointerId) return;
+        // 素早いドラッグでは pointermove が間引かれて pointerdown → pointerup だけに
+        // なることがあるため、終了座標からもドラッグだったかを判定する。
+        const wasMoved = moved || Math.hypot(ev.clientX - startX, ev.clientY - startY) > THRESHOLD;
         cleanup();
         dragging = null;
         if (wasMoved) {
@@ -731,14 +743,24 @@
       // pointercancel だけが来ることがある。ここで確実に後始末しないと、document に
       // 貼りっぱなしの move/up リスナーが残り、後の無関係な操作で誤発火して
       // 別の刀剣男士が意図しない場所へ移動する原因になる。
-      const cancel = () => {
+      const cancel = ev => {
         if (activeDrag !== self) return;
+        if (ev && typeof ev.pointerId === "number" && ev.pointerId !== pointerId) return;
+        cleanup();
+        dragging = null;
+      };
+      const lostCapture = ev => {
+        if (ev.pointerId !== pointerId || activeDrag !== self) return;
         cleanup();
         dragging = null;
       };
       document.addEventListener("pointermove", move);
       document.addEventListener("pointerup", up);
       document.addEventListener("pointercancel", cancel);
+      window.addEventListener("blur", cancel);
+      el.addEventListener("lostpointercapture", lostCapture);
+      // iframe の境界や部屋カードの外へ出ても、この要素で move/up を受け続ける。
+      try { el.setPointerCapture(pointerId); } catch (err) {}
     });
   }
 
@@ -799,32 +821,42 @@
   // 見出しの掴みどころ(room-drag-handle)からしか始まらないので、タグの移動と混ざらない。
   function attachRoomDrag(handle, roomId) {
     handle.addEventListener("pointerdown", e => {
+      if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
       e.preventDefault();
       // 前のドラッグの後始末が実機の都合で漏れていても、新しく掴んだ瞬間に
       // 強制的に片付けてから始める(残骸が新しい操作の邪魔をしないように)。
       if (activeDrag) { try { activeDrag.cleanup(); } catch (err) {} activeDrag = null; }
       const startX = e.clientX;
       const startY = e.clientY;
+      const pointerId = e.pointerId;
       const THRESHOLD = 9;
       let moved = false;
       let ghost = null;
+      let cleaned = false;
       const sourceCard = handle.closest(".room-card");
       const self = {};
 
       function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
+        window.removeEventListener("blur", cancel);
+        handle.removeEventListener("lostpointercapture", lostCapture);
         clearRoomDropHighlight();
         if (sourceCard) sourceCard.classList.remove("room-dragging-source");
         if (ghost) { ghost.remove(); ghost = null; }
+        try {
+          if (handle.hasPointerCapture && handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+        } catch (err) {}
         if (activeDrag === self) activeDrag = null;
       }
       self.cleanup = cleanup;
       activeDrag = self;
 
       const move = ev => {
-        if (activeDrag !== self) return; // 既に後片付け済み(=このドラッグはもう無効)
+        if (activeDrag !== self || ev.pointerId !== pointerId) return; // 既に後片付け済み、または別の指/ポインター
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
         if (!moved && Math.hypot(dx, dy) > THRESHOLD) {
@@ -842,8 +874,9 @@
         }
       };
       const up = ev => {
-        if (activeDrag !== self) return;
-        const wasMoved = moved;
+        if (activeDrag !== self || ev.pointerId !== pointerId) return;
+        // 短い素早い操作でも、開始点と終了点が離れていればドラッグとして扱う。
+        const wasMoved = moved || Math.hypot(ev.clientX - startX, ev.clientY - startY) > THRESHOLD;
         cleanup();
         if (wasMoved) {
           // 万一ここで例外が起きても、再描画だけは必ず行い、次の操作で
@@ -852,13 +885,22 @@
         }
       };
       // pointercancel でも後片付けする(タグ移動と同じ理由)
-      const cancel = () => {
+      const cancel = ev => {
         if (activeDrag !== self) return;
+        if (ev && typeof ev.pointerId === "number" && ev.pointerId !== pointerId) return;
+        cleanup();
+      };
+      const lostCapture = ev => {
+        if (ev.pointerId !== pointerId || activeDrag !== self) return;
         cleanup();
       };
       document.addEventListener("pointermove", move);
       document.addEventListener("pointerup", up);
       document.addEventListener("pointercancel", cancel);
+      window.addEventListener("blur", cancel);
+      handle.addEventListener("lostpointercapture", lostCapture);
+      // iframe の外へポインターが出ても終了イベントを失わないよう捕捉する。
+      try { handle.setPointerCapture(pointerId); } catch (err) {}
     });
   }
   function highlightRoomDropTarget(x, y, sourceCard) {
@@ -967,4 +1009,3 @@
 
   render();
 })();
-
