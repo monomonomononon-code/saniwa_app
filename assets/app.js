@@ -367,6 +367,14 @@
           );
         } catch (err) {}
       }
+      if (data.type === "delete_room" && data.roomId) {
+        // 見取り図(3D)からの部屋削除も、部屋データの正本である部屋割りページに委ねる
+        try {
+          roomsSub.iframe.contentWindow && roomsSub.iframe.contentWindow.postMessage(
+            { type: "room_delete", roomId: data.roomId }, "*"
+          );
+        } catch (err) {}
+      }
       return;
     }
     if (data.source === "timeline" && e.source === timelineSub.iframe.contentWindow) {
