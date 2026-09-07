@@ -144,12 +144,40 @@
   .room-card.size-large {
     grid-column: span 2;
   }
+  .room-card.room-dragging-source { opacity: .45; }
+  .room-card.room-drop-target {
+    outline: 2px dashed rgba(255,255,255,.85);
+    outline-offset: 2px;
+  }
   .room-head {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     padding: 2px 3px 6px;
   }
+  .room-drag-handle {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.55);
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px 3px;
+    margin-left: -3px;
+    cursor: grab;
+    touch-action: none;
+  }
+  .room-drag-handle:active { cursor: grabbing; color: #fff; }
+  .room-delete-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.55);
+    font-size: 17px;
+    line-height: 1;
+    padding: 2px 3px;
+  }
+  .room-delete-btn:active { color: #fff; }
   .room-name-input {
     flex: 1;
     background: transparent;
@@ -299,6 +327,20 @@
     padding: 6px 12px;
     font-size: 12.5px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    white-space: nowrap;
+  }
+  .ghost-room {
+    position: fixed;
+    z-index: 999;
+    pointer-events: none;
+    background: var(--wood-dark);
+    color: #FBF6EA;
+    border: 1px solid rgba(255,255,255,.4);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-family: "Hiragino Mincho ProN", serif;
+    box-shadow: 0 4px 12px rgba(0,0,0,.35);
     white-space: nowrap;
   }
 
