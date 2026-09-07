@@ -719,23 +719,64 @@
   function clearRoomDropHighlight() {
     document.querySelectorAll(".room-card.room-drop-target").forEach(n => n.classList.remove("room-drop-target"));
   }
-  // 落とした先の部屋と位置を入れ替える(挿入して詰め直すと、間にある無関係な部屋まで
-  // 連れて動いてしまうため、常にこの2部屋だけを交換する)。大きさの違う部屋同士でも
-  // 交換した結果1部屋分の空白ができることは許容する(無理に詰めない)。
-  // 部屋の外(隙間・画面外)や自分自身の上に落とした場合は何もしない。
+  // 部屋の並び替え。2通りある:
+  //   ・既存の部屋の上に落とした → その部屋とだけ位置を交換する(間の部屋は動かさない)。
+  //   ・空いているマスに落とした(1部屋分の空白など) → 交換相手がいないので、
+  //     一番近い部屋の隣に差し込む。差し込み位置は「その空きマスを埋めるだけ」になる
+  //     場所を選ぶので、通常は他の部屋の見た目上の位置は変わらない。
+  // 部屋の外(グリッドから離れた場所・画面外)や自分自身の上に落とした場合は何もしない。
   function handleRoomDrop(x, y, roomId) {
+    const fromIdx = state.rooms.findIndex(r => r.id === roomId);
+    if (fromIdx === -1) return;
     const target = document.elementFromPoint(x, y);
     const card = target && target.closest && target.closest(".room-card");
-    const targetRoomId = card && card.dataset.roomId;
-    if (!targetRoomId || targetRoomId === roomId) return;
-    const fromIdx = state.rooms.findIndex(r => r.id === roomId);
-    const toIdx = state.rooms.findIndex(r => r.id === targetRoomId);
-    if (fromIdx === -1 || toIdx === -1) return;
-    const moving = state.rooms[fromIdx];
-    const target2 = state.rooms[toIdx];
-    state.rooms[fromIdx] = target2;
-    state.rooms[toIdx] = moving;
-    notify(`部屋「${moving.name}」と「${target2.name}」を入れ替え`);
+
+    if (card && card.dataset.roomId === roomId) return; // 自分自身の上に落とした
+
+    if (card && card.dataset.roomId) {
+      // 既存の部屋の上 → その2部屋だけ交換
+      const toIdx = state.rooms.findIndex(r => r.id === card.dataset.roomId);
+      if (toIdx === -1) return;
+      const moving = state.rooms[fromIdx];
+      const other = state.rooms[toIdx];
+      state.rooms[fromIdx] = other;
+      state.rooms[toIdx] = moving;
+      notify(`部屋「${moving.name}」と「${other.name}」を入れ替え`);
+      render();
+      return;
+    }
+
+    // 部屋の上ではない場合、本当にグリッドの近くに落としたのかを確認する
+    // (的外れな場所に投げ出した時にまで反応しないための安全策)。
+    const grid = document.querySelector(".rooms-grid");
+    const gridRect = grid && grid.getBoundingClientRect();
+    const margin = 40;
+    const withinGrid = gridRect && x >= gridRect.left - margin && x <= gridRect.right + margin
+      && y >= gridRect.top - margin && y <= gridRect.bottom + margin;
+    if (!withinGrid) return;
+
+    const others = state.rooms.filter(r => r.id !== roomId);
+    let nearest = null, nearestDist = Infinity, nearestRect = null;
+    others.forEach(r => {
+      const el = grid.querySelector('[data-room-id="' + r.id + '"]');
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const dist = Math.hypot(x - (rect.left + rect.width / 2), y - (rect.top + rect.height / 2));
+      if (dist < nearestDist) { nearestDist = dist; nearest = r; nearestRect = rect; }
+    });
+    if (!nearest) return;
+
+    // 一番近い部屋と同じ段なら左右、違う段なら前後で「直前/直後」を判定する
+    const sameRow = y >= nearestRect.top && y <= nearestRect.bottom;
+    const after = sameRow
+      ? x > nearestRect.left + nearestRect.width / 2
+      : y > nearestRect.top + nearestRect.height / 2;
+
+    const [moving] = state.rooms.splice(fromIdx, 1);
+    let insertAt = state.rooms.findIndex(r => r.id === nearest.id);
+    if (after) insertAt += 1;
+    state.rooms.splice(insertAt, 0, moving);
+    notify(`部屋「${moving.name}」の並び順を変更`);
     render();
   }
 
