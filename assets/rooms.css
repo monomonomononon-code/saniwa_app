@@ -94,6 +94,8 @@
     cursor: grab;
     touch-action: none;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     white-space: nowrap;
     box-shadow: 0 1px 0 rgba(0,0,0,0.06);
   }
@@ -115,6 +117,8 @@
     cursor: grab;
     touch-action: none;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     box-shadow: 0 1px 3px rgba(0,0,0,0.18);
   }
   .room-tag:active { cursor: grabbing; }
@@ -156,15 +160,33 @@
   }
   .room-drag-handle {
     flex-shrink: 0;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: rgba(255,255,255,.55);
     font-size: 15px;
     line-height: 1;
-    padding: 4px 3px;
-    margin-left: -3px;
+    width: 16px;
+    height: 28px;
+    padding: 0;
+    margin: -4px 0 -4px -3px;
     cursor: grab;
     touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  /* 半幅の部屋で部屋名欄を圧迫せず、左側へ広げた44px四方をタッチ対象にする。 */
+  .room-drag-handle::before {
+    content: "";
+    position: absolute;
+    left: -28px;
+    right: 0;
+    top: -8px;
+    bottom: -8px;
   }
   .room-drag-handle:active { cursor: grabbing; color: #fff; }
   .room-delete-btn {
@@ -397,4 +419,3 @@
     font-family: inherit;
   }
   .modal-close:active { background: var(--wood-dark); }
-
