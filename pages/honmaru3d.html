@@ -3966,7 +3966,10 @@
 
   document.getElementById("btn-mode").onclick = () => setEditMode(!editMode);
   document.getElementById("btn-save-build").onclick = () => saveBuildingState(true);
-  window.addEventListener("pagehide", () => saveBuildingState(false));
+  window.addEventListener("pagehide", () => {
+    resetPointerInteraction();
+    saveBuildingState(false);
+  });
 
   // =====================================================================
   //  ピッキング / ドラッグ(タップと区別)
@@ -3975,7 +3978,10 @@
   const ndc = new THREE.Vector2();
   const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   let downPos = null;
-  let activePointers = 0;
+  // pointerdown の回数ではなく、現在生きている pointerId を追跡する。
+  // canvas 外や iframe 外で pointerup になっても、古い接触数が残って
+  // 以後の操作を永久に「複数指」と誤判定しないようにする。
+  const activePointerIds = new Set();
   let dragState = null;
   const el3d = renderer.domElement;
 
@@ -3998,10 +4004,69 @@
     }).filter(Boolean);
   }
 
+  function samePointer(e, pointerId) {
+    if (e.pointerId === pointerId) return true;
+    // 一部の実機・iframe 境界では、同じ一本指でも終了イベントの pointerId が
+    // 変わることがある。複数指でない時だけ、主ポインターを同じ操作として扱う。
+    return activePointerIds.size <= 1 && e.isPrimary !== false;
+  }
+
+  function releaseDragCapture(pointerId) {
+    try {
+      if (el3d.hasPointerCapture && el3d.hasPointerCapture(pointerId)) {
+        el3d.releasePointerCapture(pointerId);
+      }
+    } catch (err) {}
+  }
+
+  function cancelObjectDrag() {
+    const canceled = dragState;
+    dragState = null;
+    downPos = null;
+    controls.enabled = true;
+    if (!canceled) return;
+    releaseDragCapture(canceled.pointerId);
+    // 中断された操作は開始位置へ戻す。途中まで書き換えた座標を、後の保存に
+    // 混ぜないための処理。部屋ID・所属・住人の配置には触れない。
+    if (canceled.moved) {
+      canceled.members.forEach(m => {
+        m.group.position.x = m.sx;
+        m.group.position.z = m.sz;
+        m.ref.position.x = m.sx;
+        m.ref.position.z = m.sz;
+      });
+      buildDirty = canceled.dirtyBefore;
+      updateSaveStatus();
+      rebuild();
+    }
+  }
+
+  function resetPointerInteraction() {
+    activePointerIds.clear();
+    cancelObjectDrag();
+    downPos = null;
+    controls.enabled = true;
+  }
+
+  function recoverStaleInteractionOnPointerDown(e) {
+    if (!e.isPrimary) return;
+    // UI ボタン上で次の操作が始まった場合も、canvas に残った capture と
+    // ドラッグ状態を先に解放する。これでボタンまで反応しなくなる連鎖を断つ。
+    if (dragState || activePointerIds.has(e.pointerId)) {
+      resetPointerInteraction();
+    } else if (activePointerIds.size) {
+      activePointerIds.clear();
+    }
+  }
+
   el3d.addEventListener("pointerdown", e => {
-    activePointers++;
-    downPos = { x: e.clientX, y: e.clientY, multi: activePointers > 1 };
-    if (!editMode || activePointers > 1) return;
+    activePointerIds.add(e.pointerId);
+    downPos = { x: e.clientX, y: e.clientY, pointerId: e.pointerId, multi: activePointerIds.size > 1 };
+    if (activePointerIds.size > 1) {
+      cancelObjectDrag();
+      return;
+    }
+    if (!editMode) return;
     const hit = hitAt(e.clientX, e.clientY);
     if (!hit || (hit.kind !== "room" && hit.kind !== "structure")) return;
     const point = groundPoint(e.clientX, e.clientY);
@@ -4018,21 +4083,24 @@
       startZ: group.position.z,
       members,
       wingDrag: members.length > 1,
-      moved: false
+      moved: false,
+      threshold: e.pointerType === "touch" ? 4 : 5,
+      dirtyBefore: buildDirty
     };
     controls.enabled = false;
+    if (e.cancelable) e.preventDefault();
     try { el3d.setPointerCapture(e.pointerId); } catch (err) {}
   }, true);
   el3d.addEventListener("pointermove", e => {
-    if (!dragState || e.pointerId !== dragState.pointerId) return;
-    if (activePointers > 1) {
-      dragState = null;
-      controls.enabled = true;
+    if (!dragState || !samePointer(e, dragState.pointerId)) return;
+    if (activePointerIds.size > 1) {
+      cancelObjectDrag();
       return;
     }
+    if (e.cancelable) e.preventDefault();
     const point = groundPoint(e.clientX, e.clientY);
     if (!point) return;
-    if (!dragState.moved && downPos && Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 5) {
+    if (!dragState.moved && downPos && Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > dragState.threshold) {
       dragState.moved = true;
     }
     if (!dragState.moved) return;
@@ -4047,13 +4115,15 @@
     });
     markBuildDirty();
   });
-  el3d.addEventListener("pointerup", e => {
-    activePointers = Math.max(0, activePointers - 1);
-    if (dragState && e.pointerId === dragState.pointerId) {
+
+  function onPointerUp(e) {
+    activePointerIds.delete(e.pointerId);
+    if (dragState && samePointer(e, dragState.pointerId)) {
       const completed = dragState;
       dragState = null;
+      activePointerIds.delete(completed.pointerId);
       controls.enabled = true;
-      try { el3d.releasePointerCapture(e.pointerId); } catch (err) {}
+      releaseDragCapture(completed.pointerId);
       downPos = null;
       if (completed.moved) {
         saveBuildingState(false);
@@ -4064,18 +4134,29 @@
       }
       return;
     }
-    if (!downPos) return;
+    if (!downPos || !samePointer(e, downPos.pointerId)) return;
     const moved = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 8;
     const multi = downPos.multi;
     downPos = null;
     if (moved || multi) return;
     pick(e.clientX, e.clientY);
-  });
-  el3d.addEventListener("pointercancel", () => {
-    activePointers = 0;
-    downPos = null;
-    dragState = null;
-    controls.enabled = true;
+  }
+
+  function onPointerCancel(e) {
+    activePointerIds.delete(e.pointerId);
+    if (!dragState || samePointer(e, dragState.pointerId)) cancelObjectDrag();
+    if (downPos && samePointer(e, downPos.pointerId)) downPos = null;
+  }
+
+  // window で終了を拾うため、canvas や iframe の端・操作パネル上で離しても
+  // 接触数と controls.enabled が残らない。pointerup は canvas からも bubble する。
+  window.addEventListener("pointerdown", recoverStaleInteractionOnPointerDown, true);
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerCancel);
+  el3d.addEventListener("lostpointercapture", onPointerCancel);
+  window.addEventListener("blur", resetPointerInteraction);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) resetPointerInteraction();
   });
 
   function updateRay(cx, cy) {
