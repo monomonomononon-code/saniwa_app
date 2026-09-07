@@ -466,7 +466,7 @@
       roomsMenuLoaded = true;
     }
     if (id === "journal-view" && !journalLoaded) {
-      journalSub.iframe.src = "pages/journal.html";
+      journalSub.iframe.src = "pages/journal.html?v=fixed-storage-note-1";
       journalLoaded = true;
     }
     if (id === "backup-view") {
