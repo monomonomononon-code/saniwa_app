@@ -23,11 +23,72 @@
     return TEMPLATE_KEYS.map(key => `<option value="${key}">${TEMPLATE_META[key].label}</option>`).join("");
   }
 
+  // ---- 部屋の配置(見取り図の何段目・何列目か)は array の並び順ではなく、
+  // 各部屋が持つ明示的な slot 番号で決める(0,1が1段目、2,3が2段目…)。
+  // こうすることで「この2部屋だけ入れ替える/この空きマスへ移す」がその部屋以外に
+  // 一切影響しない(並び替えのために間の部屋を詰め直す、という副作用が起きない)。
+  const GRID_COLS = 2;
+  function roomSpan(room) {
+    const meta = TEMPLATE_META[room.template] || TEMPLATE_META.a;
+    return meta.size === 2 ? 2 : 1;
+  }
+  function occupiedSlots(rooms, excludeId) {
+    const set = new Set();
+    rooms.forEach(r => {
+      if (r.id === excludeId) return;
+      set.add(r.slot);
+      if (roomSpan(r) === 2) set.add(r.slot + 1);
+    });
+    return set;
+  }
+  // 空いているslotのうち一番手前を返す(2列部屋は必ず列0から始まる偶数slotのみ)
+  function nextAvailableSlot(rooms, span, excludeId) {
+    const used = occupiedSlots(rooms, excludeId);
+    let slot = 0;
+    while (true) {
+      if (span === 2 && slot % GRID_COLS !== 0) { slot++; continue; }
+      const free = span === 2 ? (!used.has(slot) && !used.has(slot + 1)) : !used.has(slot);
+      if (free) return slot;
+      slot++;
+    }
+  }
+  // 指定のslotに、そのspanの部屋が(他の部屋とぶつからず)そのまま収まるか
+  function slotFits(rooms, slot, span, excludeId) {
+    if (span === 2 && slot % GRID_COLS !== 0) return false;
+    const used = occupiedSlots(rooms, excludeId);
+    return span === 2 ? (!used.has(slot) && !used.has(slot + 1)) : !used.has(slot);
+  }
+  // 読み込んだデータにslotが無い(旧バージョンの保存データ)場合は、これまでの
+  // 詰め表示と同じ並びになるように、登録順で自動採番する(見た目が変わらない移行措置)。
+  function ensureSlots(rooms) {
+    const used = new Set();
+    rooms.forEach(r => {
+      if (typeof r.slot === "number" && Number.isFinite(r.slot)) {
+        used.add(r.slot);
+        if (roomSpan(r) === 2) used.add(r.slot + 1);
+      }
+    });
+    let cursor = 0;
+    rooms.forEach(r => {
+      if (typeof r.slot === "number" && Number.isFinite(r.slot)) return;
+      const span = roomSpan(r);
+      while (true) {
+        if (span === 2 && cursor % GRID_COLS !== 0) { cursor++; continue; }
+        const free = span === 2 ? (!used.has(cursor) && !used.has(cursor + 1)) : !used.has(cursor);
+        if (free) break;
+        cursor++;
+      }
+      r.slot = cursor;
+      used.add(cursor);
+      if (span === 2) used.add(cursor + 1);
+    });
+  }
+
   const state = {
     unplaced: characters.map(c => ({ id: c.id, name: c.name })),
     rooms: [
-      { id: "r0", name: "東の間", template: "a", note: "", occupants: [] },
-      { id: "r1", name: "西の間", template: "a", note: "", occupants: [] }
+      { id: "r0", name: "東の間", template: "a", note: "", occupants: [], slot: 0 },
+      { id: "r1", name: "西の間", template: "a", note: "", occupants: [], slot: 1 }
     ]
   };
 
@@ -39,8 +100,10 @@
   function normalizeLoadedState(raw) {
     const rooms = Array.isArray(raw.rooms) ? raw.rooms.map(r => ({
       id: r && r.id, name: r && r.name, template: r && r.template, note: (r && r.note) || "",
-      occupants: Array.isArray(r && r.occupants) ? r.occupants.slice() : []
+      occupants: Array.isArray(r && r.occupants) ? r.occupants.slice() : [],
+      slot: (r && typeof r.slot === "number" && Number.isFinite(r.slot)) ? r.slot : undefined
     })).filter(r => r.id) : [];
+    ensureSlots(rooms);
     const unplaced = Array.isArray(raw.unplaced) ? raw.unplaced.slice() : [];
     const seen = new Set();
     let duplicateFound = false;
@@ -204,8 +267,12 @@
     const meta = TEMPLATE_META[template] || TEMPLATE_META.a;
     const key = TEMPLATE_META[template] ? template : "a";
     const finalName = (name || "").trim() || meta.label;
-    const room = { id: "r" + Date.now() + Math.random().toString(16).slice(2, 6), name: finalName, template: key, note: (note || "").trim(), occupants: [] };
-    state.rooms.unshift(room); // 新規部屋は一覧の先頭へ(配置待ちトレイに近く、ドラッグ距離が短くなる)
+    const span = meta.size === 2 ? 2 : 1;
+    const room = {
+      id: "r" + Date.now() + Math.random().toString(16).slice(2, 6), name: finalName, template: key,
+      note: (note || "").trim(), occupants: [], slot: nextAvailableSlot(state.rooms, span)
+    };
+    state.rooms.unshift(room);
     notify(`部屋「${finalName}」(${meta.label})を追加`);
     render();
     return room;
@@ -338,9 +405,18 @@
     addRow.appendChild(addBtn);
     el.appendChild(addRow);
 
+    ensureSlots(state.rooms); // 保険(通常は読み込み時点で全部屋に付与済み)
     const grid = document.createElement("div");
     grid.className = "rooms-grid";
-    state.rooms.forEach(room => grid.appendChild(renderRoom(room)));
+    state.rooms.forEach(room => {
+      const card = renderRoom(room);
+      const span = roomSpan(room);
+      const col = room.slot % GRID_COLS;
+      const row = Math.floor(room.slot / GRID_COLS);
+      card.style.gridColumn = (col + 1) + " / span " + span;
+      card.style.gridRow = (row + 1) + " / span 1";
+      grid.appendChild(card);
+    });
     el.appendChild(grid);
 
     if (openProfileId) {
@@ -405,12 +481,14 @@
     confirmBtn.onclick = () => {
       const meta = TEMPLATE_META[addRoomDraft.template];
       const finalName = addRoomDraft.name.trim() || meta.label;
-      state.rooms.unshift({ // 新規部屋は一覧の先頭へ(配置待ちトレイに近く、ドラッグ距離が短くなる)
+      const span = meta.size === 2 ? 2 : 1;
+      state.rooms.unshift({
         id: "r" + Date.now(),
         name: finalName,
         template: addRoomDraft.template,
         note: addRoomDraft.note.trim(),
-        occupants: []
+        occupants: [],
+        slot: nextAvailableSlot(state.rooms, span)
       });
       notify(`部屋「${finalName}」(${meta.label})を追加`);
       addRoomOpen = false;
@@ -499,7 +577,18 @@
     tplSelect.className = "room-template-select";
     tplSelect.innerHTML = templateOptionsHtml();
     tplSelect.value = TEMPLATE_META[room.template] ? room.template : "a";
-    tplSelect.onchange = e => { room.template = e.target.value; render(); };
+    tplSelect.onchange = e => {
+      room.template = e.target.value;
+      // 種類の変更でマスの数(1→2列)が変わり、隣の部屋と重なってしまう場合は
+      // その部屋だけ空いている場所へ動かす(重なったまま表示させないための保険)。
+      const span = roomSpan(room);
+      const used = occupiedSlots(state.rooms, room.id);
+      const fits = span === 2
+        ? (room.slot % GRID_COLS === 0 && !used.has(room.slot) && !used.has(room.slot + 1))
+        : !used.has(room.slot);
+      if (!fits) room.slot = nextAvailableSlot(state.rooms, span, room.id);
+      render();
+    };
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "room-delete-btn";
@@ -719,28 +808,44 @@
   function clearRoomDropHighlight() {
     document.querySelectorAll(".room-card.room-drop-target").forEach(n => n.classList.remove("room-drop-target"));
   }
-  // 部屋の並び替え。2通りある:
-  //   ・既存の部屋の上に落とした → その部屋とだけ位置を交換する(間の部屋は動かさない)。
-  //   ・空いているマスに落とした(1部屋分の空白など) → 交換相手がいないので、
-  //     一番近い部屋の隣に差し込む。差し込み位置は「その空きマスを埋めるだけ」になる
-  //     場所を選ぶので、通常は他の部屋の見た目上の位置は変わらない。
+  // 部屋の並び替え。各部屋は明示的なslot(何段目・何列目)を持っているので、
+  // 常にこの2通りのどちらかしか起きない:
+  //   ・既存の部屋の上に落とした → その部屋とだけ slot を交換する(他の部屋のslotは一切変えない)。
+  //   ・空いているマスに落とした → 掴んでいる部屋のslotをそこへ直接書き換えるだけ(他の部屋には触れない)。
   // 部屋の外(グリッドから離れた場所・画面外)や自分自身の上に落とした場合は何もしない。
   function handleRoomDrop(x, y, roomId) {
-    const fromIdx = state.rooms.findIndex(r => r.id === roomId);
-    if (fromIdx === -1) return;
+    const moving = state.rooms.find(r => r.id === roomId);
+    if (!moving) return;
     const target = document.elementFromPoint(x, y);
     const card = target && target.closest && target.closest(".room-card");
 
     if (card && card.dataset.roomId === roomId) return; // 自分自身の上に落とした
 
     if (card && card.dataset.roomId) {
-      // 既存の部屋の上 → その2部屋だけ交換
-      const toIdx = state.rooms.findIndex(r => r.id === card.dataset.roomId);
-      if (toIdx === -1) return;
-      const moving = state.rooms[fromIdx];
-      const other = state.rooms[toIdx];
-      state.rooms[fromIdx] = other;
-      state.rooms[toIdx] = moving;
+      // 既存の部屋の上 → その2部屋だけ入れ替える
+      const other = state.rooms.find(r => r.id === card.dataset.roomId);
+      if (!other) return;
+      const movingSpan = roomSpan(moving);
+      const otherSpan = roomSpan(other);
+      if (movingSpan === otherSpan) {
+        // 同じ大きさ同士ならslotをそのまま交換するだけでよい
+        const tmp = moving.slot;
+        moving.slot = other.slot;
+        other.slot = tmp;
+      } else {
+        // 大きさが違う場合、slotをそのまま入れ替えると大型の部屋が1マス分の
+        // 場所にはみ出して置かれてしまう。小さい方を大きい方の元位置へ、
+        // 大きい方は(小さい方が元いた場所にちょうど収まるならそこへ、
+        // 収まらなければ)別の空いている場所へ動かす。
+        const small = movingSpan < otherSpan ? moving : other;
+        const big = movingSpan < otherSpan ? other : moving;
+        const smallOldSlot = small.slot;
+        const bigOldSlot = big.slot;
+        small.slot = bigOldSlot;
+        big.slot = slotFits(state.rooms, smallOldSlot, 2, big.id)
+          ? smallOldSlot
+          : nextAvailableSlot(state.rooms, 2, big.id);
+      }
       notify(`部屋「${moving.name}」と「${other.name}」を入れ替え`);
       render();
       return;
@@ -755,27 +860,45 @@
       && y >= gridRect.top - margin && y <= gridRect.bottom + margin;
     if (!withinGrid) return;
 
-    const others = state.rooms.filter(r => r.id !== roomId);
-    let nearest = null, nearestDist = Infinity, nearestRect = null;
-    others.forEach(r => {
+    // 既存の部屋から「段(row)ごとのY範囲」を集める。同じ段の部屋だけを比べることで、
+    // 別の段にある部屋を誤って巻き込まない(六畳2つの下に六畳1つ、のような場合の誤爆対策)。
+    const rowRanges = new Map(); // row -> { top, bottom }
+    state.rooms.forEach(r => {
+      if (r.id === roomId) return;
       const el = grid.querySelector('[data-room-id="' + r.id + '"]');
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const dist = Math.hypot(x - (rect.left + rect.width / 2), y - (rect.top + rect.height / 2));
-      if (dist < nearestDist) { nearestDist = dist; nearest = r; nearestRect = rect; }
+      const row = Math.floor(r.slot / GRID_COLS);
+      const cur = rowRanges.get(row);
+      if (!cur) rowRanges.set(row, { top: rect.top, bottom: rect.bottom });
+      else { cur.top = Math.min(cur.top, rect.top); cur.bottom = Math.max(cur.bottom, rect.bottom); }
     });
-    if (!nearest) return;
+    if (!rowRanges.size) return;
 
-    // 一番近い部屋と同じ段なら左右、違う段なら前後で「直前/直後」を判定する
-    const sameRow = y >= nearestRect.top && y <= nearestRect.bottom;
-    const after = sameRow
-      ? x > nearestRect.left + nearestRect.width / 2
-      : y > nearestRect.top + nearestRect.height / 2;
+    let targetRow = null;
+    rowRanges.forEach((range, row) => {
+      if (targetRow === null && y >= range.top && y <= range.bottom) targetRow = row;
+    });
+    if (targetRow === null) {
+      // どの段の範囲にも入らない(段の間の隙間・グリッドの余白など) → 中心が一番近い段を採用
+      let bestDist = Infinity;
+      rowRanges.forEach((range, row) => {
+        const d = Math.abs((range.top + range.bottom) / 2 - y);
+        if (d < bestDist) { bestDist = d; targetRow = row; }
+      });
+    }
 
-    const [moving] = state.rooms.splice(fromIdx, 1);
-    let insertAt = state.rooms.findIndex(r => r.id === nearest.id);
-    if (after) insertAt += 1;
-    state.rooms.splice(insertAt, 0, moving);
+    const col = (x - gridRect.left) < gridRect.width / 2 ? 0 : 1;
+    let targetSlot = targetRow * GRID_COLS + col;
+    const span = roomSpan(moving);
+    if (span === 2 && targetSlot % GRID_COLS !== 0) targetSlot -= 1; // 2列部屋は必ず列0始まり
+
+    // 念のため、そこが本当に空いているか確認する(埋まっていれば何もしない)
+    const used = occupiedSlots(state.rooms, roomId);
+    const free = span === 2 ? (!used.has(targetSlot) && !used.has(targetSlot + 1)) : !used.has(targetSlot);
+    if (!free || targetSlot === moving.slot) return;
+
+    moving.slot = targetSlot;
     notify(`部屋「${moving.name}」の並び順を変更`);
     render();
   }
