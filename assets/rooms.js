@@ -288,6 +288,55 @@
   // さらに、新しいドラッグを始める瞬間に前のドラッグが残っていれば強制的に後片付け
   // してから始めるので、残骸のリスナーがそのまま延々居座ることも無い。
   let activeDrag = null;
+
+  // 実機確認用。通常は何も表示せず、親ページまたはこのページのURLに
+  // ?dragdebug=1 を付けた時だけ、直近の部屋ドラッグイベントを画面下へ表示する。
+  let roomDragDebugEnabled = new URLSearchParams(location.search).has("dragdebug");
+  try { roomDragDebugEnabled = roomDragDebugEnabled || new URLSearchParams(window.parent.location.search).has("dragdebug"); } catch (e) {}
+  const roomDragDebugEntries = [];
+  function debugRoomDrag(stage, event, roomId, extra) {
+    if (!roomDragDebugEnabled) return;
+    const entry = {
+      stage,
+      roomId,
+      eventPointerId: event && typeof event.pointerId === "number" ? event.pointerId : null,
+      pointerType: event && event.pointerType ? event.pointerType : "",
+      x: event && typeof event.clientX === "number" ? Math.round(event.clientX) : null,
+      y: event && typeof event.clientY === "number" ? Math.round(event.clientY) : null,
+      scrollY: Math.round(window.scrollY),
+      time: new Date().toISOString().slice(11, 23),
+      ...(extra || {})
+    };
+    roomDragDebugEntries.push(entry);
+    if (roomDragDebugEntries.length > 30) roomDragDebugEntries.shift();
+    window.__saniwaRoomDragLog = roomDragDebugEntries;
+    console.info("[rooms:drag]", entry);
+    let panel = document.getElementById("room-drag-debug");
+    if (!panel) {
+      panel = document.createElement("pre");
+      panel.id = "room-drag-debug";
+      Object.assign(panel.style, {
+        position: "fixed", left: "4px", right: "4px", bottom: "4px", zIndex: "2000",
+        maxHeight: "34vh", overflow: "hidden", margin: "0", padding: "6px",
+        background: "rgba(0,0,0,.82)", color: "#fff", fontSize: "9px",
+        lineHeight: "1.35", whiteSpace: "pre-wrap", pointerEvents: "none"
+      });
+      document.body.appendChild(panel);
+    }
+    panel.textContent = roomDragDebugEntries.slice(-8).map(item => JSON.stringify(item)).join("\n");
+  }
+
+  // 前の終了イベントを実機で取り逃していても、通常のボタンや入力欄を次に
+  // 触った時点で古いドラッグを破棄する。古い pointerup が render() を起こして
+  // そのクリックを飲み込むことを防ぐ。
+  document.addEventListener("pointerdown", e => {
+    if (!activeDrag) return;
+    const target = e.target && e.target.closest ? e.target.closest(".room-drag-handle, .chip, .room-tag") : null;
+    if (!target) {
+      try { activeDrag.cleanup(); } catch (err) {}
+      activeDrag = null;
+    }
+  }, true);
   let openProfileId = null;
   let addRoomOpen = false;
   let addRoomDraft = { template: "a", name: "", note: "" };
@@ -675,7 +724,7 @@
 
   function attachDrag(el, charId) {
     el.addEventListener("pointerdown", e => {
-      if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
       e.preventDefault();
       // 前のドラッグの後始末が実機の都合で漏れていても、新しく掴んだ瞬間に
       // 強制的に片付けてから始める(残骸が新しい操作の邪魔をしないように)。
@@ -708,7 +757,8 @@
       activeDrag = self;
 
       const move = ev => {
-        if (activeDrag !== self || ev.pointerId !== pointerId) return; // 既に後片付け済み、または別の指/ポインター
+        if (activeDrag !== self) return; // 実機では開始時と後続イベントの pointerId が食い違うことがある
+        if (ev.cancelable) ev.preventDefault();
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
         if (!moved && Math.hypot(dx, dy) > THRESHOLD) {
@@ -724,7 +774,7 @@
         }
       };
       const up = ev => {
-        if (activeDrag !== self || ev.pointerId !== pointerId) return;
+        if (activeDrag !== self) return;
         // 素早いドラッグでは pointermove が間引かれて pointerdown → pointerup だけに
         // なることがあるため、終了座標からもドラッグだったかを判定する。
         const wasMoved = moved || Math.hypot(ev.clientX - startX, ev.clientY - startY) > THRESHOLD;
@@ -745,12 +795,11 @@
       // 別の刀剣男士が意図しない場所へ移動する原因になる。
       const cancel = ev => {
         if (activeDrag !== self) return;
-        if (ev && typeof ev.pointerId === "number" && ev.pointerId !== pointerId) return;
         cleanup();
         dragging = null;
       };
       const lostCapture = ev => {
-        if (ev.pointerId !== pointerId || activeDrag !== self) return;
+        if (activeDrag !== self) return;
         cleanup();
         dragging = null;
       };
@@ -820,8 +869,9 @@
   // ---- 部屋そのものの並び替え(刀剣男士タグのドラッグとは別の仕組み) ----
   // 見出しの掴みどころ(room-drag-handle)からしか始まらないので、タグの移動と混ざらない。
   function attachRoomDrag(handle, roomId) {
+    handle.addEventListener("contextmenu", e => e.preventDefault());
     handle.addEventListener("pointerdown", e => {
-      if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
       e.preventDefault();
       // 前のドラッグの後始末が実機の都合で漏れていても、新しく掴んだ瞬間に
       // 強制的に片付けてから始める(残骸が新しい操作の邪魔をしないように)。
@@ -829,12 +879,15 @@
       const startX = e.clientX;
       const startY = e.clientY;
       const pointerId = e.pointerId;
-      const THRESHOLD = 9;
+      // ハンドルにはタップ動作が無いので、タッチでは指の小さな移動ですぐドラッグを開始する。
+      // マウスも従来より少し軽くしつつ、押しただけの揺れは拾わない。
+      const THRESHOLD = e.pointerType === "touch" ? 4 : 6;
       let moved = false;
       let ghost = null;
       let cleaned = false;
       const sourceCard = handle.closest(".room-card");
       const self = {};
+      debugRoomDrag("down", e, roomId, { expectedPointerId: pointerId });
 
       function cleanup() {
         if (cleaned) return;
@@ -856,11 +909,13 @@
       activeDrag = self;
 
       const move = ev => {
-        if (activeDrag !== self || ev.pointerId !== pointerId) return; // 既に後片付け済み、または別の指/ポインター
+        if (activeDrag !== self) return; // pointerId は実機で不安定なため activeDrag の参照で所有権を判定する
+        if (ev.cancelable) ev.preventDefault();
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
         if (!moved && Math.hypot(dx, dy) > THRESHOLD) {
           moved = true;
+          debugRoomDrag("drag-start", ev, roomId, { expectedPointerId: pointerId });
           const room = state.rooms.find(r => r.id === roomId);
           ghost = document.createElement("div");
           ghost.className = "ghost-room";
@@ -874,9 +929,10 @@
         }
       };
       const up = ev => {
-        if (activeDrag !== self || ev.pointerId !== pointerId) return;
+        if (activeDrag !== self) return;
         // 短い素早い操作でも、開始点と終了点が離れていればドラッグとして扱う。
         const wasMoved = moved || Math.hypot(ev.clientX - startX, ev.clientY - startY) > THRESHOLD;
+        debugRoomDrag("up", ev, roomId, { expectedPointerId: pointerId, wasMoved });
         cleanup();
         if (wasMoved) {
           // 万一ここで例外が起きても、再描画だけは必ず行い、次の操作で
@@ -887,11 +943,12 @@
       // pointercancel でも後片付けする(タグ移動と同じ理由)
       const cancel = ev => {
         if (activeDrag !== self) return;
-        if (ev && typeof ev.pointerId === "number" && ev.pointerId !== pointerId) return;
+        debugRoomDrag("cancel", ev, roomId, { expectedPointerId: pointerId });
         cleanup();
       };
       const lostCapture = ev => {
-        if (ev.pointerId !== pointerId || activeDrag !== self) return;
+        if (activeDrag !== self) return;
+        debugRoomDrag("lost-capture", ev, roomId, { expectedPointerId: pointerId });
         cleanup();
       };
       document.addEventListener("pointermove", move);
@@ -900,7 +957,12 @@
       window.addEventListener("blur", cancel);
       handle.addEventListener("lostpointercapture", lostCapture);
       // iframe の外へポインターが出ても終了イベントを失わないよう捕捉する。
-      try { handle.setPointerCapture(pointerId); } catch (err) {}
+      try {
+        handle.setPointerCapture(pointerId);
+        debugRoomDrag("capture", e, roomId, { expectedPointerId: pointerId, captured: true });
+      } catch (err) {
+        debugRoomDrag("capture", e, roomId, { expectedPointerId: pointerId, captured: false, error: err.name || "capture-error" });
+      }
     });
   }
   function highlightRoomDropTarget(x, y, sourceCard) {
